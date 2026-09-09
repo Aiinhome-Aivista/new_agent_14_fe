@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { guardrailsApi } from '../api/guardrailsApi';
 import { ShieldCheck, ShieldAlert, CheckCircle, XCircle, Clock, AlertTriangle } from 'lucide-react';
 import FuturisticLoader from '../components/common/FuturisticLoader';
 
 const GuardrailsPage = () => {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [guardrailsData, setGuardrailsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -32,9 +34,12 @@ const GuardrailsPage = () => {
     try {
       setActionLoading(itemId);
       await guardrailsApi.resolveQueueItem(itemId, decision, `Resolved as ${decision} by ${user?.email || 'Officer'}`);
+      showToast(`Item #${itemId} marked as ${decision}`, 'success');
       await fetchData();
     } catch (err) {
       console.error("Resolution failed:", err);
+      const msg = err.response?.data?.error || "Resolution failed. Please verify your session.";
+      showToast(msg, 'error');
     } finally {
       setActionLoading(null);
     }
