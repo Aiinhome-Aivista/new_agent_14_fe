@@ -57,7 +57,7 @@ const RiskHeatmap = ({ data }) => {
 
       <div className="pt-4 border-t border-slate-200 dark:border-white/10 flex items-center justify-between text-xs">
         <span className="theme-muted font-medium">
-          Severity weighted across 14 vendor agreements
+          Severity weighted across active risk sources
         </span>
         <Link 
           to="/risks" 
