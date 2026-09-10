@@ -243,6 +243,7 @@ const SettingsPage = () => {
   }, []);
 
   const handleFieldChange = (provider, field, value) => {
+    setTestResult(null);
     setAllSettings(prev => ({
       ...prev,
       [provider]: {
@@ -258,8 +259,13 @@ const SettingsPage = () => {
     
     try {
       setSaving(true);
+      setTestResult(null);
       const current = allSettings[activeTab];
-      await settingsApi.saveProviderSettings(activeTab, current);
+      const res = await settingsApi.saveProviderSettings(activeTab, current);
+      
+      const tRes = res.test_result || {};
+      setTestResult(tRes);
+
       setConnectedProviders(prev => ({
         ...prev,
         [activeTab]: true
@@ -271,33 +277,16 @@ const SettingsPage = () => {
       setConnectedProfiles(prev => ({
         ...prev,
         [activeTab]: {
-          user: current.username_email?.split('@')[0] || 'Enterprise User',
-          email: current.username_email,
-          server: current.base_url,
-          account_type: activeTab === 'jira' ? 'Atlassian Cloud Identity' : 'Enterprise Service Account'
+          user: tRes.user || current.username_email?.split('@')[0] || 'Enterprise User',
+          email: tRes.email || current.username_email,
+          server: tRes.server || current.base_url,
+          avatar_url: tRes.avatar_url || '',
+          account_type: tRes.account_type || (activeTab === 'jira' ? 'Atlassian Cloud Identity' : 'Enterprise Service Account'),
+          time_zone: tRes.time_zone || ''
         }
       }));
 
-      // If Jira, run a quick profile refresh
-      if (activeTab === 'jira') {
-        settingsApi.testProviderConnection('jira').then(jRes => {
-          if (jRes && jRes.success) {
-            setConnectedProfiles(prev => ({
-              ...prev,
-              jira: {
-                user: jRes.user,
-                email: jRes.email || current.username_email,
-                server: jRes.server || current.base_url,
-                avatar_url: jRes.avatar_url,
-                account_type: jRes.account_type,
-                time_zone: jRes.time_zone
-              }
-            }));
-          }
-        }).catch(() => {});
-      }
-
-      showToast(`${PROVIDERS.find(p => p.id === activeTab)?.name} connected and saved successfully!`, "success");
+      showToast(res.message || `${PROVIDERS.find(p => p.id === activeTab)?.name} verified and connected successfully!`, "success");
       // Clear token input for security
       setAllSettings(prev => ({
         ...prev,
@@ -305,7 +294,18 @@ const SettingsPage = () => {
       }));
     } catch (err) {
       console.error("Failed to save settings:", err);
-      showToast(`Failed to save ${activeTab} configuration.`, "error");
+      const errMsg = err.response?.data?.error || err.message || `Failed to verify and save ${activeTab} configuration.`;
+      const failedResult = err.response?.data?.test_result || { success: false, error: errMsg };
+      setTestResult(failedResult);
+      setConnectedProviders(prev => ({
+        ...prev,
+        [activeTab]: false
+      }));
+      setConnectedProfiles(prev => ({
+        ...prev,
+        [activeTab]: null
+      }));
+      showToast(errMsg, "error");
     } finally {
       setSaving(false);
     }
@@ -340,12 +340,28 @@ const SettingsPage = () => {
         }));
         showToast(`Connected successfully! Authenticated as: ${result.user || 'OK'}`, "success");
       } else {
-        showToast(`Connection failed: ${result.error || 'Unknown error'}`, "error");
+        setConnectedProviders(prev => ({
+          ...prev,
+          [activeTab]: false
+        }));
+        setConnectedProfiles(prev => ({
+          ...prev,
+          [activeTab]: null
+        }));
+        showToast(`Connection failed: ${result.error || 'Authentication rejected.'}`, "error");
       }
     } catch (err) {
       console.error("Test connection failed:", err);
       const errMsg = err.response?.data?.error || err.message || "Failed to test connection.";
       setTestResult({ success: false, error: errMsg });
+      setConnectedProviders(prev => ({
+        ...prev,
+        [activeTab]: false
+      }));
+      setConnectedProfiles(prev => ({
+        ...prev,
+        [activeTab]: null
+      }));
       showToast(errMsg, "error");
     } finally {
       setTesting(false);
