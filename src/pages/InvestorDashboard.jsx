@@ -32,7 +32,8 @@ import {
   FileCheck,
   Bot,
   Zap,
-  CheckCircle2
+  CheckCircle2,
+  Cpu
 } from 'lucide-react';
 
 const InvestorDashboard = () => {
