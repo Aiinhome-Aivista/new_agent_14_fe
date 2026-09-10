@@ -60,8 +60,8 @@ function App() {
                   <Route path="/guardrails" element={<GuardrailsPage />} />
                 </Route>
 
-                {/* Connectors / Settings: PMO only */}
-                <Route element={<ProtectedRoute allowedRoles={['PMO']} />}>
+                {/* Connectors / Settings: PMO and Program Director */}
+                <Route element={<ProtectedRoute allowedRoles={['PMO', 'Program Director']} />}>
                   <Route path="/settings" element={<SettingsPage />} />
                 </Route>
 
