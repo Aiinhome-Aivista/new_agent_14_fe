@@ -3,7 +3,7 @@ import { ingestionApi } from '../../api/ingestionApi';
 import { useToast } from '../../context/ToastContext';
 import { FileUp, Loader2 } from 'lucide-react';
 
-const UploadPanel = () => {
+const UploadPanel = ({ onUploadSuccess }) => {
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -50,6 +50,9 @@ const UploadPanel = () => {
         showToast(`Successfully processed ${file.name}`, 'success');
       }
       setFile(null);
+      if (onUploadSuccess) {
+        onUploadSuccess(res);
+      }
     } catch (err) {
       showToast('Error uploading document', 'error');
     } finally {

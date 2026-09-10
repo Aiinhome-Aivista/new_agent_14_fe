@@ -3,7 +3,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { useTheme } from '../../context/ThemeContext';
 import { BarChart3 } from 'lucide-react';
 
-const BurndownChart = ({ data: initialData }) => {
+const BurndownChart = ({ data: initialData, className, minHeight = "min-h-[220px]" }) => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const chartData = initialData && initialData.length > 0 ? initialData : [
@@ -16,7 +16,7 @@ const BurndownChart = ({ data: initialData }) => {
   ];
   
   return (
-    <div className="p-6 rounded-2xl theme-card h-96 flex flex-col justify-between">
+    <div className={className || "p-6 rounded-2xl theme-card h-96 flex flex-col justify-between"}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2.5">
           <div className="p-2 rounded-xl bg-[#FF5A14]/10 text-[#FF5A14] border border-[#FF5A14]/20">
@@ -36,7 +36,7 @@ const BurndownChart = ({ data: initialData }) => {
         </span>
       </div>
 
-      <div className="flex-1 w-full h-full min-h-[220px]">
+      <div className={`flex-1 w-full h-full ${minHeight}`}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={chartData}

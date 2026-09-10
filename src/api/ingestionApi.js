@@ -30,5 +30,9 @@ export const ingestionApi = {
         });
         return response.data;
     }
+  },
+  getHistory: async () => {
+    const response = await api.get('/ingestion/history');
+    return response.data;
   }
 };
