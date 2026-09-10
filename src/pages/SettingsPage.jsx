@@ -4,7 +4,8 @@ import { settingsApi } from '../api/settingsApi';
 import { useToast } from '../context/ToastContext';
 import { 
   Save, Server, GitBranch, Database, FileText, Bell, Clock, 
-  Sparkles, CheckCircle2, AlertCircle, Loader2, Activity, RefreshCw 
+  Sparkles, CheckCircle2, AlertCircle, Loader2, Activity, RefreshCw,
+  Unplug, Wifi, WifiOff, Eye, EyeOff, Key, ExternalLink, UserCheck 
 } from 'lucide-react';
 import FuturisticLoader from '../components/common/FuturisticLoader';
 
@@ -90,6 +91,22 @@ const PROVIDERS = [
   }
 ];
 
+const getInitials = (name, email) => {
+  if (name && typeof name === 'string' && name.trim()) {
+    const clean = name.trim();
+    const parts = clean.split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return clean.slice(0, 2).toUpperCase();
+  }
+  if (email && typeof email === 'string' && email.trim()) {
+    const user = email.split('@')[0];
+    return user.slice(0, 2).toUpperCase();
+  }
+  return 'ID';
+};
+
 const SettingsPage = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
@@ -98,8 +115,38 @@ const SettingsPage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
   const [seedingAll, setSeedingAll] = useState(false);
   const [testResult, setTestResult] = useState(null);
+  const [showToken, setShowToken] = useState(false);
+  const [imgLoadFailed, setImgLoadFailed] = useState(false);
+
+  // Track connected status from database per provider
+  const [connectedProviders, setConnectedProviders] = useState({
+    jira: false,
+    azure_devops: false,
+    sap_erp: false,
+    sharepoint: false,
+    notifications: false
+  });
+
+  // Track whether provider has an existing saved token in DB
+  const [tokenStatus, setTokenStatus] = useState({
+    jira: false,
+    azure_devops: false,
+    sap_erp: false,
+    sharepoint: false,
+    notifications: false
+  });
+
+  // Detailed profile information for connected accounts
+  const [connectedProfiles, setConnectedProfiles] = useState({
+    jira: null,
+    azure_devops: null,
+    sap_erp: null,
+    sharepoint: null,
+    notifications: null
+  });
 
   // Settings stored per provider
   const [allSettings, setAllSettings] = useState({
@@ -120,18 +167,58 @@ const SettingsPage = () => {
     try {
       setLoading(true);
       const res = await settingsApi.getAllSettings();
-      if (res.settings) {
-        const updated = { ...allSettings };
-        res.settings.forEach(item => {
-          if (updated[item.provider]) {
-            updated[item.provider] = {
+      const items = res.settings || (res.data ? Object.values(res.data) : []);
+      if (items && items.length > 0) {
+        const updatedSettings = { ...allSettings };
+        const updatedConnected = { ...connectedProviders };
+        const updatedTokens = { ...tokenStatus };
+        const updatedProfiles = { ...connectedProfiles };
+
+        items.forEach(item => {
+          if (item && item.provider && updatedSettings[item.provider] !== undefined) {
+            updatedSettings[item.provider] = {
               base_url: item.base_url || '',
               username_email: item.username_email || '',
               api_token: ''
             };
+            updatedConnected[item.provider] = Boolean(item.is_connected);
+            updatedTokens[item.provider] = Boolean(item.has_token);
+
+            if (item.is_connected && item.username_email) {
+              updatedProfiles[item.provider] = {
+                user: item.username_email.split('@')[0],
+                email: item.username_email,
+                server: item.base_url,
+                account_type: item.provider === 'jira' ? 'Atlassian Cloud Identity' : 'Enterprise Service Account'
+              };
+            }
           }
         });
-        setAllSettings(updated);
+
+        setAllSettings(updatedSettings);
+        setConnectedProviders(updatedConnected);
+        setTokenStatus(updatedTokens);
+        setConnectedProfiles(updatedProfiles);
+
+        // If Jira is connected, fetch live Atlassian user profile (display name, avatar) in background
+        const jiraSetting = items.find(s => s.provider === 'jira' && s.is_connected);
+        if (jiraSetting && jiraSetting.base_url && jiraSetting.username_email) {
+          settingsApi.testProviderConnection('jira').then(jRes => {
+            if (jRes && jRes.success) {
+              setConnectedProfiles(prev => ({
+                ...prev,
+                jira: {
+                  user: jRes.user || prev.jira?.user,
+                  email: jRes.email || prev.jira?.email || jiraSetting.username_email,
+                  server: jRes.server || prev.jira?.server || jiraSetting.base_url,
+                  avatar_url: jRes.avatar_url || '',
+                  account_type: jRes.account_type || 'Atlassian Cloud Identity',
+                  time_zone: jRes.time_zone || ''
+                }
+              }));
+            }
+          }).catch(() => {});
+        }
       }
 
       // Fetch scheduler status
@@ -173,7 +260,44 @@ const SettingsPage = () => {
       setSaving(true);
       const current = allSettings[activeTab];
       await settingsApi.saveProviderSettings(activeTab, current);
-      showToast(`${PROVIDERS.find(p => p.id === activeTab)?.name} configuration saved successfully!`, "success");
+      setConnectedProviders(prev => ({
+        ...prev,
+        [activeTab]: true
+      }));
+      setTokenStatus(prev => ({
+        ...prev,
+        [activeTab]: Boolean(current.api_token || prev[activeTab])
+      }));
+      setConnectedProfiles(prev => ({
+        ...prev,
+        [activeTab]: {
+          user: current.username_email?.split('@')[0] || 'Enterprise User',
+          email: current.username_email,
+          server: current.base_url,
+          account_type: activeTab === 'jira' ? 'Atlassian Cloud Identity' : 'Enterprise Service Account'
+        }
+      }));
+
+      // If Jira, run a quick profile refresh
+      if (activeTab === 'jira') {
+        settingsApi.testProviderConnection('jira').then(jRes => {
+          if (jRes && jRes.success) {
+            setConnectedProfiles(prev => ({
+              ...prev,
+              jira: {
+                user: jRes.user,
+                email: jRes.email || current.username_email,
+                server: jRes.server || current.base_url,
+                avatar_url: jRes.avatar_url,
+                account_type: jRes.account_type,
+                time_zone: jRes.time_zone
+              }
+            }));
+          }
+        }).catch(() => {});
+      }
+
+      showToast(`${PROVIDERS.find(p => p.id === activeTab)?.name} connected and saved successfully!`, "success");
       // Clear token input for security
       setAllSettings(prev => ({
         ...prev,
@@ -195,7 +319,26 @@ const SettingsPage = () => {
       const result = await settingsApi.testProviderConnection(activeTab);
       setTestResult(result);
       if (result.success) {
-        showToast(`Connected successfully! Server: ${result.server || 'OK'}`, "success");
+        setConnectedProviders(prev => ({
+          ...prev,
+          [activeTab]: true
+        }));
+        setTokenStatus(prev => ({
+          ...prev,
+          [activeTab]: true
+        }));
+        setConnectedProfiles(prev => ({
+          ...prev,
+          [activeTab]: {
+            user: result.user || allSettings[activeTab].username_email?.split('@')[0],
+            email: result.email || allSettings[activeTab].username_email,
+            server: result.server || allSettings[activeTab].base_url,
+            avatar_url: result.avatar_url,
+            account_type: result.account_type || (activeTab === 'jira' ? 'Atlassian Cloud Identity' : 'Enterprise Service Account'),
+            time_zone: result.time_zone
+          }
+        }));
+        showToast(`Connected successfully! Authenticated as: ${result.user || 'OK'}`, "success");
       } else {
         showToast(`Connection failed: ${result.error || 'Unknown error'}`, "error");
       }
@@ -206,6 +349,29 @@ const SettingsPage = () => {
       showToast(errMsg, "error");
     } finally {
       setTesting(false);
+    }
+  };
+
+  const handleDisconnect = async (provider = activeTab) => {
+    if (!canEdit || provider === 'scheduler') return;
+    try {
+      setDisconnecting(true);
+      const res = await settingsApi.disconnectProvider(provider);
+      setConnectedProviders(prev => ({
+        ...prev,
+        [provider]: false
+      }));
+      setConnectedProfiles(prev => ({
+        ...prev,
+        [provider]: null
+      }));
+      setTestResult(null);
+      showToast(res.message || `${PROVIDERS.find(p => p.id === provider)?.name} disconnected.`, "info");
+    } catch (err) {
+      console.error("Failed to disconnect:", err);
+      showToast(`Failed to disconnect ${provider}.`, "error");
+    } finally {
+      setDisconnecting(false);
     }
   };
 
@@ -231,7 +397,33 @@ const SettingsPage = () => {
           });
           return next;
         });
-        showToast(res.message || "Demo sandbox credentials loaded!", "success");
+        setConnectedProviders(prev => {
+          const next = { ...prev };
+          Object.keys(res.data).forEach(p => {
+            next[p] = true;
+          });
+          return next;
+        });
+        setTokenStatus(prev => {
+          const next = { ...prev };
+          Object.keys(res.data).forEach(p => {
+            next[p] = true;
+          });
+          return next;
+        });
+        setConnectedProfiles(prev => {
+          const next = { ...prev };
+          Object.keys(res.data).forEach(p => {
+            next[p] = {
+              user: res.data[p].username_email?.split('@')[0],
+              email: res.data[p].username_email,
+              server: res.data[p].base_url,
+              account_type: p === 'jira' ? 'Atlassian Verified Sandbox' : 'Enterprise Demo Sandbox'
+            };
+          });
+          return next;
+        });
+        showToast(res.message || "Demo sandbox credentials loaded and connected!", "success");
       }
     } catch (err) {
       console.error("Failed to load demo presets:", err);
@@ -274,7 +466,7 @@ const SettingsPage = () => {
   const currentSettings = allSettings[activeTab] || { base_url: '', username_email: '', api_token: '' };
 
   return (
-    <div className="py-2 max-w-5xl space-y-6">
+    <div className="py-2 w-full space-y-6">
       {/* Header with Global 1-Click Sandbox Seeder */}
       <div className="pb-4 border-b theme-border flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -298,25 +490,40 @@ const SettingsPage = () => {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b theme-border">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2.5 pb-3 border-b theme-border">
         {PROVIDERS.map((prov) => {
           const Icon = prov.icon;
           const isActive = activeTab === prov.id;
+          const isConnected = connectedProviders[prov.id];
           return (
             <button
               key={prov.id}
               onClick={() => {
                 setActiveTab(prov.id);
                 setTestResult(null);
+                setShowToken(false);
+                setImgLoadFailed(false);
               }}
-              className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              className={`flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all ${
                 isActive 
-                  ? 'bg-[#FF5A14] text-white shadow-md' 
+                  ? 'bg-[#FF5A14] text-white shadow-lg shadow-[#FF5A14]/25 scale-[1.01]' 
                   : 'theme-subtle hover:theme-subtle-hover theme-heading border theme-border'
               }`}
             >
-              <Icon size={16} className={isActive ? 'text-white' : prov.color} />
-              <span>{prov.name}</span>
+              <div className="flex items-center gap-2.5 truncate">
+                <Icon size={17} className={isActive ? 'text-white' : prov.color} />
+                <span className="truncate">{prov.name}</span>
+              </div>
+              {prov.id !== 'scheduler' && (
+                <span 
+                  title={isConnected ? `${prov.name} is Connected` : `${prov.name} is Disconnected`}
+                  className={`w-2.5 h-2.5 rounded-full shrink-0 transition-all ${
+                    isConnected 
+                      ? (isActive ? 'bg-emerald-300 ring-4 ring-white/30 animate-pulse' : 'bg-emerald-400 ring-4 ring-emerald-400/30 animate-pulse') 
+                      : (isActive ? 'bg-white/30' : 'bg-slate-400/30')
+                  }`}
+                />
+              )}
             </button>
           );
         })}
@@ -412,28 +619,179 @@ const SettingsPage = () => {
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-base font-bold theme-heading">{currentProviderDef.name}</h2>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-white/10 theme-heading">
-                    Connector
-                  </span>
+                  {connectedProviders[activeTab] ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block" />
+                      Connected
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-500/10 text-slate-400 border border-slate-500/20">
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-400 inline-block" />
+                      Disconnected
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs theme-muted">{currentProviderDef.desc}</p>
               </div>
             </div>
 
-            {canEdit && (
-              <button
-                type="button"
-                onClick={() => handleLoadDemoPresets(activeTab)}
-                disabled={testing}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-purple-500/15 to-indigo-500/15 text-purple-600 dark:text-purple-400 hover:bg-purple-500/25 border border-purple-500/30 rounded-xl text-xs font-bold transition-all"
-              >
-                <Sparkles size={14} />
-                <span>Load Demo Sandbox</span>
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {canEdit && connectedProviders[activeTab] && (
+                <button
+                  type="button"
+                  onClick={() => handleDisconnect(activeTab)}
+                  disabled={disconnecting}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/30 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
+                  title="Disconnect account manually"
+                >
+                  {disconnecting ? <Loader2 size={14} className="animate-spin" /> : <Unplug size={14} />}
+                  <span>Disconnect Account</span>
+                </button>
+              )}
+
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => handleLoadDemoPresets(activeTab)}
+                  disabled={testing}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-purple-500/15 to-indigo-500/15 text-purple-600 dark:text-purple-400 hover:bg-purple-500/25 border border-purple-500/30 rounded-xl text-xs font-bold transition-all"
+                >
+                  <Sparkles size={14} />
+                  <span>Load Demo Sandbox</span>
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="p-6">
+          <div className="p-6 space-y-6">
+            {/* Futuristic Cyber Connected Identity HUD */}
+            {connectedProviders[activeTab] && (
+              <div className="relative rounded-2xl overflow-hidden border border-emerald-500/40 bg-gradient-to-b from-[#101726]/95 via-[#0D1322]/90 to-[#0A0E1A]/95 shadow-[0_10px_35px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+                {/* Cyber ambient glow lines */}
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-emerald-400 to-transparent animate-pulse" />
+                <div className="absolute -right-16 -top-16 w-56 h-56 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -left-16 -bottom-16 w-56 h-56 bg-[#FF5A14]/10 rounded-full blur-3xl pointer-events-none" />
+
+                {/* Top HUD Telemetry Bar */}
+                <div className="px-5 py-2.5 bg-white/[0.03] border-b border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-2 w-2 relative">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                    </span>
+                    <span className="font-mono font-bold text-emerald-400 uppercase tracking-wider">
+                      LIVE ENTERPRISE CONNECTOR PIPELINE
+                    </span>
+                    <span className="text-slate-600 hidden sm:inline">|</span>
+                    <span className="font-mono text-slate-400 hidden sm:inline">
+                      {currentProviderDef.name.toUpperCase()} REST API PROTOCOL
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <span className="px-2 py-0.5 rounded-full font-mono text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                      TLS 1.3 ENCRYPTED
+                    </span>
+                    <span className="font-mono text-[10px] text-slate-400 hidden md:inline">
+                      STATUS: VERIFIED
+                    </span>
+                  </div>
+                </div>
+
+                {/* Main Identity Information Block */}
+                <div className="p-5 sm:p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+                  <div className="flex items-start sm:items-center gap-4.5">
+                    {/* Futuristic Monogram Cyber Avatar */}
+                    <div className="relative shrink-0">
+                      {connectedProfiles[activeTab]?.avatar_url && !imgLoadFailed ? (
+                        <img 
+                          src={connectedProfiles[activeTab].avatar_url} 
+                          alt={connectedProfiles[activeTab]?.user || 'Account Avatar'} 
+                          onError={() => setImgLoadFailed(true)}
+                          className="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-400/80 shadow-[0_0_20px_rgba(16,185,129,0.3)] ring-4 ring-emerald-500/20"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#FF5A14] via-purple-600 to-emerald-400 p-[1.5px] shadow-[0_0_25px_rgba(255,90,20,0.35)]">
+                          <div className="w-full h-full rounded-[14px] bg-[#0C111E] flex flex-col items-center justify-center">
+                            <span className="text-xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-br from-white via-slate-100 to-emerald-300">
+                              {getInitials(connectedProfiles[activeTab]?.user, currentSettings.username_email)}
+                            </span>
+                            <span className="text-[8px] font-mono text-emerald-400 uppercase tracking-widest -mt-0.5">
+                              SEC-ID
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shadow-md ring-2 ring-slate-900" title="Active Verified Account">
+                        <CheckCircle2 size={12} strokeWidth={3} />
+                      </div>
+                    </div>
+
+                    {/* Identity Details */}
+                    <div className="space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-lg sm:text-xl font-black text-white tracking-tight">
+                          {connectedProfiles[activeTab]?.user || currentSettings.username_email || 'Enterprise Verified Account'}
+                        </h3>
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
+                          <Sparkles size={10} /> Verified {currentProviderDef.name} Account
+                        </span>
+                        {connectedProfiles[activeTab]?.time_zone && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800/90 text-slate-300 border border-slate-700/80">
+                            {connectedProfiles[activeTab].time_zone}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-xs text-slate-300">
+                        <div className="flex items-center gap-2">
+                          <span className="text-slate-400 font-medium">Account ID / Email:</span>
+                          <span className="font-mono text-emerald-300 font-bold">
+                            {connectedProfiles[activeTab]?.email || currentSettings.username_email}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="text-slate-400 font-medium">Host / Instance:</span>
+                          <a 
+                            href={currentSettings.base_url} 
+                            target="_blank" 
+                            rel="noreferrer" 
+                            className="font-mono text-sky-400 hover:text-sky-300 hover:underline flex items-center gap-1 font-semibold"
+                          >
+                            <span>{currentSettings.base_url}</span>
+                            <ExternalLink size={11} />
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action and Telemetry Column */}
+                  <div className="flex flex-row lg:flex-col items-center lg:items-end justify-between gap-3 pt-3 lg:pt-0 border-t lg:border-t-0 border-white/10 shrink-0">
+                    <div className="text-right hidden sm:block">
+                      <span className="text-[10px] uppercase font-mono text-slate-400 block tracking-wider">Sync Pipeline</span>
+                      <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 justify-end">
+                        <Activity size={13} className="animate-pulse" /> Continuous Bi-Directional
+                      </span>
+                    </div>
+
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onClick={() => handleDisconnect(activeTab)}
+                        disabled={disconnecting}
+                        className="flex items-center gap-2 px-4 py-2 bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 hover:text-rose-300 border border-rose-500/30 hover:border-rose-500/50 rounded-xl text-xs font-bold shadow-[0_0_15px_rgba(244,63,94,0.15)] transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                      >
+                        {disconnecting ? <Loader2 size={14} className="animate-spin" /> : <Unplug size={14} />}
+                        <span>Disconnect Account</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <form onSubmit={handleSave} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-1.5">
@@ -467,20 +825,51 @@ const SettingsPage = () => {
                 </div>
 
                 <div className="space-y-1.5 md:col-span-2">
-                  <label className="block text-xs font-bold theme-heading">
-                    {currentProviderDef.tokenLabel}{' '}
-                    <span className="theme-muted font-normal text-[11px] ml-1">
-                      (Leave blank to keep existing encrypted secret)
-                    </span>
-                  </label>
-                  <input
-                    type="password"
-                    value={currentSettings.api_token}
-                    onChange={(e) => handleFieldChange(activeTab, 'api_token', e.target.value)}
-                    placeholder="••••••••••••••••••••••••"
-                    disabled={!canEdit}
-                    className="w-full px-4 py-2.5 theme-input rounded-xl text-xs focus:outline-none focus:border-[#FF5A14] disabled:opacity-50 transition-colors font-mono"
-                  />
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold theme-heading flex items-center gap-1.5">
+                      <Key size={13} className="text-[#FF5A14]" />
+                      <span>{currentProviderDef.tokenLabel}</span>
+                    </label>
+                    
+                    {tokenStatus[activeTab] ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                        <CheckCircle2 size={11} />
+                        Token Saved & Active
+                      </span>
+                    ) : (
+                      <span className="text-[11px] theme-muted font-normal">
+                        (Enter token to authenticate)
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="relative">
+                    <input
+                      type={showToken ? "text" : "password"}
+                      value={currentSettings.api_token}
+                      onChange={(e) => handleFieldChange(activeTab, 'api_token', e.target.value)}
+                      placeholder={
+                        tokenStatus[activeTab] 
+                          ? "•••••••••••••••••••••••• (Encrypted Secret Configured - Type to change)" 
+                          : "Paste API token / Secret key here"
+                      }
+                      disabled={!canEdit}
+                      className="w-full pl-4 pr-11 py-2.5 theme-input rounded-xl text-xs focus:outline-none focus:border-[#FF5A14] disabled:opacity-50 transition-colors font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowToken(!showToken)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-md transition-colors"
+                      title={showToken ? "Hide secret token" : "Show secret token"}
+                    >
+                      {showToken ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                  <p className="text-[11px] theme-muted">
+                    {tokenStatus[activeTab] && !currentSettings.api_token
+                      ? "A secure encrypted token is currently active. Leave this field blank to keep the existing token, or enter a new token to update it."
+                      : "Click the eye icon to view or verify the token before saving."}
+                  </p>
                 </div>
               </div>
 
@@ -518,9 +907,29 @@ const SettingsPage = () => {
                   <p className="text-xs text-[#FF5A14] font-medium italic">
                     Read-only mode. Only PMO or Program Directors can update enterprise credentials.
                   </p>
-                ) : <div />}
+                ) : connectedProviders[activeTab] ? (
+                  <div className="flex items-center gap-2 text-xs text-emerald-500 font-medium">
+                    <CheckCircle2 size={15} />
+                    <span>Account is connected. Status persists across reloads until manually disconnected.</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-xs theme-muted">
+                    <span>Enter credentials and click "Save Configuration" or "Test Connection" to connect.</span>
+                  </div>
+                )}
                 
                 <div className="flex items-center gap-3">
+                  {canEdit && connectedProviders[activeTab] && (
+                    <button
+                      type="button"
+                      onClick={() => handleDisconnect(activeTab)}
+                      disabled={disconnecting}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/30 transition-colors disabled:opacity-50"
+                    >
+                      {disconnecting ? <Loader2 size={15} className="animate-spin" /> : <Unplug size={15} />}
+                      <span>Disconnect</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={handleTestConnection}

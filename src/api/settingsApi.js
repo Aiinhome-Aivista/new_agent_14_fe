@@ -18,6 +18,10 @@ export const settingsApi = {
     const response = await api.post(`/settings/${provider}/test-connection`);
     return response.data;
   },
+  disconnectProvider: async (provider) => {
+    const response = await api.post(`/settings/${provider}/disconnect`);
+    return response.data;
+  },
   loadDemoPresets: async (provider = null) => {
     const response = await api.post('/settings/demo-presets', provider ? { provider } : {});
     return response.data;
