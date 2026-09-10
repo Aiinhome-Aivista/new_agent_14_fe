@@ -1,9 +1,12 @@
 import api from './api';
 
 export const ingestionApi = {
-  uploadDocument: async (file, onProgress) => {
+  uploadDocument: async (file, onProgress, metadata = {}) => {
     const formData = new FormData();
     formData.append('file', file);
+    if (metadata.uploaded_by) formData.append('uploaded_by', metadata.uploaded_by);
+    if (metadata.uploaded_by_role) formData.append('uploaded_by_role', metadata.uploaded_by_role);
+    if (metadata.project_id) formData.append('project_id', metadata.project_id);
     
     // Smooth progress representation reflecting multi-agent LLM analysis
     if (onProgress) {

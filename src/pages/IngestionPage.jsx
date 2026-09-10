@@ -11,7 +11,9 @@ import {
   HardDrive, 
   RefreshCw,
   Layers,
-  FileCode
+  FileCode,
+  User,
+  AlertTriangle
 } from 'lucide-react';
 
 const IngestionPage = () => {
@@ -152,7 +154,7 @@ const IngestionPage = () => {
                             {doc.file_type}
                           </span>
                         </div>
-                        <div className="flex items-center gap-3 mt-1 text-[10px] theme-muted font-mono">
+                        <div className="flex flex-wrap items-center gap-2.5 mt-1 text-[10px] theme-muted font-mono">
                           <span className="flex items-center gap-1">
                             <HardDrive size={11} />
                             <span>{doc.size}</span>
@@ -162,11 +164,30 @@ const IngestionPage = () => {
                             <Clock size={11} />
                             <span>{doc.uploaded_at}</span>
                           </span>
+                          {doc.uploaded_by && (
+                            <>
+                              <span>•</span>
+                              <span className="flex items-center gap-1 text-slate-400 font-sans">
+                                <User size={11} className="text-[#FF5A14]" />
+                                <span className="truncate max-w-[140px]">{doc.uploaded_by}</span>
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2 flex-shrink-0 self-end sm:self-center">
+                      {doc.risks_detected !== undefined && (
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border ${
+                          doc.risks_detected > 0 
+                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' 
+                            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                        }`}>
+                          <AlertTriangle size={11} className={doc.risks_detected > 0 ? 'text-amber-400' : 'text-emerald-400'} />
+                          <span>{doc.risks_detected > 0 ? `${doc.risks_detected} Risks Found` : 'Clean Doc'}</span>
+                        </span>
+                      )}
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[10px] font-bold">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                         <span>Vector Indexed</span>
