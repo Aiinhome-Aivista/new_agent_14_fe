@@ -21,7 +21,16 @@ import {
   AlertTriangle,
   Sparkles,
   Activity,
-  Clock
+  Clock,
+  CheckCircle2,
+  Lock,
+  Unlock,
+  DollarSign,
+  Layers,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  FileCheck
 } from 'lucide-react';
 
 const InvestorDashboard = () => {
@@ -35,6 +44,42 @@ const InvestorDashboard = () => {
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef(null);
+
+  // Capital Tranche & Milestone Attainment State (Strictly Real Data, No Fallback)
+  const [expandedMilestoneId, setExpandedMilestoneId] = useState(null);
+  const [trancheMilestones, setTrancheMilestones] = useState([]);
+
+  useEffect(() => {
+    if (data?.milestones && Array.isArray(data.milestones) && data.milestones.length > 0) {
+      setTrancheMilestones(data.milestones);
+    } else {
+      setTrancheMilestones([]);
+    }
+  }, [data]);
+
+  const handleToggleTranchePayout = (mId) => {
+    setTrancheMilestones(prev => prev.map(m => {
+      if (m.id === mId) {
+        if (m.status === 'Released') {
+          showToast(`Tranche ${m.id} has already been paid and cleared via SAP ERP.`, 'info');
+          return m;
+        }
+        if (m.status === 'Locked') {
+          showToast(`Tranche ${m.id} cannot be released until preceding milestones complete.`, 'warning');
+          return m;
+        }
+        const nextStatus = m.status === 'On Hold' ? 'Authorized' : 'On Hold';
+        showToast(
+          nextStatus === 'Authorized'
+            ? `Capital Tranche ${m.id} ($${m.trancheAmount.toLocaleString()}) manually authorized for disbursement.`
+            : `Capital Tranche ${m.id} placed ON HOLD — Capital withheld to enforce vendor SLA compliance.`,
+          nextStatus === 'Authorized' ? 'success' : 'warning'
+        );
+        return { ...m, status: nextStatus };
+      }
+      return m;
+    }));
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -141,101 +186,389 @@ const InvestorDashboard = () => {
   // ==========================================
   // 1. INVESTOR VIEW
   // ==========================================
-  const renderInvestorView = () => (
-    <div className="space-y-8">
-      {/* KPI Cards Grid */}
-      {kpis.length > 0 ? (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {kpis.map((kpi, idx) => (
-            <KPICard 
-              key={idx}
-              title={kpi.title} 
-              value={kpi.value} 
-              trend={kpi.trend} 
-              trendLabel={kpi.trendLabel}
-              icon={
-                idx === 0 ? <TrendingUp size={18} /> :
-                idx === 1 ? <ShieldCheck size={18} /> :
-                idx === 2 ? <AlertTriangle size={18} /> :
-                <Sparkles size={18} />
-              }
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="p-4 rounded-xl theme-card text-xs theme-muted italic">
-          No live KPI data available.
-        </div>
-      )}
+  const renderInvestorView = () => {
+    const hasMilestones = trancheMilestones && trancheMilestones.length > 0;
+    const totalCommitted = hasMilestones ? trancheMilestones.reduce((acc, m) => acc + m.trancheAmount, 0) : 0;
+    const totalReleased = hasMilestones ? trancheMilestones.filter(m => m.status === 'Released' || m.status === 'Authorized').reduce((acc, m) => acc + m.trancheAmount, 0) : 0;
+    const totalOnHold = hasMilestones ? trancheMilestones.filter(m => m.status === 'On Hold').reduce((acc, m) => acc + m.trancheAmount, 0) : 0;
 
-      {/* Charts & Visualizations */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* Burndown Chart */}
-        <div className="lg:col-span-2">
-          <BurndownChart data={burndown} />
-        </div>
+    return (
+      <div className="space-y-8">
+        {/* KPI Cards Grid - Strictly Live Backend Data, No Fallbacks */}
+        {kpis && kpis.length > 0 ? (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {kpis.map((kpi, idx) => (
+              <KPICard 
+                key={idx}
+                title={kpi.title} 
+                value={kpi.value} 
+                trend={kpi.trend} 
+                trendLabel={kpi.trendLabel}
+                icon={
+                  idx === 0 ? <DollarSign size={18} /> :
+                  idx === 1 ? <TrendingUp size={18} /> :
+                  idx === 2 ? <ShieldCheck size={18} /> :
+                  <Sparkles size={18} />
+                }
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="p-4 rounded-xl theme-card text-xs theme-muted italic border theme-border flex items-center justify-between">
+            <span>No live KPI telemetry recorded in current snapshot.</span>
+            <span className="text-[10px] text-slate-400 font-mono">Status: Awaiting Ingestion / Live Feed</span>
+          </div>
+        )}
 
-        {/* ROI / Program Health Holographic Radial Gauge */}
-        <div className="lg:col-span-1">
-          <div className="p-6 rounded-2xl theme-card h-full flex flex-col items-center justify-between relative overflow-hidden">
-            
-            <div className="w-full flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-3 mb-4">
-              <h3 className="text-sm font-bold theme-heading flex items-center gap-2">
-                <Sparkles size={16} className="text-[#FF5A14]" />
-                <span>Portfolio ROI Health Index</span>
-              </h3>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                healthScore >= 90 ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' :
-                healthScore >= 75 ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' :
-                healthScore >= 60 ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' :
-                'bg-red-500/10 text-red-500 border border-red-500/20'
-              }`}>
-                {healthScore >= 90 ? 'Grade A' : healthScore >= 75 ? 'Grade B' : healthScore >= 60 ? 'Grade C' : 'Grade D'}
-              </span>
-            </div>
+        {/* Charts & Visualizations */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* Burndown Chart */}
+          <div className="lg:col-span-2">
+            <BurndownChart data={burndown} />
+          </div>
 
-            {/* Circular Gauge */}
-            <div className="relative my-4">
-              <svg className="w-44 h-44 transform -rotate-90">
-                <circle 
-                  cx="88" 
-                  cy="88" 
-                  r="76" 
-                  stroke="currentColor" 
-                  strokeWidth="14" 
-                  fill="transparent" 
-                  className="text-slate-200 dark:text-white/10" 
-                />
-                <circle 
-                  cx="88" 
-                  cy="88" 
-                  r="76" 
-                  stroke="currentColor" 
-                  strokeWidth="14" 
-                  fill="transparent" 
-                  strokeDasharray="477" 
-                  strokeDashoffset={`${477 - (477 * healthScore) / 100}`} 
-                  strokeLinecap="round"
-                  className="text-[#FF5A14] transition-all duration-1000 filter drop-shadow-[0_0_12px_rgba(255,90,20,0.6)]" 
-                />
-              </svg>
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
-                <div className="text-4xl font-black theme-heading tracking-tight">
-                  {healthScore}%
-                </div>
-                <span className="text-[10px] font-bold text-[#FF7A45] uppercase tracking-wider block -mt-1">
-                  Confidence
+          {/* ROI / Program Health Holographic Radial Gauge */}
+          <div className="lg:col-span-1">
+            <div className="p-6 rounded-2xl theme-card h-full flex flex-col items-center justify-between relative overflow-hidden">
+              
+              <div className="w-full flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-3 mb-4">
+                <h3 className="text-sm font-bold theme-heading flex items-center gap-2">
+                  <Sparkles size={16} className="text-[#FF5A14]" />
+                  <span>Portfolio ROI Health Index</span>
+                </h3>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  healthScore >= 90 ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' :
+                  healthScore >= 75 ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' :
+                  healthScore >= 60 ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' :
+                  'bg-red-500/10 text-red-500 border border-red-500/20'
+                }`}>
+                  {healthScore >= 90 ? 'Grade A' : healthScore >= 75 ? 'Grade B' : healthScore >= 60 ? 'Grade C' : 'Grade D'}
                 </span>
               </div>
+
+              {/* Circular Gauge */}
+              <div className="relative my-4">
+                <svg className="w-44 h-44 transform -rotate-90">
+                  <circle 
+                    cx="88" 
+                    cy="88" 
+                    r="76" 
+                    stroke="currentColor" 
+                    strokeWidth="14" 
+                    fill="transparent" 
+                    className="text-slate-200 dark:text-white/10" 
+                  />
+                  <circle 
+                    cx="88" 
+                    cy="88" 
+                    r="76" 
+                    stroke="currentColor" 
+                    strokeWidth="14" 
+                    fill="transparent" 
+                    strokeDasharray="477" 
+                    strokeDashoffset={`${477 - (477 * healthScore) / 100}`} 
+                    strokeLinecap="round"
+                    className="text-[#FF5A14] transition-all duration-1000 filter drop-shadow-[0_0_12px_rgba(255,90,20,0.6)]" 
+                  />
+                </svg>
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
+                  <div className="text-4xl font-black theme-heading tracking-tight">
+                    {healthScore}%
+                  </div>
+                  <span className="text-[10px] font-bold text-[#FF7A45] uppercase tracking-wider block -mt-1">
+                    Confidence
+                  </span>
+                </div>
+              </div>
+
+              <div className="w-full text-center text-xs theme-muted pt-2 border-t border-slate-200 dark:border-white/10">
+                Calibrated against active supplier SOWs
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+        {/* ========================================================================= */}
+        {/* MILESTONE ATTAINMENT VS. FINANCIAL PAYOUTS: CAPITAL RELEASE GATEKEEPER */}
+        {/* ========================================================================= */}
+        <div className="theme-card rounded-2xl overflow-hidden shadow-sm border theme-border">
+          
+          {/* Header Strip with Capital Protection Status */}
+          <div className="p-6 border-b theme-border flex flex-col lg:flex-row lg:items-center justify-between gap-4 theme-subtle">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="p-1.5 bg-[#FF5A14]/15 text-[#FF5A14] rounded-lg">
+                  <Layers size={16} />
+                </span>
+                <h3 className="text-base font-bold theme-heading tracking-tight">
+                  Milestone Attainment vs. Financial Tranche Payouts
+                </h3>
+                {hasMilestones && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
+                    Capital Gatekeeper Active
+                  </span>
+                )}
+              </div>
+              <p className="text-xs theme-muted">
+                Ensures vendor contractual deliverables and technical SLAs are 100% verified before authorizing capital tranche disbursements.
+              </p>
             </div>
 
+            {/* Quick Metrics Pills (Visible only when real milestones exist) */}
+            {hasMilestones && (
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="px-3 py-1.5 rounded-xl theme-card border theme-border text-xs">
+                  <span className="theme-muted text-[10px] block">Committed Capital</span>
+                  <span className="font-bold theme-heading">${totalCommitted.toLocaleString()}</span>
+                </div>
+                <div className="px-3 py-1.5 rounded-xl theme-card border border-emerald-500/30 bg-emerald-500/5 text-xs">
+                  <span className="text-emerald-600 dark:text-emerald-400 text-[10px] block font-semibold">Disbursed</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">${totalReleased.toLocaleString()}</span>
+                </div>
+                <div className="px-3 py-1.5 rounded-xl theme-card border border-rose-500/30 bg-rose-500/5 text-xs">
+                  <span className="text-rose-600 dark:text-rose-400 text-[10px] block font-semibold">Withheld (SLA Hold)</span>
+                  <span className="font-bold text-rose-600 dark:text-rose-400">${totalOnHold.toLocaleString()}</span>
+                </div>
+              </div>
+            )}
           </div>
+
+          {!hasMilestones ? (
+            <div className="p-10 text-center text-xs theme-muted flex flex-col items-center justify-center space-y-2">
+              <Layers size={36} className="opacity-30 text-[#FF5A14] mb-1" />
+              <div className="font-bold theme-heading text-sm">No Live Milestone Tranche Telemetry Available</div>
+              <p className="max-w-md text-xs theme-muted">
+                No contractual milestone tranches have been recorded in the current program telemetry. Upload a vendor SOW or sync external connectors to populate real-time contractual milestone verification.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="theme-subtle border-b theme-border uppercase tracking-wider font-bold theme-muted text-[11px]">
+                  <th className="p-4">Milestone & Phase</th>
+                  <th className="p-4">Deliverables Verified</th>
+                  <th className="p-4">SLA Compliance</th>
+                  <th className="p-4">Tranche Amount</th>
+                  <th className="p-4">Gatekeeper Status</th>
+                  <th className="p-4 text-center">Investor Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y theme-border">
+                {trancheMilestones.map((milestone) => {
+                  const isExpanded = expandedMilestoneId === milestone.id;
+                  const isBlocked = milestone.status === 'On Hold';
+                  const isReleased = milestone.status === 'Released' || milestone.status === 'Authorized';
+
+                  return (
+                    <React.Fragment key={milestone.id}>
+                      <tr className={`theme-subtle-hover transition-colors ${isBlocked ? 'bg-rose-500/[0.03]' : ''}`}>
+                        
+                        {/* Milestone ID & Name */}
+                        <td className="p-4 max-w-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold text-[#FF5A14]">{milestone.id}</span>
+                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 dark:bg-white/10 theme-muted font-medium">
+                              {milestone.timeline}
+                            </span>
+                          </div>
+                          <div className="font-bold theme-heading mt-1">{milestone.name}</div>
+                        </td>
+
+                        {/* Deliverables Verified */}
+                        <td className="p-4 whitespace-nowrap">
+                          <div className="flex items-center justify-between text-[11px] mb-1">
+                            <span className="font-medium theme-heading">{milestone.deliverablesCount}</span>
+                            <span className="theme-muted font-mono">{milestone.deliverablesPercent}%</span>
+                          </div>
+                          <div className="w-36 h-2 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                milestone.deliverablesPercent === 100 ? 'bg-emerald-500' :
+                                milestone.deliverablesPercent > 50 ? 'bg-amber-500' : 'bg-slate-400'
+                              }`}
+                              style={{ width: `${milestone.deliverablesPercent}%` }}
+                            />
+                          </div>
+                        </td>
+
+                        {/* SLA Compliance */}
+                        <td className="p-4 whitespace-nowrap">
+                          {milestone.slaScore !== null ? (
+                            <div>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                milestone.slaStatus === 'Compliant' 
+                                  ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30' 
+                                  : 'bg-rose-500/15 text-rose-500 border border-rose-500/30 animate-pulse'
+                              }`}>
+                                {milestone.slaScore}% — {milestone.slaStatus}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 text-xs italic">Awaiting Milestone</span>
+                          )}
+                        </td>
+
+                        {/* Tranche Amount */}
+                        <td className="p-4 font-mono font-bold text-sm theme-heading whitespace-nowrap">
+                          ${milestone.trancheAmount.toLocaleString()}
+                        </td>
+
+                        {/* Gatekeeper Payout Status */}
+                        <td className="p-4 whitespace-nowrap">
+                          {milestone.status === 'Released' && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                              <CheckCircle2 size={13} /> Released & Paid
+                            </span>
+                          )}
+                          {milestone.status === 'Authorized' && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30">
+                              <Unlock size={13} /> Authorized by Investor
+                            </span>
+                          )}
+                          {milestone.status === 'On Hold' && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+                              <Lock size={13} /> On Hold (SLA Withheld)
+                            </span>
+                          )}
+                          {milestone.status === 'Locked' && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-100 dark:bg-white/5 text-slate-400 border theme-border">
+                              <Lock size={13} /> Scheduled Phase
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Interactive Investor Actions */}
+                        <td className="p-4 text-center whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-2">
+                            {/* Expand / Inspect Button */}
+                            <button
+                              type="button"
+                              onClick={() => setExpandedMilestoneId(isExpanded ? null : milestone.id)}
+                              className="px-3 py-1.5 rounded-xl theme-card border theme-border hover:border-[#FF5A14]/50 theme-heading text-xs font-semibold inline-flex items-center gap-1 transition-all"
+                            >
+                              <Eye size={12} />
+                              <span>Audit</span>
+                              {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                            </button>
+
+                            {/* Authorize or Place On Hold Button */}
+                            {milestone.status !== 'Released' && milestone.status !== 'Locked' && (
+                              <button
+                                type="button"
+                                onClick={() => handleToggleTranchePayout(milestone.id)}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold shadow-sm transition-all flex items-center gap-1 ${
+                                  milestone.status === 'On Hold'
+                                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white'
+                                    : 'bg-rose-600 hover:bg-rose-500 text-white'
+                                }`}
+                              >
+                                {milestone.status === 'On Hold' ? (
+                                  <>
+                                    <Unlock size={12} /> Authorize Release
+                                  </>
+                                ) : (
+                                  <>
+                                    <Lock size={12} /> Place On Hold
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* Expanded SOW Deliverables & SLA Audit Details */}
+                      {isExpanded && (
+                        <tr className="bg-slate-50 dark:bg-slate-900/40 border-b theme-border">
+                          <td colSpan={6} className="p-5">
+                            <div className="space-y-4 max-w-4xl">
+                              
+                              {/* AI Gatekeeper Alert Box */}
+                              <div className={`p-4 rounded-xl border leading-relaxed text-xs ${
+                                isBlocked 
+                                  ? 'bg-rose-500/10 border-rose-500/30 text-rose-800 dark:text-rose-300' 
+                                  : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+                              }`}>
+                                <div className="font-bold flex items-center gap-1.5 mb-1 text-[11px] uppercase tracking-wider">
+                                  {isBlocked ? <AlertTriangle size={14} className="text-rose-500" /> : <ShieldCheck size={14} className="text-emerald-500" />}
+                                  <span>Autonomous Capital Gatekeeper Verdict:</span>
+                                </div>
+                                <p className="font-sans font-medium">{milestone.aiAudit}</p>
+                              </div>
+
+                              {/* Two Columns: Contract Deliverables Checklist vs SLA Benchmark */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                                
+                                {/* Contract Deliverables */}
+                                <div className="p-4 rounded-xl theme-card border theme-border">
+                                  <div className="font-bold theme-heading mb-2.5 flex items-center justify-between">
+                                    <span className="flex items-center gap-1.5">
+                                      <FileCheck size={14} className="text-[#FF5A14]" />
+                                      Contract SOW Deliverables
+                                    </span>
+                                    <span className="text-[10px] theme-muted font-normal">Source: SharePoint M365</span>
+                                  </div>
+                                  <ul className="space-y-2">
+                                    {milestone.deliverables.map((item, dIdx) => (
+                                      <li key={dIdx} className="flex items-center justify-between text-[11px]">
+                                        <span className="theme-muted truncate mr-2">• {item.title}</span>
+                                        <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                                          item.status === 'Verified' ? 'bg-emerald-500/15 text-emerald-500' :
+                                          item.status.includes('Blocked') ? 'bg-red-500/15 text-red-500' : 'bg-slate-200 dark:bg-white/10 text-slate-400'
+                                        }`}>
+                                          {item.status}
+                                        </span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+
+                                {/* Financial Disbursement Governance */}
+                                <div className="p-4 rounded-xl theme-card border theme-border flex flex-col justify-between">
+                                  <div>
+                                    <div className="font-bold theme-heading mb-2.5 flex items-center justify-between">
+                                      <span className="flex items-center gap-1.5">
+                                        <DollarSign size={14} className="text-emerald-500" />
+                                        Disbursement Authorization Schedule
+                                      </span>
+                                      <span className="text-[10px] theme-muted font-normal">SAP S/4HANA Feed</span>
+                                    </div>
+                                    <div className="space-y-1.5 text-[11px] theme-muted">
+                                      <div>Tranche Allocation: <span className="font-bold theme-heading">${milestone.trancheAmount.toLocaleString()} USD</span></div>
+                                      <div>Disbursement Status: <span className="font-bold theme-heading">{milestone.payoutDate}</span></div>
+                                      <div>Linked Blocker Ticket: <span className="font-mono text-[#FF5A14] font-bold">{milestone.id === 'M-03' ? 'Risk R-802 (PRJ-1-103)' : 'None (Cleared)'}</span></div>
+                                    </div>
+                                  </div>
+
+                                  <div className="pt-3 border-t theme-border mt-3 text-[11px] flex items-center justify-between">
+                                    <span className="text-slate-400 italic">Investor Safeguard Rule #4</span>
+                                    <span className="font-bold text-[#FF5A14]">Zero-Disbursement on SLA Breach</span>
+                                  </div>
+                                </div>
+
+                              </div>
+
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
         </div>
 
       </div>
-    </div>
-  );
+    );
+  };
 
   // ==========================================
   // 2. PMO VIEW

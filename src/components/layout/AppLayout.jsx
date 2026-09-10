@@ -62,6 +62,7 @@ const AppLayout = () => {
           allNavDefinitions.dashboard,
           allNavDefinitions.reports,
           allNavDefinitions.knowledge,
+          allNavDefinitions.chat,
         ];
       case 'Program Director':
         return [
