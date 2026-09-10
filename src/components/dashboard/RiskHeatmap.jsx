@@ -3,13 +3,53 @@ import { ArrowRight, ShieldAlert } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const RiskHeatmap = ({ data }) => {
-  const grid = data && data.length > 0 ? data : [
-    { label: 'Critical', color: 'bg-red-500/80 hover:bg-red-500 text-white shadow-[0_0_10px_rgba(239,68,68,0.4)]', items: ['RSK-401 Cloud Outage', 'RSK-402 SLA Breach'] },
-    { label: 'High', color: 'bg-amber-500/80 hover:bg-amber-500 text-white shadow-[0_0_10px_rgba(245,158,11,0.3)]', items: ['RSK-301 Rate Limit', 'RSK-302 Key Personnel', 'RSK-303 Scope Drift'] },
-    { label: 'Medium', color: 'bg-yellow-500/80 hover:bg-yellow-500 text-slate-900', items: ['RSK-201 API Latency', 'RSK-202 Token Overrun'] },
-    { label: 'Low', color: 'bg-emerald-500/70 hover:bg-emerald-500 text-white', items: ['RSK-101 Documentation', 'RSK-102 Minor Patch', 'RSK-103 Timezone Lag'] }
-  ];
+  const formatGrid = (inputData) => {
+    if (!inputData || inputData.length === 0) {
+      return [
+        { label: 'Critical', color: 'bg-red-500/80 hover:bg-red-500 text-white shadow-[0_0_10px_rgba(239,68,68,0.4)]', items: ['RSK-401 Cloud Outage', 'RSK-402 SLA Breach'] },
+        { label: 'High', color: 'bg-amber-500/80 hover:bg-amber-500 text-white shadow-[0_0_10px_rgba(245,158,11,0.3)]', items: ['RSK-301 Rate Limit', 'RSK-302 Key Personnel', 'RSK-303 Scope Drift'] },
+        { label: 'Medium', color: 'bg-yellow-500/80 hover:bg-yellow-500 text-slate-900', items: ['RSK-201 API Latency', 'RSK-202 Token Overrun'] },
+        { label: 'Low', color: 'bg-emerald-500/70 hover:bg-emerald-500 text-white', items: ['RSK-101 Documentation', 'RSK-102 Minor Patch', 'RSK-103 Timezone Lag'] }
+      ];
+    }
 
+    // If inputData is already in grouped format [{ label, items }]
+    if (inputData[0]?.label && Array.isArray(inputData[0]?.items)) {
+      return inputData;
+    }
+
+    // If inputData is an array of individual risk objects: [{ id, severity, title, ... }]
+    const critItems = [];
+    const highItems = [];
+    const medItems = [];
+    const lowItems = [];
+
+    inputData.forEach((r) => {
+      const idStr = r.id || r.risk_id || 'R-100';
+      const titleStr = r.title || r.description || '';
+      const displayStr = titleStr ? `${idStr} ${titleStr}` : idStr;
+      const sev = (r.severity || 'Medium').toLowerCase();
+
+      if (sev === 'critical') {
+        critItems.push(displayStr);
+      } else if (sev === 'high') {
+        highItems.push(displayStr);
+      } else if (sev === 'medium') {
+        medItems.push(displayStr);
+      } else {
+        lowItems.push(displayStr);
+      }
+    });
+
+    return [
+      { label: 'Critical', color: 'bg-red-500/80 hover:bg-red-500 text-white shadow-[0_0_10px_rgba(239,68,68,0.4)]', items: critItems },
+      { label: 'High', color: 'bg-amber-500/80 hover:bg-amber-500 text-white shadow-[0_0_10px_rgba(245,158,11,0.3)]', items: highItems },
+      { label: 'Medium', color: 'bg-yellow-500/80 hover:bg-yellow-500 text-slate-900', items: medItems },
+      { label: 'Low', color: 'bg-emerald-500/70 hover:bg-emerald-500 text-white', items: lowItems }
+    ];
+  };
+
+  const grid = formatGrid(data);
   const totalRisks = grid.reduce((acc, row) => acc + (row.items?.length || 0), 0);
 
   return (

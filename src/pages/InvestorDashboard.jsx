@@ -320,7 +320,11 @@ const InvestorDashboard = () => {
                     Ingesting Document Telemetry ({uploadProgress}%)...
                   </span>
                   <span className="text-[11px] theme-muted font-mono">
-                    Chunking semantic embeddings & triggering Risk Agent
+                    {uploadProgress < 25 && "Chunking semantic embeddings & triggering Intake Agent..."}
+                    {uploadProgress >= 25 && uploadProgress < 50 && "Evaluating Financial Variances & Contract Risks..."}
+                    {uploadProgress >= 50 && uploadProgress < 75 && "Running Predictive Modeling & Schedule Forecasting..."}
+                    {uploadProgress >= 75 && uploadProgress < 90 && "Computing Governance KPIs & Quality Metrics..."}
+                    {uploadProgress >= 90 && "Synthesizing Executive Report & Risk Heatmaps..."}
                   </span>
                 </div>
               ) : (
@@ -337,6 +341,21 @@ const InvestorDashboard = () => {
                 </>
               )}
             </button>
+
+            {/* Live Enterprise Jira Telemetry Ribbon */}
+            <div className="mt-3 pt-3 border-t theme-border flex items-center justify-between text-[11px]">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span className="font-semibold theme-heading">Jira Cloud Telemetry:</span>
+                <span className="theme-muted font-mono text-[10px]">dipakkrsaha44.atlassian.net</span>
+              </div>
+              <span className="font-mono text-emerald-400 font-bold text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                {data?.jira_synced ? `Live (${data?.jira_issues_count ?? 0} tickets)` : 'Connected'}
+              </span>
+            </div>
           </div>
           
           {/* Active Escalations Feed */}
