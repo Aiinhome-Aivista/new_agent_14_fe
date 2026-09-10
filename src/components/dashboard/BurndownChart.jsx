@@ -69,7 +69,7 @@ const BurndownChart = ({ data: initialData, className, minHeight = "min-h-[220px
                 color: isDark ? '#FFFFFF' : '#0F172A',
                 boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.2)'
               }}
-              formatter={(value) => [`$${value.toLocaleString()}`, '']}
+              formatter={(value) => [value !== null && value !== undefined ? `$${Number(value).toLocaleString()}` : 'N/A', '']}
             />
             <Legend 
               iconType="circle" 
