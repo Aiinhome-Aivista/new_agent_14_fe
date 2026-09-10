@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { knowledgeApi } from '../api/knowledgeApi';
-import { BookOpen, Search, FileText, Database, Layers } from 'lucide-react';
+import { BookOpen, Search, FileText, Database, Layers, Sparkles, CheckCircle2, Filter } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import FuturisticLoader from '../components/common/FuturisticLoader';
 
@@ -11,14 +11,15 @@ const KnowledgePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
+  const [selectedPartition, setSelectedPartition] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState(null);
 
-  const fetchKnowledge = async () => {
+  const fetchKnowledge = async (partition = selectedPartition) => {
     try {
       setLoading(true);
-      const res = await knowledgeApi.getKnowledge();
+      const res = await knowledgeApi.getKnowledge(partition);
       setKnowledgeData(res);
     } catch (err) {
       console.error("Failed to load knowledge documents:", err);
@@ -29,8 +30,14 @@ const KnowledgePage = () => {
   };
 
   useEffect(() => {
-    fetchKnowledge();
+    fetchKnowledge('ALL');
   }, []);
+
+  const handlePartitionChange = (pId) => {
+    setSelectedPartition(pId);
+    setSearchResults(null);
+    fetchKnowledge(pId);
+  };
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -40,7 +47,7 @@ const KnowledgePage = () => {
     }
     try {
       setSearching(true);
-      const res = await knowledgeApi.searchKnowledge(searchQuery);
+      const res = await knowledgeApi.searchKnowledge(searchQuery, selectedPartition);
       setSearchResults(res.results || []);
     } catch (err) {
       console.error("Search failed:", err);
@@ -49,16 +56,16 @@ const KnowledgePage = () => {
     }
   };
 
-  if (loading) {
+  if (loading && !knowledgeData) {
     return (
       <FuturisticLoader 
         title="Accessing Semantic Vector Knowledge Base..." 
-        subtitle="Retrieving ingested contracts, meeting minutes, and RAG embeddings"
+        subtitle="Retrieving partitioned vector embeddings, contracts, and RAG index"
       />
     );
   }
 
-  if (error) {
+  if (error && !knowledgeData) {
     return (
       <div className="p-8">
         <div className="p-6 rounded-2xl theme-card border-red-500/40 text-center max-w-xl mx-auto">
@@ -71,16 +78,20 @@ const KnowledgePage = () => {
 
   const documents = knowledgeData?.documents || [];
   const totalChunks = knowledgeData?.total_chunks || 0;
+  const partitions = knowledgeData?.partitions || {};
+  const projects = knowledgeData?.projects || [];
 
   return (
-    <div className="py-2 h-full flex flex-col space-y-8">
+    <div className="py-2 h-full flex flex-col space-y-6">
       {/* Header */}
       <div className="flex justify-between items-end pb-2 border-b border-slate-200 dark:border-white/10">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black theme-heading tracking-tight">Knowledge Base & RAG Index</h1>
-          <p className="text-xs sm:text-sm theme-muted mt-1">Search through vectorized documents, meeting minutes, and program knowledge.</p>
+          <p className="text-xs sm:text-sm theme-muted mt-1">
+            Enterprise-grade partitioned vector store (ChromaDB HNSW) with recursive semantic chunking and project-level context isolation.
+          </p>
         </div>
-        {['PMO', 'Project Manager'].includes(user?.role) && (
+        {['PMO', 'Project Manager', 'Program Director'].includes(user?.role) && (
           <Link
             to="/ingestion"
             className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white rounded-xl text-xs font-bold shadow-md hover:brightness-110 transition-all"
@@ -91,14 +102,16 @@ const KnowledgePage = () => {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="theme-card p-5 rounded-2xl flex items-center gap-4">
           <div className="p-3 bg-blue-500/10 text-blue-500 rounded-xl border border-blue-500/20">
             <FileText size={24} />
           </div>
           <div>
             <div className="text-2xl font-black theme-heading">{documents.length}</div>
-            <div className="text-[11px] font-bold theme-muted uppercase tracking-wider mt-0.5">Indexed Source Files</div>
+            <div className="text-[11px] font-bold theme-muted uppercase tracking-wider mt-0.5">
+              {selectedPartition === 'ALL' ? 'Total Source Files' : `Partition ${selectedPartition} Files`}
+            </div>
           </div>
         </div>
 
@@ -108,7 +121,9 @@ const KnowledgePage = () => {
           </div>
           <div>
             <div className="text-2xl font-black theme-heading">{totalChunks}</div>
-            <div className="text-[11px] font-bold theme-muted uppercase tracking-wider mt-0.5">Vectorized Semantic Chunks</div>
+            <div className="text-[11px] font-bold theme-muted uppercase tracking-wider mt-0.5">
+              Vectorized Semantic Chunks
+            </div>
           </div>
         </div>
 
@@ -118,8 +133,55 @@ const KnowledgePage = () => {
           </div>
           <div>
             <div className="text-2xl font-black theme-heading">Vector Vault</div>
-            <div className="text-[11px] font-bold theme-muted uppercase tracking-wider mt-0.5">Persistent Semantic Index</div>
+            <div className="text-[11px] font-bold theme-muted uppercase tracking-wider mt-0.5">
+              {knowledgeData?.embedding_model || '384-dim Dense Vectors'}
+            </div>
           </div>
+        </div>
+      </div>
+
+      {/* Vector Partition Isolation Filter Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl theme-card border theme-border">
+        <div className="flex items-center gap-2">
+          <Filter size={15} className="text-[#FF5A14]" />
+          <span className="text-xs font-bold theme-heading">Vector Partition Filter:</span>
+          <span className="text-[10px] theme-muted">(Prevents cross-project context leakage)</span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => handlePartitionChange('ALL')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              selectedPartition === 'ALL'
+                ? 'bg-[#FF5A14] text-white shadow-sm'
+                : 'theme-subtle hover:theme-heading theme-muted border theme-border'
+            }`}
+          >
+            All Partitions
+          </button>
+
+          {projects.map((proj) => {
+            const count = partitions[proj.id] || 0;
+            const isSelected = selectedPartition === proj.id;
+            return (
+              <button
+                key={proj.id}
+                onClick={() => handlePartitionChange(proj.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  isSelected
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'theme-subtle hover:theme-heading theme-muted border theme-border'
+                }`}
+              >
+                <span>{proj.jira_key || `Project ${proj.id}`}: {proj.name}</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                  isSelected ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300'
+                }`}>
+                  {count} chunks
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -132,36 +194,63 @@ const KnowledgePage = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search across program meeting minutes, architectural decisions, and risk notes..."
+              placeholder={`Search ${selectedPartition === 'ALL' ? 'across all vector partitions' : `within partition Project ${selectedPartition}`} (meeting minutes, architectural decisions, risks)...`}
               className="w-full pl-11 pr-4 py-3 theme-input rounded-xl text-sm focus:outline-none focus:border-[#FF5A14] transition-colors"
             />
           </div>
           <button
             type="submit"
             disabled={searching}
-            className="px-6 py-3 bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white text-xs font-bold rounded-xl hover:brightness-110 transition-all disabled:opacity-50 flex items-center gap-2"
+            className="px-6 py-3 bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white text-xs font-bold rounded-xl hover:brightness-110 transition-all disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
           >
-            {searching ? 'Searching...' : 'Search Context'}
+            {searching ? 'Searching...' : 'Search Partition'}
           </button>
         </form>
 
-        {/* Search Results */}
+        {/* Semantic Search Results */}
         {searchResults !== null && (
           <div className="mt-6 border-t theme-border pt-4">
-            <h3 className="text-sm font-bold theme-heading mb-3">
-              Search Results ({searchResults.length} matches for "{searchQuery}")
-            </h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold theme-heading flex items-center gap-2">
+                <Sparkles size={16} className="text-[#FF5A14]" />
+                <span>
+                  Semantic Retrieval Results ({searchResults.length} matches in {selectedPartition === 'ALL' ? 'All Partitions' : `Partition Project ${selectedPartition}`})
+                </span>
+              </h3>
+              <button 
+                onClick={() => setSearchResults(null)}
+                className="text-xs text-slate-400 hover:text-[#FF5A14] font-medium"
+              >
+                Clear Search
+              </button>
+            </div>
+
             {searchResults.length === 0 ? (
-              <p className="text-xs theme-muted italic">No matching chunks found in semantic memory.</p>
+              <p className="text-xs theme-muted italic py-3 text-center">No matching vector chunks found in this partition.</p>
             ) : (
               <div className="space-y-3">
                 {searchResults.map((item, idx) => (
-                  <div key={idx} className="p-4 rounded-xl theme-subtle border theme-border">
-                    <div className="flex justify-between items-center text-xs theme-muted mb-1.5">
-                      <span className="font-bold text-[#FF5A14]">Source: {item.metadata?.source || 'Document'}</span>
-                      <span className="font-mono text-[10px]">Chunk ID: {item.id}</span>
+                  <div key={idx} className="p-4 rounded-xl theme-card border theme-border space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-[#FF5A14] font-mono">{item.source || item.metadata?.source || 'Document'}</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 font-mono text-slate-500">
+                          {item.id}
+                        </span>
+                        {item.metadata?.project_id && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 font-bold border border-blue-500/20">
+                            Partition: Project {item.metadata.project_id}
+                          </span>
+                        )}
+                      </div>
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 flex items-center gap-1">
+                        <CheckCircle2 size={11} />
+                        <span>{item.score || 'Match'} Similarity</span>
+                      </span>
                     </div>
-                    <p className="text-xs theme-heading whitespace-pre-wrap leading-relaxed">{item.content}</p>
+                    <p className="text-xs theme-heading leading-relaxed font-sans bg-slate-50 dark:bg-slate-900/40 p-3 rounded-lg border theme-border">
+                      {item.content}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -172,46 +261,86 @@ const KnowledgePage = () => {
 
       {/* Ingested Documents List */}
       <div className="theme-card rounded-2xl p-6 flex-1">
-        <h2 className="text-base font-bold theme-heading mb-4 flex items-center gap-2">
-          <BookOpen className="text-[#FF5A14]" size={20} />
-          <span>Ingested Knowledge Sources</span>
-        </h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+          <h2 className="text-base font-bold theme-heading flex items-center gap-2">
+            <BookOpen className="text-[#FF5A14]" size={20} />
+            <span>Ingested Knowledge Sources</span>
+          </h2>
+          <span className="text-xs theme-muted font-mono">
+            {documents.length} source documents in {selectedPartition === 'ALL' ? 'all partitions' : `partition ${selectedPartition}`}
+          </span>
+        </div>
 
         {documents.length === 0 ? (
           <div className="text-center py-12 border border-dashed theme-border rounded-2xl">
             <BookOpen className="mx-auto text-slate-400 mb-3" size={40} />
-            <h3 className="text-sm font-bold theme-heading">No Knowledge Sources Ingested</h3>
+            <h3 className="text-sm font-bold theme-heading">No Documents in this Partition</h3>
             <p className="text-xs theme-muted mt-1 max-w-sm mx-auto">
-              Upload MOMs, status updates, or contract addendums to populate the semantic index.
+              Upload MOMs or specification documents for this project partition to index vector memory.
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {documents.map((doc, idx) => (
-              <div key={idx} className="p-4 rounded-xl theme-subtle border theme-border flex flex-col justify-between hover:border-[#FF5A14]/40 transition-all">
+              <div 
+                key={idx} 
+                className="p-4 sm:p-5 rounded-2xl theme-subtle border theme-border flex flex-col justify-between hover:border-[#FF5A14]/40 transition-all shadow-sm space-y-3"
+              >
                 <div>
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex items-center gap-2">
-                      <FileText className="text-[#FF5A14] flex-shrink-0" size={16} />
-                      <span className="font-bold text-xs theme-heading truncate max-w-[200px]" title={doc.filename}>
-                        {doc.filename}
-                      </span>
+                  {/* Document Header */}
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex items-start gap-2.5 min-w-0">
+                      <div className="p-2 rounded-xl bg-[#FF5A14]/10 text-[#FF5A14] border border-[#FF5A14]/20 flex-shrink-0 mt-0.5">
+                        <FileText size={16} />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-xs theme-heading truncate" title={doc.title || doc.filename}>
+                          {doc.title || doc.filename}
+                        </h4>
+                        <div className="flex items-center gap-2 text-[11px] theme-muted font-mono mt-0.5 truncate">
+                          <span className="px-1.5 py-0.2 rounded bg-slate-200 dark:bg-white/10 text-[9px] font-bold text-slate-700 dark:text-slate-300">
+                            {doc.file_ext || 'TXT'}
+                          </span>
+                          <span>{doc.filename || doc.source}</span>
+                          <span>•</span>
+                          <span>{doc.timestamp || 'Indexed'}</span>
+                        </div>
+                      </div>
                     </div>
-                    <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-blue-500/10 text-blue-500">
+
+                    <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-500 border border-blue-500/25 flex-shrink-0">
                       {doc.chunk_count} chunks
                     </span>
                   </div>
-                  
+
+                  {/* Semantic NLP Tags */}
+                  {doc.tags && doc.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-2.5">
+                      {doc.tags.map((tag, tIdx) => (
+                        <span key={tIdx} className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-200/60 dark:bg-white/5 theme-muted border theme-border">
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Clean Content Preview */}
                   {doc.preview && (
-                    <p className="text-[11px] theme-muted line-clamp-3 mb-3 theme-card p-2.5 rounded-lg border theme-border font-mono">
+                    <div className="text-[11px] theme-heading leading-relaxed theme-card p-3 rounded-xl border theme-border font-sans">
                       {doc.preview}
-                    </p>
+                    </div>
                   )}
                 </div>
 
-                <div className="flex justify-between items-center text-[10px] theme-muted pt-2 border-t theme-border">
-                  <span>Project ID: {doc.project_id || 1}</span>
-                  <span className="font-mono">Indexed in Vector Memory</span>
+                {/* Vector Metadata & Partition Footer */}
+                <div className="flex items-center justify-between text-[10px] theme-muted pt-2.5 border-t theme-border">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>{doc.embedding_info || '384-dim Dense Vectors'}</span>
+                  </span>
+                  <span className="font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-500 font-bold border border-blue-500/20">
+                    Partition: Project {doc.project_id || 1}
+                  </span>
                 </div>
               </div>
             ))}
