@@ -261,10 +261,10 @@ const AppLayout = () => {
         </header>
 
         {/* Main Content View with Semantic Theme Background */}
-        <main className={`flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 transition-colors duration-200 ${
+        <main className={`flex-1 overflow-y-auto p-4 sm:p-5 lg:px-6 lg:py-4 transition-colors duration-200 ${
           theme === 'dark' ? 'bg-[#0B0F19] bg-grid-dark text-slate-100' : 'bg-[#F1F5F9] bg-grid-light text-slate-800'
         }`}>
-          <div className="max-w-7xl mx-auto h-full relative">
+          <div className="w-full max-w-[1720px] mx-auto h-full relative">
             <Outlet />
           </div>
         </main>

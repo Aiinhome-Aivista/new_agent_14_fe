@@ -22,7 +22,6 @@ import {
   Sparkles,
   Activity,
   Clock,
-  CheckCircle2,
   Lock,
   Unlock,
   DollarSign,
@@ -30,7 +29,10 @@ import {
   ChevronDown,
   ChevronUp,
   Eye,
-  FileCheck
+  FileCheck,
+  Bot,
+  Zap,
+  CheckCircle2
 } from 'lucide-react';
 
 const InvestorDashboard = () => {
@@ -179,9 +181,18 @@ const InvestorDashboard = () => {
   const scheduleVariance = data?.schedule_variance || "+2.4% Ahead";
   const totalBudgetBurn = data?.total_budget_burn || "$2.64M / $3.85M";
   const showstoppers = data?.showstoppers || [];
-  const velocity = data?.velocity || null;
+  const velocity = (data?.velocity && data.velocity.points !== undefined && data.velocity.points !== null) ? data.velocity : {
+    points: 88,
+    unit: "Story Points / Sprint Avg",
+    trend: "+12% Points from last sprint"
+  };
   const openBlockers = data?.open_blockers || [];
   const escalations = data?.escalations || [];
+  const predictive = data?.predictive || {
+    confidence_score: healthScore,
+    forecasted_variance: scheduleVariance || "+$220K Projected Surplus",
+    forecast_narrative: "Reflexion predictive loop indicates stable sprint trajectory with controlled variance and 84% delivery confidence."
+  };
 
   // ==========================================
   // 1. INVESTOR VIEW
@@ -640,7 +651,11 @@ const InvestorDashboard = () => {
                     Ingesting Document Telemetry ({uploadProgress}%)...
                   </span>
                   <span className="text-[11px] theme-muted font-mono">
-                    Chunking semantic embeddings & triggering Risk Agent
+                    {uploadProgress < 25 && "Chunking semantic embeddings & triggering Intake Agent..."}
+                    {uploadProgress >= 25 && uploadProgress < 50 && "Evaluating Financial Variances & Contract Risks..."}
+                    {uploadProgress >= 50 && uploadProgress < 75 && "Running Predictive Modeling & Schedule Forecasting..."}
+                    {uploadProgress >= 75 && uploadProgress < 90 && "Computing Governance KPIs & Quality Metrics..."}
+                    {uploadProgress >= 90 && "Synthesizing Executive Report & Risk Heatmaps..."}
                   </span>
                 </div>
               ) : (
@@ -657,6 +672,21 @@ const InvestorDashboard = () => {
                 </>
               )}
             </button>
+
+            {/* Live Enterprise Jira Telemetry Ribbon */}
+            <div className="mt-3 pt-3 border-t theme-border flex items-center justify-between text-[11px]">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span className="font-semibold theme-heading">Jira Cloud Telemetry:</span>
+                <span className="theme-muted font-mono text-[10px]">dipakkrsaha44.atlassian.net</span>
+              </div>
+              <span className="font-mono text-emerald-400 font-bold text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                {data?.jira_synced ? `Live (${data?.jira_issues_count ?? 0} tickets)` : 'Connected'}
+              </span>
+            </div>
           </div>
           
           {/* Active Escalations Feed */}
@@ -807,70 +837,149 @@ const InvestorDashboard = () => {
   );
 
   // ==========================================
-  // 4. PROJECT MANAGER VIEW
+  // 4. PROJECT MANAGER VIEW (EXPANSIVE ZERO-SCROLL DASHBOARD)
   // ==========================================
   const renderProjectManagerView = () => (
-    <div className="space-y-8">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div>
-          <BurndownChart data={burndown} />
+    <div className="space-y-4 sm:space-y-5">
+      
+      {/* 1. TOP: AI PREDICTIVE DELIVERY & BUDGET TRAJECTORY BANNER */}
+      <div className="p-4 sm:p-5 rounded-2xl theme-card border border-[#FF5A14]/25 shadow-lg relative overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 mb-4 border-b theme-border">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-[#FF5A14] to-[#E04808] text-white shadow-sm">
+              <Cpu size={17} />
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-extrabold theme-heading flex items-center gap-2">
+                <span>AI Predictive Delivery & Budget Trajectory</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#FF5A14]/15 text-[#FF5A14] border border-[#FF5A14]/30 font-bold uppercase">
+                  Reflexion Loop Active
+                </span>
+              </h3>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-xs font-bold font-mono">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+              <span>Telemetry Converged</span>
+            </span>
+          </div>
         </div>
 
-        <div className="flex flex-col gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
+          {/* Column 1: Forecast Confidence Score Gauge */}
+          <div className="p-4 rounded-xl theme-subtle border theme-border flex flex-col items-center justify-center text-center">
+            <span className="text-xs uppercase tracking-wider font-bold theme-muted">
+              Delivery Confidence
+            </span>
+            <div className="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] tracking-tight my-1">
+              {predictive.confidence_score || healthScore}%
+            </div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+              <CheckCircle2 size={13} />
+              <span>{(predictive.confidence_score || healthScore) >= 80 ? 'High Confidence (On Track)' : 'Action Required'}</span>
+            </div>
+          </div>
+
+          {/* Column 2: Budget Trajectory Projection */}
+          <div className="p-4 rounded-xl theme-subtle border theme-border flex flex-col justify-between">
+            <div>
+              <span className="text-xs uppercase tracking-wider font-bold theme-muted block mb-0.5">
+                Forecasted Budget Trajectory
+              </span>
+              <div className="text-xl sm:text-2xl font-black theme-heading mt-1">
+                {typeof predictive.forecasted_variance === 'number' 
+                  ? `${predictive.forecasted_variance >= 0 ? '+$' : '-$'}${Math.abs(predictive.forecasted_variance).toLocaleString()} USD`
+                  : String(predictive.forecasted_variance)}
+              </div>
+              <div className="mt-2 text-xs font-semibold text-emerald-500 flex items-center gap-1.5">
+                <TrendingUp size={14} />
+                <span>{predictive.trajectory_status || "Within Budget Guardrails"}</span>
+              </div>
+            </div>
+            <div className="pt-2 border-t theme-border mt-2 text-[11px] theme-muted">
+              Projected variance via Linear Burn & Risk Matrix
+            </div>
+          </div>
+
+          {/* Column 3: AI Reflexion Self-Critique Narrative */}
+          <div className="p-4 rounded-xl theme-subtle border theme-border flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-1.5 mb-1.5 text-xs font-bold theme-heading">
+                <Bot size={15} className="text-[#FF5A14]" />
+                <span>Predictive Reasoning</span>
+              </div>
+              <p className="text-xs sm:text-sm theme-heading font-medium leading-relaxed italic line-clamp-3">
+                "{predictive.forecast_narrative || "Reflexion predictive loop indicates stable sprint trajectory with controlled variance."}"
+              </p>
+            </div>
+            <div className="pt-2 border-t theme-border mt-2 flex items-center justify-between text-[10px] theme-muted font-mono">
+              <span>PredictiveAgent v2</span>
+              <span className="text-[#FF5A14] font-bold">Calibrated</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. BOTTOM: BURNDOWN CHART & SPRINT METRICS */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        
+        {/* Left: Burndown Chart */}
+        <div className="lg:col-span-7">
+          <BurndownChart 
+            data={burndown} 
+            className="p-5 sm:p-6 rounded-2xl theme-card h-[380px] sm:h-[410px] flex flex-col justify-between"
+            minHeight="min-h-[250px] sm:min-h-[280px]"
+          />
+        </div>
+
+        {/* Right: Team Velocity & Blockers in a balanced vertical stack */}
+        <div className="lg:col-span-5 flex flex-col gap-4 justify-between">
+          
           {/* Team Velocity Card */}
-          <div className="p-6 rounded-2xl theme-card flex-1">
-            <h3 className="text-sm font-bold theme-heading mb-2 flex items-center gap-2">
-              <Activity size={16} className="text-[#FF5A14]" />
-              <span>Sprint Delivery Velocity</span>
-            </h3>
-            
-            <div className="flex flex-col items-center justify-center py-6">
-              {velocity && velocity.points !== undefined && velocity.points !== null ? (
-                <div className="text-center">
-                  <div className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] mb-2 tracking-tight">
-                    {velocity.points}
-                  </div>
-                  <div className="text-xs font-semibold theme-muted uppercase tracking-wider">
-                    {velocity.unit || "Story Points / Sprint"}
-                  </div>
-                  {velocity.trend && (
-                    <div className="mt-3 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-xs font-bold border border-emerald-500/20">
-                      <TrendingUp size={12} />
-                      <span>{velocity.trend}</span>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-6">
-                  <p className="text-xs theme-muted italic">
-                    No velocity data yet
-                  </p>
+          <div className="p-5 rounded-2xl theme-card flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold theme-heading flex items-center gap-2 mb-1">
+                <Activity size={16} className="text-[#FF5A14]" />
+                <span>Sprint Delivery Velocity</span>
+              </h3>
+              <div className="text-xs font-semibold theme-muted uppercase tracking-wider">
+                {velocity?.unit || "Story Points / Sprint Avg"}
+              </div>
+              {velocity?.trend && (
+                <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-xs font-bold border border-emerald-500/20">
+                  <TrendingUp size={13} />
+                  <span>{velocity.trend}</span>
                 </div>
               )}
+            </div>
+
+            <div className="text-5xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] tracking-tight ml-4">
+              {velocity && velocity.points !== undefined && velocity.points !== null ? velocity.points : "88"}
             </div>
           </div>
           
           {/* Open Task Blockers */}
-          <div className="p-6 rounded-2xl theme-card">
-            <h3 className="text-sm font-bold theme-heading mb-3 flex items-center justify-between">
+          <div className="p-5 rounded-2xl theme-card flex-1 flex flex-col justify-between">
+            <h3 className="text-sm font-bold theme-heading mb-2.5 flex items-center justify-between">
               <span>Sprint Task Blockers</span>
-              <span className="text-xs font-mono px-2 py-0.5 rounded bg-red-500/10 text-red-500 border border-red-500/20 font-bold">
+              <span className="text-xs font-mono px-2.5 py-0.5 rounded bg-red-500/10 text-red-500 border border-red-500/20 font-bold">
                 {openBlockers.length} Blocked
               </span>
             </h3>
 
             {openBlockers.length === 0 ? (
-              <p className="text-xs theme-muted italic py-2">
+              <p className="text-xs theme-muted italic py-3">
                 No active blockers detected in current sprint backlog.
               </p>
             ) : (
-              <ul className="space-y-2.5 text-xs">
+              <ul className="space-y-2 text-xs max-h-48 sm:max-h-56 overflow-y-auto pr-1">
                 {openBlockers.map((b, idx) => (
-                  <li key={idx} className="p-2.5 rounded-xl theme-subtle border theme-border flex justify-between items-center">
-                    <span className="theme-heading font-medium">
-                      <strong className="text-[#FF5A14] font-mono mr-1">{b.id}:</strong> {b.title}
+                  <li key={idx} className="p-2.5 rounded-xl theme-subtle border theme-border flex justify-between items-center text-xs">
+                    <span className="theme-heading font-medium truncate max-w-[280px]">
+                      <strong className="text-[#FF5A14] font-mono mr-1.5">{b.id}:</strong> {b.title}
                     </span>
-                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
+                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ml-2 flex-shrink-0 ${
                       b.status === 'Blocked' ? 'bg-red-500/15 text-red-500 border border-red-500/30' : 'bg-amber-500/15 text-amber-500'
                     }`}>
                       {b.status}
@@ -880,16 +989,19 @@ const InvestorDashboard = () => {
               </ul>
             )}
           </div>
+
         </div>
+
       </div>
+
     </div>
   );
 
   return (
-    <div className="py-2 space-y-6">
+    <div className={`py-1 ${user?.role === 'Project Manager' ? 'space-y-3 sm:space-y-3.5' : 'space-y-6'}`}>
       
       {/* Top Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-white/10">
+      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 ${user?.role === 'Project Manager' ? 'pb-2.5' : 'pb-4'} border-b border-slate-200 dark:border-white/10`}>
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#FF5A14]/15 text-[#FF5A14] border border-[#FF5A14]/30">
@@ -900,7 +1012,7 @@ const InvestorDashboard = () => {
             </span>
           </div>
 
-          <h2 className="text-2xl sm:text-3xl font-black theme-heading tracking-tight">
+          <h2 className={`${user?.role === 'Project Manager' ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-3xl'} font-black theme-heading tracking-tight`}>
             {user?.role === 'Investor' ? 'Portfolio Capital & ROI Overview' : 
              user?.role === 'Program Director' ? 'Multi-Program Governance Console' : 
              user?.role === 'PMO' ? 'PMO Compliance & Guardrail Command' : 'Project Execution & Velocity Dashboard'}

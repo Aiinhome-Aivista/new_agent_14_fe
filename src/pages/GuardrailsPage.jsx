@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { guardrailsApi } from '../api/guardrailsApi';
-import { ShieldCheck, ShieldAlert, CheckCircle, XCircle, Clock, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, CheckCircle, XCircle, Clock, AlertTriangle, ExternalLink } from 'lucide-react';
 import FuturisticLoader from '../components/common/FuturisticLoader';
 
 const GuardrailsPage = () => {
@@ -33,8 +33,12 @@ const GuardrailsPage = () => {
   const handleResolve = async (itemId, decision) => {
     try {
       setActionLoading(itemId);
-      await guardrailsApi.resolveQueueItem(itemId, decision, `Resolved as ${decision} by ${user?.email || 'Officer'}`);
-      showToast(`Item #${itemId} marked as ${decision}`, 'success');
+      const res = await guardrailsApi.resolveQueueItem(itemId, decision, `Resolved as ${decision} by ${user?.email || 'Officer'}`);
+      if (decision === 'Approved' && res?.jira?.key) {
+        showToast(`Item #${itemId} approved! Raised Jira ticket: ${res.jira.key}`, 'success');
+      } else {
+        showToast(`Item #${itemId} marked as ${decision}`, 'success');
+      }
       await fetchData();
     } catch (err) {
       console.error("Resolution failed:", err);
@@ -188,6 +192,19 @@ const GuardrailsPage = () => {
                     }`}>
                       {item.status}
                     </span>
+
+                    {item.payload?.jira_issue_key && (
+                      <a
+                        href={item.payload.jira_url || `https://dipakkrsaha44.atlassian.net/browse/${item.payload.jira_issue_key}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-500 border border-blue-500/30 hover:bg-blue-500/25 transition-all shadow-sm"
+                        title="View issue on Jira Cloud"
+                      >
+                        <ExternalLink size={10} />
+                        <span>Jira: {item.payload.jira_issue_key}</span>
+                      </a>
+                    )}
                   </div>
                   <p className="text-xs theme-muted">{item.reasoning || 'Automated escalation flag'}</p>
                   <div className="text-[11px] theme-muted flex items-center gap-1 mt-1 font-mono">
