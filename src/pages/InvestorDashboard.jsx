@@ -780,16 +780,32 @@ const InvestorDashboard = () => {
             {/* Live Enterprise Jira Telemetry Ribbon */}
             <div className="mt-3 pt-3 border-t theme-border flex items-center justify-between text-[11px]">
               <div className="flex items-center gap-2">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </span>
-                <span className="font-semibold theme-heading">Jira Cloud Telemetry:</span>
-                <span className="theme-muted font-mono text-[10px]">dipakkrsaha44.atlassian.net</span>
+                {data?.jira_integration?.is_connected ? (
+                  <>
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <span className="font-semibold theme-heading">Jira Cloud Telemetry:</span>
+                    <span className="theme-muted font-mono text-[10px]">{data.jira_integration.host || 'Connected'}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="flex h-2 w-2 rounded-full bg-slate-400"></span>
+                    <span className="font-semibold theme-muted">Jira Cloud Connector:</span>
+                    <span className="theme-muted font-mono text-[10px]">Offline / Disconnected</span>
+                  </>
+                )}
               </div>
-              <span className="font-mono text-emerald-400 font-bold text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                {data?.jira_synced ? `Live (${data?.jira_issues_count ?? 0} tickets)` : 'Connected'}
-              </span>
+              {data?.jira_integration?.is_connected ? (
+                <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                  {data?.jira_synced ? `Live (${data?.jira_issues_count ?? 0} tickets)` : 'Live Connected'}
+                </span>
+              ) : (
+                <span className="font-mono text-slate-400 font-medium text-[10px] px-2 py-0.5 rounded-full bg-slate-500/10 border border-slate-500/20">
+                  Disconnected
+                </span>
+              )}
             </div>
           </div>
           

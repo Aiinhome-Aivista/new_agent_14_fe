@@ -5,7 +5,7 @@ import { useToast } from '../context/ToastContext';
 import { 
   Save, Server, GitBranch, Database, FileText, Bell, Clock, 
   Sparkles, CheckCircle2, AlertCircle, Loader2, Activity, RefreshCw,
-  Unplug, Wifi, WifiOff, Eye, EyeOff, Key, ExternalLink, UserCheck 
+  Unplug, Wifi, WifiOff, Eye, EyeOff, Key, ExternalLink, UserCheck, Copy 
 } from 'lucide-react';
 import FuturisticLoader from '../components/common/FuturisticLoader';
 
@@ -179,7 +179,7 @@ const SettingsPage = () => {
             updatedSettings[item.provider] = {
               base_url: item.base_url || '',
               username_email: item.username_email || '',
-              api_token: ''
+              api_token: item.api_token || ''
             };
             updatedConnected[item.provider] = Boolean(item.is_connected);
             updatedTokens[item.provider] = Boolean(item.has_token);
@@ -287,10 +287,13 @@ const SettingsPage = () => {
       }));
 
       showToast(res.message || `${PROVIDERS.find(p => p.id === activeTab)?.name} verified and connected successfully!`, "success");
-      // Clear token input for security
+      // Keep active token in state so user can view/copy it via eye toggle
       setAllSettings(prev => ({
         ...prev,
-        [activeTab]: { ...prev[activeTab], api_token: '' }
+        [activeTab]: { 
+          ...prev[activeTab], 
+          api_token: current.api_token || prev[activeTab].api_token || '' 
+        }
       }));
     } catch (err) {
       console.error("Failed to save settings:", err);
@@ -680,35 +683,35 @@ const SettingsPage = () => {
           </div>
 
           <div className="p-6 space-y-6">
-            {/* Futuristic Cyber Connected Identity HUD */}
+            {/* Futuristic Connected Identity HUD (Dual Light & Dark Theme Adaptive) */}
             {connectedProviders[activeTab] && (
-              <div className="relative rounded-2xl overflow-hidden border border-emerald-500/40 bg-gradient-to-b from-[#101726]/95 via-[#0D1322]/90 to-[#0A0E1A]/95 shadow-[0_10px_35px_rgba(0,0,0,0.5)] backdrop-blur-xl">
-                {/* Cyber ambient glow lines */}
+              <div className="relative rounded-2xl overflow-hidden border border-emerald-500/30 dark:border-emerald-500/40 bg-gradient-to-b from-emerald-500/[0.07] via-slate-50/90 to-white dark:from-[#101726]/95 dark:via-[#0D1322]/90 dark:to-[#0A0E1A]/95 shadow-sm dark:shadow-[0_10px_35px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+                {/* Ambient glow accent line */}
                 <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-emerald-400 to-transparent animate-pulse" />
                 <div className="absolute -right-16 -top-16 w-56 h-56 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
                 <div className="absolute -left-16 -bottom-16 w-56 h-56 bg-[#FF5A14]/10 rounded-full blur-3xl pointer-events-none" />
 
                 {/* Top HUD Telemetry Bar */}
-                <div className="px-5 py-2.5 bg-white/[0.03] border-b border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                <div className="px-5 py-2.5 bg-emerald-500/[0.08] dark:bg-white/[0.03] border-b border-emerald-500/20 dark:border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-[11px]">
                   <div className="flex items-center gap-2">
                     <span className="flex h-2 w-2 relative">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
                     </span>
-                    <span className="font-mono font-bold text-emerald-400 uppercase tracking-wider">
+                    <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
                       LIVE ENTERPRISE CONNECTOR PIPELINE
                     </span>
-                    <span className="text-slate-600 hidden sm:inline">|</span>
-                    <span className="font-mono text-slate-400 hidden sm:inline">
+                    <span className="text-slate-300 dark:text-slate-600 hidden sm:inline">|</span>
+                    <span className="font-mono text-slate-500 dark:text-slate-400 hidden sm:inline">
                       {currentProviderDef.name.toUpperCase()} REST API PROTOCOL
                     </span>
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <span className="px-2 py-0.5 rounded-full font-mono text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                    <span className="px-2 py-0.5 rounded-full font-mono text-[10px] font-bold bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30">
                       TLS 1.3 ENCRYPTED
                     </span>
-                    <span className="font-mono text-[10px] text-slate-400 hidden md:inline">
+                    <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400 hidden md:inline">
                       STATUS: VERIFIED
                     </span>
                   </div>
@@ -724,56 +727,56 @@ const SettingsPage = () => {
                           src={connectedProfiles[activeTab].avatar_url} 
                           alt={connectedProfiles[activeTab]?.user || 'Account Avatar'} 
                           onError={() => setImgLoadFailed(true)}
-                          className="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-400/80 shadow-[0_0_20px_rgba(16,185,129,0.3)] ring-4 ring-emerald-500/20"
+                          className="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-400/80 shadow-[0_0_20px_rgba(16,185,129,0.25)] ring-4 ring-emerald-500/20"
                         />
                       ) : (
-                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#FF5A14] via-purple-600 to-emerald-400 p-[1.5px] shadow-[0_0_25px_rgba(255,90,20,0.35)]">
-                          <div className="w-full h-full rounded-[14px] bg-[#0C111E] flex flex-col items-center justify-center">
-                            <span className="text-xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-br from-white via-slate-100 to-emerald-300">
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#FF5A14] via-purple-600 to-emerald-400 p-[1.5px] shadow-[0_0_25px_rgba(255,90,20,0.25)]">
+                          <div className="w-full h-full rounded-[14px] bg-emerald-50/90 dark:bg-[#0C111E] flex flex-col items-center justify-center border border-emerald-200/50 dark:border-transparent">
+                            <span className="text-xl font-black tracking-wider text-emerald-950 dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-br dark:from-white dark:via-slate-100 dark:to-emerald-300">
                               {getInitials(connectedProfiles[activeTab]?.user, currentSettings.username_email)}
                             </span>
-                            <span className="text-[8px] font-mono text-emerald-400 uppercase tracking-widest -mt-0.5">
+                            <span className="text-[8px] font-mono text-emerald-700 dark:text-emerald-400 uppercase tracking-widest -mt-0.5">
                               SEC-ID
                             </span>
                           </div>
                         </div>
                       )}
-                      <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shadow-md ring-2 ring-slate-900" title="Active Verified Account">
-                        <CheckCircle2 size={12} strokeWidth={3} />
+                      <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shadow-md ring-2 ring-white dark:ring-slate-900" title="Active Verified Account">
+                        <CheckCircle2 size={12} strokeWidth={3} className="text-white dark:text-slate-950" />
                       </div>
                     </div>
 
                     {/* Identity Details */}
                     <div className="space-y-1.5">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-lg sm:text-xl font-black text-white tracking-tight">
+                        <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
                           {connectedProfiles[activeTab]?.user || currentSettings.username_email || 'Enterprise Verified Account'}
                         </h3>
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
                           <Sparkles size={10} /> Verified {currentProviderDef.name} Account
                         </span>
                         {connectedProfiles[activeTab]?.time_zone && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800/90 text-slate-300 border border-slate-700/80">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-200/80 dark:bg-slate-800/90 text-slate-700 dark:text-slate-300 border border-slate-300/80 dark:border-slate-700/80">
                             {connectedProfiles[activeTab].time_zone}
                           </span>
                         )}
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-xs text-slate-300">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-xs text-slate-700 dark:text-slate-300">
                         <div className="flex items-center gap-2">
-                          <span className="text-slate-400 font-medium">Account ID / Email:</span>
-                          <span className="font-mono text-emerald-300 font-bold">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">Account ID / Email:</span>
+                          <span className="font-mono text-emerald-700 dark:text-emerald-300 font-bold">
                             {connectedProfiles[activeTab]?.email || currentSettings.username_email}
                           </span>
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <span className="text-slate-400 font-medium">Host / Instance:</span>
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">Host / Instance:</span>
                           <a 
                             href={currentSettings.base_url} 
                             target="_blank" 
                             rel="noreferrer" 
-                            className="font-mono text-sky-400 hover:text-sky-300 hover:underline flex items-center gap-1 font-semibold"
+                            className="font-mono text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 hover:underline flex items-center gap-1 font-semibold"
                           >
                             <span>{currentSettings.base_url}</span>
                             <ExternalLink size={11} />
@@ -784,10 +787,10 @@ const SettingsPage = () => {
                   </div>
 
                   {/* Action and Telemetry Column */}
-                  <div className="flex flex-row lg:flex-col items-center lg:items-end justify-between gap-3 pt-3 lg:pt-0 border-t lg:border-t-0 border-white/10 shrink-0">
+                  <div className="flex flex-row lg:flex-col items-center lg:items-end justify-between gap-3 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-200 dark:border-white/10 shrink-0">
                     <div className="text-right hidden sm:block">
-                      <span className="text-[10px] uppercase font-mono text-slate-400 block tracking-wider">Sync Pipeline</span>
-                      <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 justify-end">
+                      <span className="text-[10px] uppercase font-mono text-slate-500 dark:text-slate-400 block tracking-wider">Sync Pipeline</span>
+                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 justify-end">
                         <Activity size={13} className="animate-pulse" /> Continuous Bi-Directional
                       </span>
                     </div>
@@ -797,7 +800,7 @@ const SettingsPage = () => {
                         type="button"
                         onClick={() => handleDisconnect(activeTab)}
                         disabled={disconnecting}
-                        className="flex items-center gap-2 px-4 py-2 bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 hover:text-rose-300 border border-rose-500/30 hover:border-rose-500/50 rounded-xl text-xs font-bold shadow-[0_0_15px_rgba(244,63,94,0.15)] transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                        className="flex items-center gap-2 px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 dark:bg-rose-500/15 dark:hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 hover:border-rose-500/50 rounded-xl text-xs font-bold shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
                       >
                         {disconnecting ? <Loader2 size={14} className="animate-spin" /> : <Unplug size={14} />}
                         <span>Disconnect Account</span>
@@ -870,16 +873,31 @@ const SettingsPage = () => {
                           : "Paste API token / Secret key here"
                       }
                       disabled={!canEdit}
-                      className="w-full pl-4 pr-11 py-2.5 theme-input rounded-xl text-xs focus:outline-none focus:border-[#FF5A14] disabled:opacity-50 transition-colors font-mono"
+                      className="w-full pl-4 pr-20 py-2.5 theme-input rounded-xl text-xs focus:outline-none focus:border-[#FF5A14] disabled:opacity-50 transition-colors font-mono"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowToken(!showToken)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-md transition-colors"
-                      title={showToken ? "Hide secret token" : "Show secret token"}
-                    >
-                      {showToken ? <EyeOff size={15} /> : <Eye size={15} />}
-                    </button>
+                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                      {currentSettings.api_token && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(currentSettings.api_token);
+                            showToast("Token copied to clipboard!", "success");
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-[#FF5A14] rounded-md transition-colors"
+                          title="Copy token to clipboard"
+                        >
+                          <Copy size={15} />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setShowToken(!showToken)}
+                        className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-md transition-colors"
+                        title={showToken ? "Hide secret token" : "Show secret token"}
+                      >
+                        {showToken ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
                   </div>
                   <p className="text-[11px] theme-muted">
                     {tokenStatus[activeTab] && !currentSettings.api_token
