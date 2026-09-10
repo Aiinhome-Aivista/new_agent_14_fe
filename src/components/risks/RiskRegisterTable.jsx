@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { 
   Search, ArrowUpDown, ChevronDown, ChevronUp, 
-  CheckCircle2, Clock, AlertTriangle, Edit3, Save, UserCheck 
+  CheckCircle2, Clock, AlertTriangle, Edit3, Save, UserCheck,
+  Send, ExternalLink, Loader2, Share2 
 } from 'lucide-react';
+import { useToast } from '../../context/ToastContext';
+import { risksApi } from '../../api/risksApi';
 
 const OWNER_OPTIONS = [
   "Unassigned",
@@ -13,13 +16,9 @@ const OWNER_OPTIONS = [
   "Financial Controller"
 ];
 
-const STATUS_CYCLE = {
-  'Open': 'Mitigated',
-  'Mitigated': 'Closed',
-  'Closed': 'Open'
-};
+const STATUS_OPTIONS = ['Open', 'Mitigated', 'Closed'];
 
-const RiskRegisterTable = ({ risks, onUpdateRisk }) => {
+const RiskRegisterTable = ({ risks, onUpdateRisk, onRiskUpdated }) => {
   const [sortField, setSortField] = useState('severity');
   const [sortAsc, setSortAsc] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -28,6 +27,8 @@ const RiskRegisterTable = ({ risks, onUpdateRisk }) => {
   const [expandedRiskId, setExpandedRiskId] = useState(null);
   const [editingMitigationId, setEditingMitigationId] = useState(null);
   const [mitigationDraft, setMitigationDraft] = useState('');
+  const [pushingJiraId, setPushingJiraId] = useState(null);
+  const { showToast } = useToast();
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -38,17 +39,36 @@ const RiskRegisterTable = ({ risks, onUpdateRisk }) => {
     }
   };
 
-  const handleToggleStatus = (risk) => {
-    const current = risk.status || 'Open';
-    const nextStatus = STATUS_CYCLE[current] || 'Open';
+  const handleStatusChange = (risk, newStatus) => {
     if (onUpdateRisk) {
-      onUpdateRisk(risk.id, { status: nextStatus });
+      onUpdateRisk(risk.id, { status: newStatus });
     }
   };
 
   const handleOwnerChange = (risk, newOwner) => {
     if (onUpdateRisk) {
       onUpdateRisk(risk.id, { owner: newOwner });
+    }
+  };
+
+  const handlePushToJira = async (risk) => {
+    try {
+      setPushingJiraId(risk.id);
+      const res = await risksApi.pushToJira(risk.id);
+      if (res.success && res.risk) {
+        if (onRiskUpdated) {
+          onRiskUpdated(res.risk);
+        }
+        showToast(res.message || `Jira ticket ${res.jira_issue_key} created successfully!`, 'success');
+      } else {
+        showToast(res.error || 'Failed to push risk to Jira', 'error');
+      }
+    } catch (err) {
+      console.error('Push to Jira error:', err);
+      const msg = err.response?.data?.error || err.message || 'Failed to push risk to Jira';
+      showToast(msg, 'error');
+    } finally {
+      setPushingJiraId(null);
     }
   };
 
@@ -71,7 +91,8 @@ const RiskRegisterTable = ({ risks, onUpdateRisk }) => {
       (r.owner || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (r.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (r.risk_id || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (r.description || '').toLowerCase().includes(searchQuery.toLowerCase());
+      (r.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (r.jira_issue_key || '').toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchSev = selectedSeverity === 'ALL' || r.severity === selectedSeverity;
     const matchStat = selectedStatus === 'ALL' || (r.status || 'Open') === selectedStatus;
@@ -139,7 +160,7 @@ const RiskRegisterTable = ({ risks, onUpdateRisk }) => {
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input 
             type="text" 
-            placeholder="Search risk ID, title, owner..." 
+            placeholder="Search risk, owner, Jira key..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-3 py-1.5 text-xs theme-input rounded-xl focus:outline-none focus:border-[#FF5A14] transition-colors"
@@ -162,18 +183,19 @@ const RiskRegisterTable = ({ risks, onUpdateRisk }) => {
                 <div className="flex items-center gap-1">Severity <ArrowUpDown size={12} /></div>
               </th>
               <th className="p-4 cursor-pointer hover:text-[#FF5A14] transition-colors" onClick={() => handleSort('status')}>
-                <div className="flex items-center gap-1">Status (Click to Cycle) <ArrowUpDown size={12} /></div>
+                <div className="flex items-center gap-1">Status <ArrowUpDown size={12} /></div>
               </th>
               <th className="p-4 cursor-pointer hover:text-[#FF5A14] transition-colors" onClick={() => handleSort('owner')}>
                 <div className="flex items-center gap-1">Owner Assignment <ArrowUpDown size={12} /></div>
               </th>
+              <th className="p-4 text-center">Jira Sync</th>
               <th className="p-4 text-center">Mitigation</th>
             </tr>
           </thead>
           <tbody className="divide-y theme-border">
             {sortedRisks.length === 0 ? (
               <tr>
-                <td colSpan={6} className="p-12 text-center theme-muted italic">
+                <td colSpan={7} className="p-12 text-center theme-muted italic">
                   No matching program risks found.
                 </td>
               </tr>
@@ -211,23 +233,33 @@ const RiskRegisterTable = ({ risks, onUpdateRisk }) => {
                         </span>
                       </td>
 
-                      {/* Interactive Status Pill */}
+                      {/* Interactive Status Selector (No accidental circular reopening) */}
                       <td className="p-4 whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleStatus(risk)}
-                          title="Click to cycle status: Open -> Mitigated -> Closed"
-                          className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 ${
-                            status === 'Open' ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 hover:bg-rose-500/25' :
-                            status === 'Mitigated' ? 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30 hover:bg-sky-500/25' :
-                            'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25'
-                          }`}
-                        >
-                          {status === 'Open' && <AlertTriangle size={12} />}
-                          {status === 'Mitigated' && <Clock size={12} />}
-                          {status === 'Closed' && <CheckCircle2 size={12} />}
-                          <span>{status}</span>
-                        </button>
+                        <div className="relative inline-flex items-center">
+                          <select
+                            value={status}
+                            onChange={(e) => handleStatusChange(risk, e.target.value)}
+                            className={`appearance-none pl-6 pr-6 py-1 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer focus:outline-none border ${
+                              status === 'Open' ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30 hover:bg-rose-500/25' :
+                              status === 'Mitigated' ? 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/30 hover:bg-sky-500/25' :
+                              'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25'
+                            }`}
+                          >
+                            {STATUS_OPTIONS.map(opt => (
+                              <option key={opt} value={opt} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">
+                                {opt}
+                              </option>
+                            ))}
+                          </select>
+                          <div className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2">
+                            {status === 'Open' && <AlertTriangle size={11} className="text-rose-500" />}
+                            {status === 'Mitigated' && <Clock size={11} className="text-sky-500" />}
+                            {status === 'Closed' && <CheckCircle2 size={11} className="text-emerald-500" />}
+                          </div>
+                          <div className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400">
+                            <ChevronDown size={11} />
+                          </div>
+                        </div>
                       </td>
 
                       {/* Interactive Owner Select */}
@@ -246,6 +278,43 @@ const RiskRegisterTable = ({ risks, onUpdateRisk }) => {
                         </div>
                       </td>
 
+                      {/* 1-Click Push to Jira Cloud */}
+                      <td className="p-4 text-center whitespace-nowrap">
+                        {risk.jira_issue_key ? (
+                          <a
+                            href={`https://dipakkrsaha44.atlassian.net/browse/${risk.jira_issue_key}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-mono font-bold border border-blue-500/30 text-xs transition-all shadow-sm group"
+                            title="Open live ticket in Jira Cloud"
+                          >
+                            <span className="w-2 h-2 rounded-full bg-blue-500 group-hover:scale-125 transition-transform" />
+                            <span>{risk.jira_issue_key}</span>
+                            <ExternalLink size={12} />
+                          </a>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={pushingJiraId === risk.id}
+                            onClick={() => handlePushToJira(risk)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:brightness-110 text-white font-bold text-xs shadow-sm transition-all active:scale-95 disabled:opacity-50"
+                            title="Push detected risk as a new ticket to Jira Cloud"
+                          >
+                            {pushingJiraId === risk.id ? (
+                              <>
+                                <Loader2 size={12} className="animate-spin" />
+                                <span>Pushing...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Send size={12} />
+                                <span>Push to Jira</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </td>
+
                       {/* Mitigation Accordion Toggle */}
                       <td className="p-4 text-center whitespace-nowrap">
                         <button
@@ -259,10 +328,10 @@ const RiskRegisterTable = ({ risks, onUpdateRisk }) => {
                       </td>
                     </tr>
 
-                    {/* Accordion Row for Mitigation Strategy */}
+                    {/* Accordion Row for Mitigation Strategy & Jira Sync Panel */}
                     {isExpanded && (
                       <tr className="bg-slate-50 dark:bg-slate-900/40 border-b theme-border">
-                        <td colSpan={6} className="p-4 sm:p-5">
+                        <td colSpan={7} className="p-4 sm:p-5">
                           <div className="max-w-3xl space-y-3">
                             <div className="flex items-center justify-between">
                               <span className="text-xs font-bold theme-heading uppercase tracking-wider flex items-center gap-1.5">
@@ -289,7 +358,66 @@ const RiskRegisterTable = ({ risks, onUpdateRisk }) => {
                               )}
                             </div>
 
-                            {/* Full Description */}
+                            {/* Jira Cloud Sync Ribbon Card */}
+                            <div className="p-3.5 rounded-xl theme-card border theme-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                              <div className="flex items-center gap-3">
+                                <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                                  <Share2 size={18} />
+                                </div>
+                                <div>
+                                  <div className="text-xs font-bold theme-heading flex items-center gap-2">
+                                    <span>Jira Cloud Sprint Sync</span>
+                                    {risk.jira_issue_key ? (
+                                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 font-bold border border-emerald-500/30">
+                                        Synchronized
+                                      </span>
+                                    ) : (
+                                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500 font-bold border border-amber-500/30">
+                                        Awaiting Push
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-[11px] theme-muted mt-0.5">
+                                    {risk.jira_issue_key 
+                                      ? `Linked to live Jira ticket ${risk.jira_issue_key} on dipakkrsaha44.atlassian.net`
+                                      : 'Push this AI-analyzed risk directly into the Jira delivery sprint backlog.'}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {risk.jira_issue_key ? (
+                                <a
+                                  href={`https://dipakkrsaha44.atlassian.net/browse/${risk.jira_issue_key}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 border border-blue-500/30 rounded-xl text-xs font-bold transition-all whitespace-nowrap self-start sm:self-auto"
+                                >
+                                  <span>Open {risk.jira_issue_key}</span>
+                                  <ExternalLink size={13} />
+                                </a>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={pushingJiraId === risk.id}
+                                  onClick={() => handlePushToJira(risk)}
+                                  className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:brightness-110 text-white rounded-xl text-xs font-bold shadow-md transition-all whitespace-nowrap disabled:opacity-50 self-start sm:self-auto"
+                                >
+                                  {pushingJiraId === risk.id ? (
+                                    <>
+                                      <Loader2 size={13} className="animate-spin" />
+                                      <span>Creating Ticket...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Send size={13} />
+                                      <span>Push to Jira Cloud</span>
+                                    </>
+                                  )}
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Full Technical Context */}
                             <div className="p-3 rounded-xl theme-card border theme-border text-xs leading-relaxed theme-heading">
                               <span className="font-bold text-slate-400 mr-2">Context:</span>
                               {risk.description || 'No additional technical context logged.'}

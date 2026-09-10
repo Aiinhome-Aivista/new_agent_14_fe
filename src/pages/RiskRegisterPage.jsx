@@ -58,6 +58,11 @@ const RiskRegisterPage = () => {
     }
   };
 
+  const handleRiskUpdated = (updatedRisk) => {
+    if (!updatedRisk) return;
+    setRisks(prev => prev.map(r => r.id === updatedRisk.id ? updatedRisk : r));
+  };
+
   const handleCreateRisk = async (e) => {
     e.preventDefault();
     if (!newRisk.title.trim()) {
@@ -185,6 +190,7 @@ const RiskRegisterPage = () => {
       <RiskRegisterTable 
         risks={risks} 
         onUpdateRisk={handleUpdateRisk}
+        onRiskUpdated={handleRiskUpdated}
       />
 
       {/* Add Risk Modal */}

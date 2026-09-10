@@ -16,5 +16,9 @@ export const risksApi = {
   deleteRisk: async (riskId) => {
     const response = await api.delete(`/risks/${riskId}`);
     return response.data;
+  },
+  pushToJira: async (riskId) => {
+    const response = await api.post(`/risks/${riskId}/push-to-jira`);
+    return response.data;
   }
 };
