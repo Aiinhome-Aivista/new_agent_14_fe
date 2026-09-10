@@ -5,13 +5,22 @@ export const ingestionApi = {
     const formData = new FormData();
     formData.append('file', file);
     
-    // Fake progress since the backend handles it synchronously right now
+    // Smooth progress representation reflecting multi-agent LLM analysis
     if (onProgress) {
-        let p = 0;
+        let p = 5;
+        onProgress(p);
         const interval = setInterval(() => {
-            p += 10;
-            if (p <= 90) onProgress(p);
-        }, 500);
+            if (p < 30) {
+                p += 3;
+            } else if (p < 65) {
+                p += 1.5;
+            } else if (p < 85) {
+                p += 0.8;
+            } else if (p < 96) {
+                p += 0.3;
+            }
+            onProgress(Math.min(Math.round(p), 96));
+        }, 1500);
         
         try {
             const response = await api.post('/ingestion/upload', formData, {

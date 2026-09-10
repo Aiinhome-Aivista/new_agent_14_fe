@@ -307,7 +307,11 @@ const InvestorDashboard = () => {
                     Ingesting Document Telemetry ({uploadProgress}%)...
                   </span>
                   <span className="text-[11px] theme-muted font-mono">
-                    Chunking semantic embeddings & triggering Risk Agent
+                    {uploadProgress < 25 && "Chunking semantic embeddings & triggering Intake Agent..."}
+                    {uploadProgress >= 25 && uploadProgress < 50 && "Evaluating Financial Variances & Contract Risks..."}
+                    {uploadProgress >= 50 && uploadProgress < 75 && "Running Predictive Modeling & Schedule Forecasting..."}
+                    {uploadProgress >= 75 && uploadProgress < 90 && "Computing Governance KPIs & Quality Metrics..."}
+                    {uploadProgress >= 90 && "Synthesizing Executive Report & Risk Heatmaps..."}
                   </span>
                 </div>
               ) : (
