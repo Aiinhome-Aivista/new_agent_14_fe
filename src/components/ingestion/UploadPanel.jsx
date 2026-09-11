@@ -3,6 +3,7 @@ import { ingestionApi } from '../../api/ingestionApi';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 import { useProject } from '../../context/ProjectContext';
+import { dashboardApi } from '../../api/dashboardApi';
 import { FileUp, Loader2 } from 'lucide-react';
 
 const UploadPanel = ({ onUploadSuccess }) => {
@@ -12,8 +13,25 @@ const UploadPanel = ({ onUploadSuccess }) => {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [projects, setProjects] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState('');
   const inputRef = useRef(null);
   const { showToast } = useToast();
+
+  React.useEffect(() => {
+    dashboardApi.getSnapshot()
+      .then(data => {
+        if (data && data.projects) {
+          setProjects(data.projects);
+          if (activeProject?.id) {
+            setSelectedProjectId(activeProject.id);
+          } else if (data.projects.length > 0) {
+            setSelectedProjectId(data.projects[0].numeric_id);
+          }
+        }
+      })
+      .catch(console.error);
+  }, [activeProject?.id]);
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -53,7 +71,7 @@ const UploadPanel = ({ onUploadSuccess }) => {
         { 
           uploaded_by: user?.name || user?.email, 
           uploaded_by_role: user?.role,
-          project_id: activeProject?.id 
+          project_id: selectedProjectId || activeProject?.id || '1'
         }
       );
       if (res?.ai_processing_status === 'degraded_fallback') {
@@ -82,6 +100,20 @@ const UploadPanel = ({ onUploadSuccess }) => {
       <p className="text-xs theme-muted mb-6">
         Upload MOMs, status reports, or SOWs (.docx, .pdf, .xlsx, .txt) to calibrate autonomous agent telemetry.
       </p>
+
+      <div className="mb-4">
+        <label className="block text-xs font-bold theme-heading mb-1.5">Map to Enterprise Project</label>
+        <select 
+          value={selectedProjectId}
+          onChange={(e) => setSelectedProjectId(e.target.value)}
+          className="w-full px-3 py-2.5 rounded-xl theme-subtle border theme-border text-xs font-semibold theme-heading focus:outline-none focus:border-[#FF5A14]/50 cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23FF5A14%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center] bg-[length:10px_10px]"
+        >
+          {projects.map(p => (
+            <option key={p.numeric_id} value={p.numeric_id}>{p.id}: {p.name}</option>
+          ))}
+          {projects.length === 0 && <option value="1">Default Project (Connect to Sync)</option>}
+        </select>
+      </div>
       
       <form onDragEnter={handleDrag} onSubmit={(e) => e.preventDefault()}>
         <input ref={inputRef} type="file" className="hidden" accept=".pdf,.docx,.xlsx,.txt" onChange={handleChange} />

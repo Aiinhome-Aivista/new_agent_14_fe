@@ -40,6 +40,7 @@ import {
 const InvestorDashboard = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const { activeProject } = useProject();
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -47,6 +48,7 @@ const InvestorDashboard = () => {
   const [generatingReport, setGeneratingReport] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [selectedUploadProjectId, setSelectedUploadProjectId] = useState('');
   const fileInputRef = useRef(null);
 
   // Capital Tranche & Milestone Attainment State (Robust Data Normalization)
@@ -161,7 +163,13 @@ const InvestorDashboard = () => {
     } else {
       setTrancheMilestones([]);
     }
-  }, [data]);
+    
+    if (activeProject?.id) {
+      setSelectedUploadProjectId(activeProject.id);
+    } else if (data?.projects && data.projects.length > 0 && !selectedUploadProjectId) {
+      setSelectedUploadProjectId(data.projects[0].numeric_id);
+    }
+  }, [data, selectedUploadProjectId, activeProject?.id]);
 
   const handleToggleTranchePayout = (mId) => {
     setTrancheMilestones(prev => prev.map(m => {
@@ -187,8 +195,6 @@ const InvestorDashboard = () => {
       return m;
     }));
   };
-
-  const { activeProject } = useProject();
 
   const fetchDashboardData = async () => {
     try {
@@ -234,11 +240,11 @@ const InvestorDashboard = () => {
     try {
       setUploadingDoc(true);
       setUploadProgress(0);
-      const res = await ingestionApi.uploadDocument(
-        file, 
-        (p) => setUploadProgress(p),
-        { project_id: activeProject?.id }
-      );
+      const res = await ingestionApi.uploadDocument(file, (p) => setUploadProgress(p), {
+        project_id: selectedUploadProjectId || activeProject?.id || '1',
+        uploaded_by: user?.name || user?.email,
+        uploaded_by_role: user?.role
+      });
       if (res?.ai_processing_status === 'degraded_fallback') {
         showToast('AI processing degraded — some figures are heuristic estimates', 'warning');
       } else {
@@ -738,6 +744,20 @@ const InvestorDashboard = () => {
               Autonomous ingestion extracts deliverables, computes risk scores, and updates semantic memory.
             </p>
             
+            <div className="mb-4">
+              <label className="block text-[10px] font-bold theme-heading mb-1.5 uppercase tracking-wider">Map to Enterprise Project</label>
+              <select 
+                value={selectedUploadProjectId}
+                onChange={(e) => setSelectedUploadProjectId(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl theme-subtle border theme-border text-xs font-semibold theme-heading focus:outline-none focus:border-[#FF5A14]/50 cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23FF5A14%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center] bg-[length:10px_10px]"
+              >
+                {(data?.projects || []).map(p => (
+                  <option key={p.numeric_id} value={p.numeric_id}>{p.id}: {p.name}</option>
+                ))}
+                {(!data?.projects || data.projects.length === 0) && <option value="1">Default Project (Connect to Sync)</option>}
+              </select>
+            </div>
+            
             <input 
               ref={fileInputRef} 
               type="file" 
@@ -851,6 +871,39 @@ const InvestorDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Synced Enterprise Projects Grid */}
+      <div className="p-6 rounded-2xl theme-card mt-8">
+        <h3 className="text-base font-bold theme-heading mb-4">
+          Synced Enterprise Projects
+        </h3>
+        {data?.projects && data.projects.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {data.projects.map((proj) => (
+              <Link
+                key={proj.id}
+                to={`/project/${proj.id}`}
+                className="p-4 rounded-xl border theme-border hover:border-[#FF5A14] theme-subtle hover:bg-[#FF5A14]/5 transition-all flex items-center justify-between group"
+              >
+                <div>
+                  <div className="font-bold theme-heading text-sm group-hover:text-[#FF7A45] transition-colors truncate max-w-[200px]">
+                    {proj.id}: {proj.name}
+                  </div>
+                  <div className="text-xs theme-muted mt-1">
+                    {proj.budget_summary} • Status: <span className="text-emerald-500 font-bold">{proj.status}</span>
+                  </div>
+                </div>
+                <ExternalLink size={16} className="text-[#FF5A14] group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="p-4 rounded-xl theme-card text-xs theme-muted italic text-center">
+            No projects loaded. Configure connectors and trigger a sync to populate this list.
+          </div>
+        )}
+      </div>
+
     </div>
   );
 
