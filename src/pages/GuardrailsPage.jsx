@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { useProject } from '../context/ProjectContext';
 import { guardrailsApi } from '../api/guardrailsApi';
 import { 
   ShieldCheck, 
@@ -22,7 +23,8 @@ import {
   RotateCw,
   ChevronDown,
   ChevronUp,
-  Cpu
+  Cpu,
+  FolderKanban
 } from 'lucide-react';
 import FuturisticLoader from '../components/common/FuturisticLoader';
 
@@ -67,6 +69,7 @@ const CATEGORIES = [
 const GuardrailsPage = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const { activeProject } = useProject();
   const [guardrailsData, setGuardrailsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -96,7 +99,8 @@ const GuardrailsPage = () => {
   const fetchAiSuggestions = async (refresh = false) => {
     try {
       setAiLoading(true);
-      const res = await guardrailsApi.getSuggestions(1, refresh);
+      const pid = activeProject?.id || 1;
+      const res = await guardrailsApi.getSuggestions(pid, refresh);
       if (res && res.suggestions && res.suggestions.length > 0) {
         setAiSuggestions(res.suggestions);
       }
@@ -110,7 +114,7 @@ const GuardrailsPage = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const res = await guardrailsApi.getGuardrails();
+      const res = await guardrailsApi.getGuardrails(activeProject?.id);
       setGuardrailsData(res);
     } catch (err) {
       console.error("Failed to fetch guardrails:", err);
@@ -123,7 +127,7 @@ const GuardrailsPage = () => {
   useEffect(() => {
     fetchData();
     fetchAiSuggestions();
-  }, []);
+  }, [activeProject?.id]);
 
   useEffect(() => {
     if (showAddModal && aiSuggestions.length === 0) {
@@ -274,14 +278,17 @@ const GuardrailsPage = () => {
       {/* Header Section */}
       <div className="pb-4 border-b theme-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#FF5A14]/15 text-[#FF5A14] border border-[#FF5A14]/30">
-              Autonomous Governance
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#FF5A14]/15 text-[#FF5A14] border border-[#FF5A14]/30 flex items-center gap-1">
+              <FolderKanban size={11} />
+              <span>[{activeProject?.jira_key || 'PRJ'}] {activeProject?.name || 'All Projects'}</span>
             </span>
-            <span className="text-xs theme-muted font-mono">• Policy Engine v2.4</span>
+            <span className="text-xs theme-muted font-mono">• Autonomous Policy Engine</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black theme-heading tracking-tight">Guardrails &amp; Human Oversight</h1>
-          <p className="text-xs sm:text-sm theme-muted mt-1">Configure active AI safety constraints, PII redaction filters, and human approval gates.</p>
+          <p className="text-xs sm:text-sm theme-muted mt-1">
+            Configure active AI safety constraints, PII redaction filters, and human approval gates for {activeProject?.name || 'enterprise portfolio'}.
+          </p>
         </div>
 
         {/* Action Button to Add New Guardrail */}
@@ -491,7 +498,7 @@ const GuardrailsPage = () => {
           <div className="text-center py-10 border border-dashed theme-border rounded-2xl">
             <CheckCircle className="mx-auto text-emerald-500 mb-2" size={32} />
             <p className="theme-heading font-bold text-sm">All Escalations Resolved</p>
-            <p className="text-xs theme-muted mt-1">No items currently require human operator intervention.</p>
+            <p className="text-xs theme-muted mt-1">No items currently require human operator intervention for {activeProject?.name || 'this project'}.</p>
           </div>
         ) : (
           <div className="divide-y theme-border">
@@ -572,7 +579,7 @@ const GuardrailsPage = () => {
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-white/10 transition-colors"
+                className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -776,7 +783,7 @@ const GuardrailsPage = () => {
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>

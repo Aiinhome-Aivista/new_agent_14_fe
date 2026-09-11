@@ -300,9 +300,9 @@ const AppLayout = () => {
               </button>
 
               {isProjectDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-72 rounded-2xl dark-glass-card p-2 border border-white/15 shadow-[0_15px_50px_rgba(0,0,0,0.6)] z-50 animate-fadeIn">
-                  <div className="px-3 py-2 border-b border-white/10 flex items-center justify-between">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Switch Project</span>
+                <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-white dark:bg-[#131A29] p-2 border border-slate-200 dark:border-white/15 shadow-xl dark:shadow-[0_15px_50px_rgba(0,0,0,0.6)] z-50 animate-fadeIn">
+                  <div className="px-3 py-2 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
+                    <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider">Switch Project</span>
                     <button 
                       onClick={() => { setIsProjectDropdownOpen(false); navigate('/projects'); }}
                       className="text-[10px] font-bold text-[#FF7A45] hover:underline cursor-pointer"
@@ -318,10 +318,10 @@ const AppLayout = () => {
                           selectProject(p);
                           setIsProjectDropdownOpen(false);
                         }}
-                        className={`w-full px-3 py-2 rounded-xl text-left text-xs flex items-center justify-between transition-colors ${
+                        className={`w-full px-3 py-2 rounded-xl text-left text-xs flex items-center justify-between transition-colors cursor-pointer ${
                           activeProject?.id === p.id 
-                            ? 'bg-[#FF5A14]/20 text-[#FF7A45] font-bold border border-[#FF5A14]/30' 
-                            : 'text-slate-300 hover:bg-white/[0.05]'
+                            ? 'bg-[#FF5A14]/15 text-[#FF7A45] font-bold border border-[#FF5A14]/30' 
+                            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.05]'
                         }`}
                       >
                         <div className="truncate pr-2">

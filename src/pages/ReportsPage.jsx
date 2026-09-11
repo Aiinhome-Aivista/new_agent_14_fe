@@ -17,7 +17,7 @@ const ReportsPage = () => {
   const fetchReports = async () => {
     try {
       setLoading(true);
-      const data = await reportsApi.getReports();
+      const data = await reportsApi.getReports(activeProject?.id);
       setReports(data || []);
     } catch (err) {
       console.error(err);
@@ -29,14 +29,14 @@ const ReportsPage = () => {
 
   useEffect(() => {
     fetchReports();
-  }, []);
+  }, [activeProject?.id]);
 
   const handleGenerateReport = async () => {
     try {
       setGenerating(true);
       const pid = activeProject?.id || 1;
       const res = await reportsApi.generateReport(pid);
-      showToast(res.message || "New executive briefing generated successfully!", "success");
+      showToast(res.message || `Executive briefing for ${activeProject?.name || 'Project'} generated successfully!`, "success");
       await fetchReports();
     } catch (err) {
       console.error(err);
@@ -70,8 +70,19 @@ const ReportsPage = () => {
     <div className="py-2 flex flex-col h-full space-y-6">
       <div className="pb-4 border-b theme-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#FF5A14]/15 text-[#FF5A14] border border-[#FF5A14]/30 flex items-center gap-1">
+              <FolderKanban size={11} />
+              <span>[{activeProject?.jira_key || 'PRJ'}] {activeProject?.name || 'All Projects'}</span>
+            </span>
+            <span className="text-xs theme-muted font-mono">
+              Project Executive Archive
+            </span>
+          </div>
           <h1 className="text-2xl sm:text-3xl font-black theme-heading tracking-tight">Generated Reports</h1>
-          <p className="text-xs sm:text-sm theme-muted mt-1">Download auto-generated executive briefings and portfolio health decks.</p>
+          <p className="text-xs sm:text-sm theme-muted mt-1">
+            Download auto-generated executive briefings and portfolio health decks for {activeProject?.name || 'selected workspace'}.
+          </p>
         </div>
 
         <button
@@ -90,7 +101,7 @@ const ReportsPage = () => {
           <FileText className="mx-auto text-slate-400 mb-3" size={40} />
           <h3 className="text-base font-bold theme-heading">No Reports Available</h3>
           <p className="text-xs theme-muted mt-1 max-w-md">
-            Trigger a report from the Executive Dashboard to generate a new verifiable briefing.
+            No executive reports generated for {activeProject?.name || 'this project'} yet. Click 'Generate Executive Report' above to synthesize a real-time briefing.
           </p>
         </div>
       ) : (
