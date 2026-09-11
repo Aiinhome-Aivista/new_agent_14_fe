@@ -134,8 +134,8 @@ const ProjectsPage = () => {
               <FolderKanban size={11} />
               <span>Project Command Hub</span>
             </span>
-            <span className="text-xs text-slate-400 font-mono">
-              Role: <strong className="text-white font-semibold">{user?.role}</strong>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+              Role: <strong className="text-slate-800 dark:text-white font-semibold">{user?.role}</strong>
             </span>
           </div>
 
@@ -230,7 +230,7 @@ const ProjectsPage = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search by project name, Jira Key (e.g. PRJ-101)..."
-            className="w-full pl-10 pr-4 py-2 rounded-xl text-xs bg-white/[0.03] border border-slate-300 dark:border-white/10 focus:border-[#FF5A14] outline-none text-slate-200 placeholder-slate-500 transition-all"
+            className="w-full pl-10 pr-4 py-2 rounded-xl text-xs bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 focus:border-[#FF5A14] outline-none text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 transition-all"
           />
         </div>
 
@@ -240,10 +240,10 @@ const ProjectsPage = () => {
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 statusFilter === status
                   ? 'bg-[#FF5A14] text-white shadow-md'
-                  : 'bg-white/[0.04] text-slate-400 hover:text-white hover:bg-white/[0.08]'
+                  : 'bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/[0.08]'
               }`}
             >
               {status}
@@ -328,9 +328,9 @@ const ProjectsPage = () => {
                   <div className="space-y-1.5 mb-4">
                     <div className="flex justify-between items-center text-[11px]">
                       <span className="theme-muted font-medium">Budget Burn</span>
-                      <span className="font-mono font-bold text-white">{proj.budget_summary || '$0 / $1.0M'}</span>
+                      <span className="font-mono font-bold text-slate-800 dark:text-white">{proj.budget_summary || '$0 / $1.0M'}</span>
                     </div>
-                    <div className="w-full h-2 rounded-full bg-black/40 overflow-hidden border border-white/5">
+                    <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-black/40 overflow-hidden border border-slate-200 dark:border-white/5">
                       <div 
                         className={`h-full rounded-full transition-all duration-500 ${
                           burnPct > 90 ? 'bg-red-500' : burnPct > 70 ? 'bg-amber-500' : 'bg-gradient-to-r from-[#FF5A14] to-emerald-400'
@@ -342,11 +342,11 @@ const ProjectsPage = () => {
 
                   {/* Badges: Risks, Ingestion Docs */}
                   <div className="flex items-center gap-2 text-[11px] font-medium theme-muted mb-4">
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white/[0.04] border border-white/5">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/5">
                       <ShieldAlert size={12} className={proj.critical_risks_count > 0 ? "text-red-400" : "text-slate-400"} />
                       <span>{proj.total_risks_count || 0} Risks</span>
                     </span>
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white/[0.04] border border-white/5">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/5">
                       <FileText size={12} className="text-blue-400" />
                       <span>{proj.documents_count || 0} Docs</span>
                     </span>
@@ -372,23 +372,23 @@ const ProjectsPage = () => {
       {/* PMO ONLY: CREATE NEW PROJECT MODAL DIALOG           */}
       {/* ==================================================== */}
       {isCreateModalOpen && isPMO && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fadeIn">
-          <div className="max-w-xl w-full dark-glass-card rounded-3xl p-6 sm:p-8 border border-white/15 shadow-[0_25px_80px_rgba(0,0,0,0.85)] relative overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fadeIn">
+          <div className="max-w-xl w-full bg-white dark:bg-[#131A29] rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-white/15 shadow-[0_25px_80px_rgba(0,0,0,0.25)] dark:shadow-[0_25px_80px_rgba(0,0,0,0.85)] relative overflow-hidden transition-colors">
             
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-6">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-white/10 mb-6">
               <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-[#FF5A14]/20 text-[#FF5A14] border border-[#FF5A14]/40 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-[#FF5A14]/15 text-[#FF5A14] border border-[#FF5A14]/30 flex items-center justify-center">
                   <FolderKanban size={20} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-white">Create Enterprise Project</h3>
-                  <span className="text-[11px] text-emerald-400 font-mono font-semibold">PMO Authorized Action</span>
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white">Create Enterprise Project</h3>
+                  <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-mono font-semibold">PMO Authorized Action</span>
                 </div>
               </div>
               <button
                 onClick={() => setIsCreateModalOpen(false)}
-                className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -399,47 +399,47 @@ const ProjectsPage = () => {
               
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
-                  <label className="block text-slate-300 font-bold mb-1">Project Name *</label>
+                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Project Name *</label>
                   <input
                     type="text"
                     name="name"
                     value={form.name}
                     onChange={handleFormChange}
                     placeholder="e.g., Core Banking Modernization"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder-slate-500 focus:border-[#FF5A14] outline-none transition-all"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#0E1422] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-[#FF5A14] focus:ring-1 focus:ring-[#FF5A14] outline-none transition-all"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 font-bold mb-1">Jira Key *</label>
+                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Jira Key *</label>
                   <input
                     type="text"
                     name="jira_key"
                     value={form.jira_key}
                     onChange={handleFormChange}
                     placeholder="e.g., CBM"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white font-mono placeholder-slate-500 focus:border-[#FF5A14] outline-none uppercase transition-all"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#0E1422] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-mono placeholder-slate-400 dark:placeholder-slate-500 focus:border-[#FF5A14] focus:ring-1 focus:ring-[#FF5A14] outline-none uppercase transition-all"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-slate-300 font-bold mb-1">Program Portfolio</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Program Portfolio</label>
                 <input
                   type="text"
                   name="program_name"
                   value={form.program_name}
                   onChange={handleFormChange}
                   placeholder="e.g., Alpha Migration"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder-slate-500 focus:border-[#FF5A14] outline-none transition-all"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#0E1422] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-[#FF5A14] focus:ring-1 focus:ring-[#FF5A14] outline-none transition-all"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-300 font-bold mb-1">Planned Budget ($)</label>
+                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Planned Budget ($)</label>
                   <input
                     type="number"
                     name="planned_spend"
@@ -447,43 +447,43 @@ const ProjectsPage = () => {
                     onChange={handleFormChange}
                     placeholder="1500000"
                     step="50000"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white font-mono placeholder-slate-500 focus:border-[#FF5A14] outline-none transition-all"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#0E1422] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-mono placeholder-slate-400 dark:placeholder-slate-500 focus:border-[#FF5A14] focus:ring-1 focus:ring-[#FF5A14] outline-none transition-all"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 font-bold mb-1">Initial Status</label>
+                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Initial Status</label>
                   <select
                     name="status"
                     value={form.status}
                     onChange={handleFormChange}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#141A28] border border-white/10 text-white focus:border-[#FF5A14] outline-none transition-all"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#0E1422] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:border-[#FF5A14] focus:ring-1 focus:ring-[#FF5A14] outline-none transition-all cursor-pointer"
                   >
-                    <option value="Active">Active</option>
-                    <option value="Planning">Planning</option>
-                    <option value="On Hold">On Hold</option>
+                    <option value="Active" className="bg-white dark:bg-[#141A28] text-slate-900 dark:text-white">Active</option>
+                    <option value="Planning" className="bg-white dark:bg-[#141A28] text-slate-900 dark:text-white">Planning</option>
+                    <option value="On Hold" className="bg-white dark:bg-[#141A28] text-slate-900 dark:text-white">On Hold</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="block text-slate-300 font-bold mb-1">Description</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Description</label>
                 <textarea
                   name="description"
                   value={form.description}
                   onChange={handleFormChange}
                   rows={3}
                   placeholder="High-level objectives, architectural scope, and delivery milestones..."
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder-slate-500 focus:border-[#FF5A14] outline-none transition-all resize-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#0E1422] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-[#FF5A14] focus:ring-1 focus:ring-[#FF5A14] outline-none transition-all resize-none"
                 />
               </div>
 
               {/* Modal Footer Actions */}
-              <div className="pt-4 border-t border-white/10 flex items-center justify-end gap-3">
+              <div className="pt-4 border-t border-slate-200 dark:border-white/10 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl bg-white/[0.05] hover:bg-white/10 text-slate-300 text-xs font-semibold transition-colors"
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.05] dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>

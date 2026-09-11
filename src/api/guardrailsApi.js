@@ -1,8 +1,9 @@
 import api from './api';
  
 export const guardrailsApi = {
-  getGuardrails: async () => {
-    const response = await api.get('/guardrails');
+  getGuardrails: async (projectId = null) => {
+    const params = projectId ? { project_id: projectId } : {};
+    const response = await api.get('/guardrails', { params });
     return response.data;
   },
   resolveQueueItem: async (itemId, decision, reasoning) => {

@@ -531,9 +531,9 @@ const SettingsPage = () => {
       </div>
 
       {/* Active Project Connector Context Banner */}
-      <div className="p-4 rounded-2xl dark-glass-card border border-[#FF5A14]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+      <div className="p-4 rounded-2xl bg-white dark:bg-[#131A29] border border-[#FF5A14]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm dark:shadow-md">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#FF5A14]/20 text-[#FF5A14] flex items-center justify-center font-bold flex-shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-[#FF5A14]/15 text-[#FF5A14] flex items-center justify-center font-bold flex-shrink-0">
             <FolderKanban size={20} />
           </div>
           <div>
@@ -541,12 +541,12 @@ const SettingsPage = () => {
               <span className="text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded bg-[#FF5A14]/15 text-[#FF7A45] border border-[#FF5A14]/30">
                 Active Project Context: {activeProject?.jira_key || 'PRJ'}
               </span>
-              <span className="text-xs text-emerald-400 font-medium">Auto-Scoped</span>
+              <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Auto-Scoped</span>
             </div>
-            <h3 className="text-sm font-bold text-white mt-0.5">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">
               {activeProject?.name || 'Enterprise Project'}
             </h3>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[11px] text-slate-600 dark:text-slate-400">
               Connecting and syncing tools matches this project's key to fetch related issues, commits, and risk matrices.
             </p>
           </div>

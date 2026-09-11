@@ -1,8 +1,9 @@
 import api from './api';
 
 export const reportsApi = {
-  getReports: async () => {
-    const response = await api.get('/reports/list');
+  getReports: async (projectId = null) => {
+    const params = projectId ? { project_id: projectId } : {};
+    const response = await api.get('/reports/list', { params });
     return response.data;
   },
   downloadReport: async (id, targetName) => {
