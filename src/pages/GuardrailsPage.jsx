@@ -134,7 +134,7 @@ const GuardrailsPage = () => {
   const handleResolve = async (itemId, decision) => {
     try {
       setActionLoading(itemId);
-      const res = await guardrailsApi.resolveQueueItem(itemId, decision, `Resolved as ${decision} by ${user?.email || 'Officer'}`);
+      const res = await guardrailsApi.resolveQueueItem(itemId, decision, `Resolved as ${decision} by ${user?.name || user?.email || 'Officer'}`);
       if (decision === 'Approved' && res?.jira?.key) {
         showToast(`Item #${itemId} approved! Raised Jira ticket: ${res.jira.key}`, 'success');
       } else {

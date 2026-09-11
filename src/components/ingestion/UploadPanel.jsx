@@ -48,7 +48,7 @@ const UploadPanel = ({ onUploadSuccess }) => {
       const res = await ingestionApi.uploadDocument(
         file, 
         (p) => setProgress(p),
-        { uploaded_by: user?.email, uploaded_by_role: user?.role }
+        { uploaded_by: user?.name || user?.email, uploaded_by_role: user?.role }
       );
       if (res?.ai_processing_status === 'degraded_fallback') {
         showToast('AI processing degraded — some figures are heuristic estimates', 'warning');

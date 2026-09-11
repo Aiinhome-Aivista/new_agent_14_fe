@@ -182,11 +182,19 @@ const AppLayout = () => {
         <div className="p-3.5 border-t border-white/10 bg-[#0E1320]/60">
           <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/5 flex items-center justify-between mb-3">
             <div className="flex items-center gap-2.5 overflow-hidden">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FF5A14] to-[#E04808] flex items-center justify-center text-white font-bold text-xs shadow-md flex-shrink-0">
-                {user?.role ? user.role.charAt(0) : 'U'}
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FF5A14] to-[#E04808] flex items-center justify-center text-white font-bold text-xs shadow-md flex-shrink-0 tracking-wider">
+                {(() => {
+                  if (user?.name) {
+                    const parts = user.name.trim().split(/\s+/);
+                    return parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : user.name.substring(0, 2).toUpperCase();
+                  }
+                  return user?.role ? user.role.charAt(0) : 'U';
+                })()}
               </div>
               <div className="flex flex-col overflow-hidden">
-                <span className="text-xs font-bold text-white truncate">{user?.email || 'User'}</span>
+                <span className="text-xs font-bold text-white truncate" title={user?.name || user?.email}>
+                  {user?.name || user?.email || 'User'}
+                </span>
                 <span className="text-[10px] text-[#FF7A45] font-semibold truncate">{user?.role}</span>
               </div>
             </div>
@@ -253,8 +261,17 @@ const AppLayout = () => {
             </button>
 
             {/* User Avatar Chip */}
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FF5A14] to-[#E04808] flex items-center justify-center text-white font-extrabold text-sm shadow-[0_0_12px_rgba(255,90,20,0.4)]">
-              {user?.role ? user.role.charAt(0) : 'U'}
+            <div 
+              className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FF5A14] to-[#E04808] flex items-center justify-center text-white font-extrabold text-xs shadow-[0_0_12px_rgba(255,90,20,0.4)] tracking-wider"
+              title={`${user?.name || user?.email} (${user?.role})`}
+            >
+              {(() => {
+                if (user?.name) {
+                  const parts = user.name.trim().split(/\s+/);
+                  return parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : user.name.substring(0, 2).toUpperCase();
+                }
+                return user?.role ? user.role.charAt(0) : 'U';
+              })()}
             </div>
 
           </div>
