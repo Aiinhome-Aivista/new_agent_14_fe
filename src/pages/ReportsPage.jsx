@@ -3,9 +3,11 @@ import { reportsApi } from '../api/reportsApi';
 import ReportCard from '../components/reports/ReportCard';
 import FuturisticLoader from '../components/common/FuturisticLoader';
 import { useToast } from '../context/ToastContext';
-import { FileText, Sparkles, Loader2, RefreshCw } from 'lucide-react';
+import { useProject } from '../context/ProjectContext';
+import { FileText, Sparkles, Loader2, RefreshCw, FolderKanban } from 'lucide-react';
 
 const ReportsPage = () => {
+  const { activeProject } = useProject();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -32,7 +34,8 @@ const ReportsPage = () => {
   const handleGenerateReport = async () => {
     try {
       setGenerating(true);
-      const res = await reportsApi.generateReport(1);
+      const pid = activeProject?.id || 1;
+      const res = await reportsApi.generateReport(pid);
       showToast(res.message || "New executive briefing generated successfully!", "success");
       await fetchReports();
     } catch (err) {

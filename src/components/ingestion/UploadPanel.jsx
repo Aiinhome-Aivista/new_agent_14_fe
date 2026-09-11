@@ -2,10 +2,12 @@ import React, { useState, useRef } from 'react';
 import { ingestionApi } from '../../api/ingestionApi';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
+import { useProject } from '../../context/ProjectContext';
 import { FileUp, Loader2 } from 'lucide-react';
 
 const UploadPanel = ({ onUploadSuccess }) => {
   const { user } = useAuth();
+  const { activeProject } = useProject();
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -48,7 +50,11 @@ const UploadPanel = ({ onUploadSuccess }) => {
       const res = await ingestionApi.uploadDocument(
         file, 
         (p) => setProgress(p),
-        { uploaded_by: user?.name || user?.email, uploaded_by_role: user?.role }
+        { 
+          uploaded_by: user?.name || user?.email, 
+          uploaded_by_role: user?.role,
+          project_id: activeProject?.id 
+        }
       );
       if (res?.ai_processing_status === 'degraded_fallback') {
         showToast('AI processing degraded — some figures are heuristic estimates', 'warning');

@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useProject } from '../context/ProjectContext';
 import { knowledgeApi } from '../api/knowledgeApi';
-import { BookOpen, Search, FileText, Database, Layers, Sparkles, CheckCircle2, Filter } from 'lucide-react';
+import { BookOpen, Search, FileText, Database, Layers, Sparkles, CheckCircle2, Filter, FolderKanban } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import FuturisticLoader from '../components/common/FuturisticLoader';
 
 const KnowledgePage = () => {
   const { user } = useAuth();
+  const { activeProject } = useProject();
   const [knowledgeData, setKnowledgeData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  const [selectedPartition, setSelectedPartition] = useState('ALL');
+  const [selectedPartition, setSelectedPartition] = useState(() => activeProject?.id ? String(activeProject.id) : 'ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState(null);
@@ -30,8 +32,10 @@ const KnowledgePage = () => {
   };
 
   useEffect(() => {
-    fetchKnowledge('ALL');
-  }, []);
+    const pId = activeProject?.id ? String(activeProject.id) : 'ALL';
+    setSelectedPartition(pId);
+    fetchKnowledge(pId);
+  }, [activeProject?.id]);
 
   const handlePartitionChange = (pId) => {
     setSelectedPartition(pId);

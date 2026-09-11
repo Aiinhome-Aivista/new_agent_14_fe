@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Outlet, useNavigate, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useProject } from '../../context/ProjectContext';
 import ChatWindow from '../chat/ChatWindow';
 import { 
   LayoutDashboard, 
@@ -16,15 +17,31 @@ import {
   Moon,
   Bot,
   Sparkles,
-  Layers
+  Layers,
+  FolderKanban,
+  ChevronDown,
+  Check
 } from 'lucide-react';
 
 const AppLayout = () => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { activeProject, projects, selectProject } = useProject();
   const navigate = useNavigate();
   const location = useLocation();
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
+  const projectDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (projectDropdownRef.current && !projectDropdownRef.current.contains(e.target)) {
+        setIsProjectDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -33,7 +50,8 @@ const AppLayout = () => {
 
   const getPageTitle = () => {
     const path = location.pathname;
-    if (path.startsWith('/dashboard')) return 'Executive Dashboard';
+    if (path.startsWith('/projects')) return 'Enterprise Projects Portfolio';
+    if (path.startsWith('/dashboard')) return activeProject ? `${activeProject.name} — Command Center` : 'Executive Dashboard';
     if (path.startsWith('/knowledge')) return 'RAG Knowledge Intelligence';
     if (path.startsWith('/risks')) return 'Predictive Risk Register';
     if (path.startsWith('/reports')) return 'Automated Briefings & Analytics';
@@ -132,6 +150,29 @@ const AppLayout = () => {
 
         {/* Main Navigation Links */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1.5">
+          {/* Projects Hub Entry */}
+          <NavLink
+            to="/projects"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all duration-200 group mb-2 ${
+                isActive 
+                  ? 'bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white shadow-[0_0_20px_rgba(255,90,20,0.4)]' 
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+              }`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                <span className={`${isActive ? 'text-white' : 'text-slate-400 group-hover:text-[#FF7A45]'} transition-colors`}>
+                  <FolderKanban size={19} />
+                </span>
+                <span>Projects Hub</span>
+              </>
+            )}
+          </NavLink>
+
+          <div className="border-t border-white/5 my-2"></div>
+
           {navItems.map((item) => (
             <NavLink
               key={item.name}
@@ -232,9 +273,69 @@ const AppLayout = () => {
             </span>
           </div>
 
-          {/* Right Header Actions: Theme Switcher, Persona Switcher, User Badge */}
+          {/* Right Header Actions: Project Switcher, Theme Switcher, Role Badge, User Badge */}
           <div className="flex items-center gap-3">
             
+            {/* Active Project Switcher Dropdown */}
+            <div className="relative" ref={projectDropdownRef}>
+              <button
+                onClick={() => setIsProjectDropdownOpen(!isProjectDropdownOpen)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all select-none cursor-pointer ${
+                  theme === 'dark'
+                    ? 'bg-[#182236] border-white/10 hover:border-[#FF5A14]/50 text-white'
+                    : 'bg-slate-100 border-slate-300 hover:border-[#FF5A14]/50 text-slate-800'
+                }`}
+                title="Active Project Context - Click to switch"
+              >
+                <FolderKanban size={15} className="text-[#FF5A14]" />
+                <div className="flex items-center gap-1.5 max-w-[180px] sm:max-w-[240px] truncate">
+                  <span className="font-mono text-[#FF7A45] font-bold text-[11px]">
+                    [{activeProject?.jira_key || 'PRJ'}]
+                  </span>
+                  <span className="truncate font-bold">
+                    {activeProject?.name || 'Select Project'}
+                  </span>
+                </div>
+                <ChevronDown size={14} className="text-slate-400 ml-0.5" />
+              </button>
+
+              {isProjectDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-72 rounded-2xl dark-glass-card p-2 border border-white/15 shadow-[0_15px_50px_rgba(0,0,0,0.6)] z-50 animate-fadeIn">
+                  <div className="px-3 py-2 border-b border-white/10 flex items-center justify-between">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Switch Project</span>
+                    <button 
+                      onClick={() => { setIsProjectDropdownOpen(false); navigate('/projects'); }}
+                      className="text-[10px] font-bold text-[#FF7A45] hover:underline cursor-pointer"
+                    >
+                      All Projects
+                    </button>
+                  </div>
+                  <div className="max-h-56 overflow-y-auto py-1 space-y-1">
+                    {projects.map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => {
+                          selectProject(p);
+                          setIsProjectDropdownOpen(false);
+                        }}
+                        className={`w-full px-3 py-2 rounded-xl text-left text-xs flex items-center justify-between transition-colors ${
+                          activeProject?.id === p.id 
+                            ? 'bg-[#FF5A14]/20 text-[#FF7A45] font-bold border border-[#FF5A14]/30' 
+                            : 'text-slate-300 hover:bg-white/[0.05]'
+                        }`}
+                      >
+                        <div className="truncate pr-2">
+                          <span className="font-mono text-[10px] text-slate-400 mr-1.5">[{p.jira_key}]</span>
+                          <span>{p.name}</span>
+                        </div>
+                        {activeProject?.id === p.id && <Check size={14} className="text-[#FF5A14] flex-shrink-0" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Active User Role Badge (Read-only, strictly derived from login session) */}
             <div
               className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold select-none ${

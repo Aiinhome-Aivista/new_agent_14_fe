@@ -2,9 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import MessageBubble from './MessageBubble';
 import StreamingResponse from './StreamingResponse';
 import { streamChatResponse } from '../../api/chatStream';
-import { Bot, Send, X } from 'lucide-react';
+import { useProject } from '../../context/ProjectContext';
+import { Bot, Send, X, FolderKanban } from 'lucide-react';
 
 const ChatWindow = ({ onClose }) => {
+  const { activeProject } = useProject();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
@@ -43,7 +45,8 @@ const ChatWindow = ({ onClose }) => {
         () => {
           setIsStreaming(false);
           setMessages(prev => [...prev, { text: "Error communicating with AI agent.", isUser: false }]);
-        }
+        },
+        activeProject?.id
       );
     } catch (err) {
       console.error(err);
@@ -60,8 +63,15 @@ const ChatWindow = ({ onClose }) => {
             <Bot size={18} />
           </div>
           <div>
-            <h2 className="font-bold theme-heading text-xs sm:text-sm">VPM AI Copilot</h2>
-            <p className="text-[11px] theme-muted">Direct interface to RAG memory & risk engine</p>
+            <div className="flex items-center gap-2">
+              <h2 className="font-bold theme-heading text-xs sm:text-sm">VPM AI Copilot</h2>
+              {activeProject && (
+                <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-[#FF5A14]/15 text-[#FF7A45] border border-[#FF5A14]/30 font-bold">
+                  {activeProject.jira_key}
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] theme-muted">Grounded in {activeProject ? activeProject.name : 'RAG memory & risk engine'}</p>
           </div>
         </div>
         {onClose && (

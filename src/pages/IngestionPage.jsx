@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useProject } from '../context/ProjectContext';
 import UploadPanel from '../components/ingestion/UploadPanel';
 import { ingestionApi } from '../api/ingestionApi';
 import { 
@@ -13,18 +14,20 @@ import {
   Layers,
   FileCode,
   User,
-  AlertTriangle
+  AlertTriangle,
+  FolderKanban
 } from 'lucide-react';
 
 const IngestionPage = () => {
   const { user } = useAuth();
+  const { activeProject } = useProject();
   const [history, setHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
 
   const fetchHistory = async () => {
     try {
       setLoadingHistory(true);
-      const data = await ingestionApi.getHistory();
+      const data = await ingestionApi.getHistory(activeProject?.id);
       setHistory(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Failed to fetch ingestion history:", err);
@@ -35,7 +38,7 @@ const IngestionPage = () => {
 
   useEffect(() => {
     fetchHistory();
-  }, []);
+  }, [activeProject?.id]);
 
   if (!['Project Manager', 'PMO'].includes(user?.role)) {
     return (

@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import RiskRegisterTable from '../components/risks/RiskRegisterTable';
 import { risksApi } from '../api/risksApi';
 import { useToast } from '../context/ToastContext';
+import { useProject } from '../context/ProjectContext';
 import FuturisticLoader from '../components/common/FuturisticLoader';
-import { PlusCircle, ShieldAlert, CheckCircle, RefreshCw } from 'lucide-react';
+import { PlusCircle, ShieldAlert, CheckCircle, RefreshCw, FolderKanban } from 'lucide-react';
 
 const RiskRegisterPage = () => {
+  const { activeProject } = useProject();
   const [risks, setRisks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -26,7 +28,7 @@ const RiskRegisterPage = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await risksApi.getRisks();
+      const data = await risksApi.getRisks(activeProject?.id || activeProject?.jira_key);
       setRisks(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Failed to fetch risks", err);
@@ -38,7 +40,7 @@ const RiskRegisterPage = () => {
 
   useEffect(() => {
     fetchRisks();
-  }, []);
+  }, [activeProject?.id]);
 
   const handleUpdateRisk = async (id, updates) => {
     // Optimistic update
@@ -72,7 +74,10 @@ const RiskRegisterPage = () => {
 
     try {
       setCreating(true);
-      const res = await risksApi.createRisk(newRisk);
+      const res = await risksApi.createRisk({
+        ...newRisk,
+        project_id: activeProject?.id
+      });
       if (res.success && res.risk) {
         setRisks(prev => [res.risk, ...prev]);
         setShowAddModal(false);

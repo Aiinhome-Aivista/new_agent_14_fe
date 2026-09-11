@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useProject } from '../context/ProjectContext';
 import { settingsApi } from '../api/settingsApi';
+import { projectApi } from '../api/projectApi';
 import { useToast } from '../context/ToastContext';
 import { 
   Save, Server, GitBranch, Database, FileText, Bell, Clock, 
   Sparkles, CheckCircle2, AlertCircle, Loader2, Activity, RefreshCw,
-  Unplug, Wifi, WifiOff, Eye, EyeOff, Key, ExternalLink, UserCheck, Copy 
+  Unplug, Wifi, WifiOff, Eye, EyeOff, Key, ExternalLink, UserCheck, Copy,
+  FolderKanban
 } from 'lucide-react';
 import FuturisticLoader from '../components/common/FuturisticLoader';
 
@@ -110,6 +113,7 @@ const getInitials = (name, email) => {
 const SettingsPage = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const { activeProject } = useProject();
   
   const [activeTab, setActiveTab] = useState('jira');
   const [loading, setLoading] = useState(true);
@@ -117,9 +121,27 @@ const SettingsPage = () => {
   const [testing, setTesting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [seedingAll, setSeedingAll] = useState(false);
+  const [syncingProject, setSyncingProject] = useState(false);
   const [testResult, setTestResult] = useState(null);
   const [showToken, setShowToken] = useState(false);
   const [imgLoadFailed, setImgLoadFailed] = useState(false);
+
+  const handleSyncProjectTelemetry = async () => {
+    if (!activeProject?.id) {
+      showToast("Please select an active project first.", "warning");
+      return;
+    }
+    try {
+      setSyncingProject(true);
+      const res = await projectApi.syncProjectConnectors(activeProject.id);
+      showToast(res.message || `Successfully synced connectors for ${activeProject.name}!`, "success");
+    } catch (err) {
+      console.error(err);
+      showToast(err.response?.data?.error || "Failed to sync project telemetry.", "error");
+    } finally {
+      setSyncingProject(false);
+    }
+  };
 
   // Track connected status from database per provider
   const [connectedProviders, setConnectedProviders] = useState({
@@ -504,6 +526,40 @@ const SettingsPage = () => {
           >
             {seedingAll ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
             <span>1-Click Seed All Demo Sandboxes</span>
+          </button>
+        )}
+      </div>
+
+      {/* Active Project Connector Context Banner */}
+      <div className="p-4 rounded-2xl dark-glass-card border border-[#FF5A14]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#FF5A14]/20 text-[#FF5A14] flex items-center justify-center font-bold flex-shrink-0">
+            <FolderKanban size={20} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded bg-[#FF5A14]/15 text-[#FF7A45] border border-[#FF5A14]/30">
+                Active Project Context: {activeProject?.jira_key || 'PRJ'}
+              </span>
+              <span className="text-xs text-emerald-400 font-medium">Auto-Scoped</span>
+            </div>
+            <h3 className="text-sm font-bold text-white mt-0.5">
+              {activeProject?.name || 'Enterprise Project'}
+            </h3>
+            <p className="text-[11px] text-slate-400">
+              Connecting and syncing tools matches this project's key to fetch related issues, commits, and risk matrices.
+            </p>
+          </div>
+        </div>
+
+        {canEdit && (
+          <button
+            onClick={handleSyncProjectTelemetry}
+            disabled={syncingProject || !activeProject?.id}
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] hover:brightness-110 text-white text-xs font-bold flex items-center gap-2 shadow-md disabled:opacity-50 transition-all flex-shrink-0 cursor-pointer"
+          >
+            {syncingProject ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+            <span>{syncingProject ? 'Matching & Syncing...' : `Sync [${activeProject?.jira_key || 'Project'}] Live Telemetry`}</span>
           </button>
         )}
       </div>

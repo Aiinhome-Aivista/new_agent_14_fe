@@ -31,7 +31,7 @@ const LoginPage = () => {
     setIsSubmitting(true);
     try {
       await login(loginEmail, loginPassword);
-      navigate('/dashboard');
+      navigate('/projects');
     } catch (err) {
       console.error(err);
       setError('Invalid credentials. Please verify your email and password.');

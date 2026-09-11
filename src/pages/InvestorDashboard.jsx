@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { useProject } from '../context/ProjectContext';
 import { dashboardApi } from '../api/dashboardApi';
 import { reportsApi } from '../api/reportsApi';
 import { ingestionApi } from '../api/ingestionApi';
@@ -187,10 +188,12 @@ const InvestorDashboard = () => {
     }));
   };
 
+  const { activeProject } = useProject();
+
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const snapshot = await dashboardApi.getSnapshot();
+      const snapshot = await dashboardApi.getSnapshot(activeProject?.id || activeProject?.jira_key);
       setData(snapshot);
       setLastUpdated(new Date());
     } catch (err) {
@@ -207,12 +210,13 @@ const InvestorDashboard = () => {
       setLastUpdated(new Date());
     }, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [activeProject?.id, activeProject?.jira_key]);
 
   const handleGenerateReport = async () => {
     try {
       setGeneratingReport(true);
-      const res = await reportsApi.generateReport(1);
+      const targetPid = activeProject?.id || 1;
+      const res = await reportsApi.generateReport(targetPid);
       showToast(`Report ${res.filename} generated successfully!`, 'success');
       await reportsApi.downloadReport(res.filename);
     } catch (err) {
@@ -230,7 +234,11 @@ const InvestorDashboard = () => {
     try {
       setUploadingDoc(true);
       setUploadProgress(0);
-      const res = await ingestionApi.uploadDocument(file, (p) => setUploadProgress(p));
+      const res = await ingestionApi.uploadDocument(
+        file, 
+        (p) => setUploadProgress(p),
+        { project_id: activeProject?.id }
+      );
       if (res?.ai_processing_status === 'degraded_fallback') {
         showToast('AI processing degraded — some figures are heuristic estimates', 'warning');
       } else {

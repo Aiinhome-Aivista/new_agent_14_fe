@@ -1,8 +1,9 @@
 import api from './api';
 
 export const dashboardApi = {
-  getSnapshot: async () => {
-    const response = await api.get('/dashboard/snapshot');
+  getSnapshot: async (projectId = null) => {
+    const params = projectId ? { project_id: projectId } : {};
+    const response = await api.get('/dashboard/snapshot', { params });
     // The backend returns a snapshot object containing 'data' JSON
     // If the data was stored as a JSON string by mistake, parse it:
     let payload = response.data.data;

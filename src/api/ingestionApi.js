@@ -43,8 +43,9 @@ export const ingestionApi = {
         return response.data;
     }
   },
-  getHistory: async () => {
-    const response = await api.get('/ingestion/history');
+  getHistory: async (projectId = null) => {
+    const params = projectId ? { project_id: projectId } : {};
+    const response = await api.get('/ingestion/history', { params });
     return response.data;
   }
 };

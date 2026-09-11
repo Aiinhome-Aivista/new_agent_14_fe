@@ -7,7 +7,7 @@
  * @param {function} onComplete Callback fired when the stream finishes
  * @param {function} onError Callback fired when an error occurs
  */
-export const streamChatResponse = async (prompt, onChunk, onComplete, onError) => {
+export const streamChatResponse = async (prompt, onChunk, onComplete, onError, projectId = null) => {
     try {
       const token = localStorage.getItem('token');
       const headers = {
@@ -20,7 +20,8 @@ export const streamChatResponse = async (prompt, onChunk, onComplete, onError) =
       }
   
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
-      const response = await fetch(`${API_BASE_URL}/api/chat/stream?query=${encodeURIComponent(prompt)}`, {
+      const projectParam = projectId ? `&project_id=${encodeURIComponent(projectId)}` : '';
+      const response = await fetch(`${API_BASE_URL}/api/chat/stream?query=${encodeURIComponent(prompt)}${projectParam}`, {
         method: 'GET',
         headers,
       });

@@ -1,8 +1,9 @@
 import api from './api';
 
 export const risksApi = {
-  getRisks: async () => {
-    const response = await api.get('/risks/');
+  getRisks: async (projectId = null) => {
+    const params = projectId ? { project_id: projectId } : {};
+    const response = await api.get('/risks/', { params });
     return response.data;
   },
   updateRisk: async (riskId, data) => {
