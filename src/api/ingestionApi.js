@@ -47,5 +47,20 @@ export const ingestionApi = {
     const params = projectId ? { project_id: projectId } : {};
     const response = await api.get('/ingestion/history', { params });
     return response.data;
+  },
+  getProjectConnectors: async (projectId = null) => {
+    const params = projectId ? { project_id: projectId } : {};
+    const response = await api.get('/ingestion/connectors', { params });
+    return response.data;
+  },
+  fetchConnectorData: async (provider, projectId = null) => {
+    const params = { provider, ...(projectId ? { project_id: projectId } : {}) };
+    const response = await api.get('/ingestion/connectors/fetch', { params });
+    return response.data;
+  },
+  ingestConnectorItems: async (provider, items, projectId = null) => {
+    const payload = { provider, items, ...(projectId ? { project_id: projectId } : {}) };
+    const response = await api.post('/ingestion/connectors/ingest', payload);
+    return response.data;
   }
 };

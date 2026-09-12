@@ -83,13 +83,15 @@ const GuardrailsPage = () => {
     category: 'Security & PII',
     level: 'Strict',
     description: '',
-    status: 'Active'
+    status: 'Active',
+    scope: 'project'
   });
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [levelFilter, setLevelFilter] = useState('All');
+  const [scopeFilter, setScopeFilter] = useState('All'); // 'All', 'Project', 'Global'
 
   // Dynamic AI Suggestions State
   const [aiSuggestions, setAiSuggestions] = useState([]);
@@ -163,15 +165,25 @@ const GuardrailsPage = () => {
 
     try {
       setSubmitting(true);
-      const res = await guardrailsApi.createPolicy(newPolicy);
-      showToast(`Guardrail "${res.policy?.name || newPolicy.name}" deployed successfully!`, 'success');
+      const payload = {
+        name: newPolicy.name.trim(),
+        category: newPolicy.category.trim(),
+        level: newPolicy.level,
+        description: newPolicy.description.trim(),
+        status: newPolicy.status,
+        project_id: newPolicy.scope === 'global' ? null : (activeProject?.id || 1)
+      };
+      const res = await guardrailsApi.createPolicy(payload);
+      const scopeLabel = newPolicy.scope === 'global' ? 'Global Standard' : `Project [${activeProject?.jira_key || 'PRJ'}]`;
+      showToast(`Guardrail "${res.policy?.name || newPolicy.name}" deployed (${scopeLabel})!`, 'success');
       setShowAddModal(false);
       setNewPolicy({
         name: '',
         category: 'Security & PII',
         level: 'Strict',
         description: '',
-        status: 'Active'
+        status: 'Active',
+        scope: 'project'
       });
       await fetchData();
     } catch (err) {
@@ -182,6 +194,7 @@ const GuardrailsPage = () => {
       setSubmitting(false);
     }
   };
+
 
   const handleTogglePolicy = async (policyId) => {
     try {
@@ -224,13 +237,14 @@ const GuardrailsPage = () => {
   };
 
   const applyTemplate = (tpl) => {
-    setNewPolicy({
+    setNewPolicy(prev => ({
+      ...prev,
       name: tpl.name,
       category: tpl.category,
       level: tpl.level,
       description: tpl.description,
       status: 'Active'
-    });
+    }));
   };
 
   if (loading) {
@@ -257,6 +271,8 @@ const GuardrailsPage = () => {
   const approvalQueue = guardrailsData?.approval_queue || [];
   const stats = guardrailsData?.stats || { 
     active_policies: policies.filter(p => p.status === 'Active').length, 
+    project_policies_count: policies.filter(p => !p.is_global).length,
+    global_policies_count: policies.filter(p => p.is_global).length,
     pending_approvals: approvalQueue.filter(q => q.status === 'Pending').length 
   };
 
@@ -270,7 +286,10 @@ const GuardrailsPage = () => {
       p.category?.toLowerCase().includes(q);
     const matchesCat = categoryFilter === 'All' || p.category === categoryFilter;
     const matchesLevel = levelFilter === 'All' || p.level === levelFilter;
-    return matchesSearch && matchesCat && matchesLevel;
+    const matchesScope = scopeFilter === 'All' || 
+      (scopeFilter === 'Project' && !p.is_global) || 
+      (scopeFilter === 'Global' && p.is_global);
+    return matchesSearch && matchesCat && matchesLevel && matchesScope;
   });
 
   return (
@@ -313,7 +332,12 @@ const GuardrailsPage = () => {
               {policies.filter(p => p.status === 'Active').length}
               <span className="text-xs font-normal theme-muted ml-1.5">/ {policies.length} total</span>
             </div>
-            <div className="text-[11px] font-bold theme-muted uppercase tracking-wider mt-0.5">Active Safety Policies</div>
+            <div className="text-[11px] font-bold theme-muted uppercase tracking-wider mt-0.5 flex items-center gap-1.5">
+              <span>Active Policies</span>
+              <span className="text-[10px] text-slate-400 lowercase font-normal">
+                ({stats.project_policies_count || 0} project, {stats.global_policies_count || 0} global)
+              </span>
+            </div>
           </div>
         </div>
 
@@ -358,9 +382,20 @@ const GuardrailsPage = () => {
                 placeholder="Search policies..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 pr-3 py-1.5 rounded-xl text-xs theme-card border theme-border focus:outline-none focus:border-[#FF5A14] w-40 sm:w-52"
+                className="pl-8 pr-3 py-1.5 rounded-xl text-xs theme-card border theme-border focus:outline-none focus:border-[#FF5A14] w-36 sm:w-48"
               />
             </div>
+
+            {/* Scope Filter */}
+            <select
+              value={scopeFilter}
+              onChange={(e) => setScopeFilter(e.target.value)}
+              className="px-2.5 py-1.5 rounded-xl text-xs theme-card border theme-border focus:outline-none focus:border-[#FF5A14]"
+            >
+              <option value="All">All Scopes ({policies.length})</option>
+              <option value="Project">Project Scoped ({policies.filter(p => !p.is_global).length})</option>
+              <option value="Global">Enterprise Global ({policies.filter(p => p.is_global).length})</option>
+            </select>
 
             <select
               value={categoryFilter}
@@ -393,6 +428,7 @@ const GuardrailsPage = () => {
               <tr>
                 <th className="py-3 px-4">Policy ID</th>
                 <th className="py-3 px-4">Name</th>
+                <th className="py-3 px-4">Scope</th>
                 <th className="py-3 px-4">Category</th>
                 <th className="py-3 px-4">Constraint Rule</th>
                 <th className="py-3 px-4">Enforcement</th>
@@ -403,7 +439,7 @@ const GuardrailsPage = () => {
             <tbody className="divide-y theme-border">
               {filteredPolicies.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="py-8 text-center text-xs theme-muted">
+                  <td colSpan="8" className="py-8 text-center text-xs theme-muted">
                     No policies matched your current filter criteria.
                   </td>
                 </tr>
@@ -417,6 +453,18 @@ const GuardrailsPage = () => {
                       </td>
                       <td className="py-3 px-4 font-bold theme-heading whitespace-nowrap">
                         {p.name}
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        {p.is_global ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30">
+                            <span>🌐 Global</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#FF5A14]/15 text-[#FF5A14] border border-[#FF5A14]/30">
+                            <FolderKanban size={10} />
+                            <span>[{activeProject?.jira_key || 'PRJ'}] Scoped</span>
+                          </span>
+                        )}
                       </td>
                       <td className="py-3 px-4">
                         <span className="px-2 py-0.5 rounded-md text-[10px] font-medium font-mono theme-badge">
@@ -475,6 +523,7 @@ const GuardrailsPage = () => {
                 })
               )}
             </tbody>
+
           </table>
         </div>
       </div>
@@ -694,6 +743,63 @@ const GuardrailsPage = () => {
 
             {/* Guardrail Policy Form */}
             <form onSubmit={handleCreatePolicy} className="space-y-4">
+              {/* Policy Scope Selection */}
+              <div>
+                <label className="block text-xs font-bold theme-heading mb-1.5">
+                  Deployment Scope <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div
+                    type="button"
+                    onClick={() => setNewPolicy({ ...newPolicy, scope: 'project' })}
+                    className={`p-3 rounded-xl border cursor-pointer transition-all flex items-start gap-2.5 ${
+                      newPolicy.scope === 'project'
+                        ? 'border-[#FF5A14] bg-[#FF5A14]/10 shadow-sm'
+                        : 'theme-border hover:border-slate-400 bg-white/50 dark:bg-slate-800/50'
+                    }`}
+                  >
+                    <div className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                      newPolicy.scope === 'project' ? 'border-[#FF5A14]' : 'border-slate-400'
+                    }`}>
+                      {newPolicy.scope === 'project' && <div className="w-2 h-2 rounded-full bg-[#FF5A14]" />}
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold theme-heading flex items-center gap-1.5">
+                        <FolderKanban size={13} className="text-[#FF5A14]" />
+                        <span>Project Scoped</span>
+                      </div>
+                      <div className="text-[11px] theme-muted mt-0.5 leading-snug">
+                        Saved strictly for <strong>[{activeProject?.jira_key || 'PRJ'}] {activeProject?.name || 'Active Project'}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    type="button"
+                    onClick={() => setNewPolicy({ ...newPolicy, scope: 'global' })}
+                    className={`p-3 rounded-xl border cursor-pointer transition-all flex items-start gap-2.5 ${
+                      newPolicy.scope === 'global'
+                        ? 'border-purple-500 bg-purple-500/10 shadow-sm'
+                        : 'theme-border hover:border-slate-400 bg-white/50 dark:bg-slate-800/50'
+                    }`}
+                  >
+                    <div className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                      newPolicy.scope === 'global' ? 'border-purple-500' : 'border-slate-400'
+                    }`}>
+                      {newPolicy.scope === 'global' && <div className="w-2 h-2 rounded-full bg-purple-500" />}
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold theme-heading flex items-center gap-1.5">
+                        <span>🌐 Enterprise Global</span>
+                      </div>
+                      <div className="text-[11px] theme-muted mt-0.5 leading-snug">
+                        Enforced across all active projects &amp; portfolio agents
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Policy Name */}
               <div>
                 <label className="block text-xs font-bold theme-heading mb-1.5">

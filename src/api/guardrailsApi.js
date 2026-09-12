@@ -1,8 +1,10 @@
 import api from './api';
  
 export const guardrailsApi = {
-  getGuardrails: async (projectId = null) => {
-    const params = projectId ? { project_id: projectId } : {};
+  getGuardrails: async (projectId = null, scope = 'all') => {
+    const params = {};
+    if (projectId) params.project_id = projectId;
+    if (scope && scope !== 'all') params.scope = scope;
     const response = await api.get('/guardrails', { params });
     return response.data;
   },

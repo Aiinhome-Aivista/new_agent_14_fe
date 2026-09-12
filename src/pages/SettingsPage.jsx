@@ -2,13 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useProject } from '../context/ProjectContext';
 import { settingsApi } from '../api/settingsApi';
-import { projectApi } from '../api/projectApi';
 import { useToast } from '../context/ToastContext';
 import { 
-  Save, Server, GitBranch, Database, FileText, Bell, Clock, 
-  Sparkles, CheckCircle2, AlertCircle, Loader2, Activity, RefreshCw,
-  Unplug, Wifi, WifiOff, Eye, EyeOff, Key, ExternalLink, Copy,
-  FolderKanban, HardDrive, Cloud, Layers, BookmarkCheck, ArrowDownToLine
+  Save, Server, GitBranch, Database, FileText, Bell, 
+  Sparkles, CheckCircle2, AlertCircle, Loader2, Activity,
+  Unplug, Eye, EyeOff, Key, ExternalLink, Copy,
+  FolderKanban, HardDrive, Cloud, Layers, BookmarkCheck
 } from 'lucide-react';
 import FuturisticLoader from '../components/common/FuturisticLoader';
 
@@ -68,15 +67,6 @@ const PRIMARY_PROVIDERS = [
     userLabel: 'Account Email / Tenant ID',
     userPlaceholder: 'onedrive.pmo@pwc-enterprise.com',
     tokenLabel: 'Microsoft Graph API Client Secret / PAT'
-  },
-  {
-    id: 'scheduler',
-    name: 'Autonomous Sync',
-    icon: Clock,
-    color: 'text-[#FF5A14]',
-    borderActive: 'border-[#FF5A14]',
-    bgActive: 'bg-[#FF5A14]/10',
-    desc: 'Background Sync Daemon, Polling Intervals & Cross-Tool Health'
   }
 ];
 
@@ -146,51 +136,10 @@ const SettingsPage = () => {
   const [testing, setTesting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [seedingAll, setSeedingAll] = useState(false);
-  const [syncingProject, setSyncingProject] = useState(false);
-  const [syncingDrive, setSyncingDrive] = useState(false);
   const [testResult, setTestResult] = useState(null);
   const [showToken, setShowToken] = useState(false);
   const [imgLoadFailed, setImgLoadFailed] = useState(false);
   const [notifiedConnectors, setNotifiedConnectors] = useState({});
-
-  const handleSyncProjectTelemetry = async () => {
-    if (!activeProject?.id) {
-      showToast("Please select an active project first.", "warning");
-      return;
-    }
-    try {
-      setSyncingProject(true);
-      const res = await projectApi.syncProjectConnectors(activeProject.id);
-      showToast(res.message || `Successfully synced connectors for ${activeProject.name}!`, "success");
-    } catch (err) {
-      console.error(err);
-      showToast(err.response?.data?.error || "Failed to sync project telemetry.", "error");
-    } finally {
-      setSyncingProject(false);
-    }
-  };
-
-  const handleSyncDriveFiles = async (provider) => {
-    if (!activeProject?.id) {
-      showToast("Please select an active project first.", "warning");
-      return;
-    }
-    try {
-      setSyncingDrive(true);
-      let res;
-      if (provider === 'google_drive') {
-        res = await settingsApi.syncGoogleDrive(activeProject.id);
-      } else if (provider === 'onedrive') {
-        res = await settingsApi.syncOneDrive(activeProject.id);
-      }
-      showToast(res?.message || `Successfully synchronized documents from ${provider === 'google_drive' ? 'Google Drive' : 'OneDrive'} into Project!`, "success");
-    } catch (err) {
-      console.error(err);
-      showToast(err.response?.data?.error || "Failed to synchronize documents.", "error");
-    } finally {
-      setSyncingDrive(false);
-    }
-  };
 
   // Track connected status from database per provider
   const [connectedProviders, setConnectedProviders] = useState({
@@ -223,10 +172,6 @@ const SettingsPage = () => {
     google_drive: { base_url: '', username_email: '', api_token: '' },
     onedrive: { base_url: '', username_email: '', api_token: '' }
   });
-
-  // Scheduler state
-  const [schedulerStatus, setSchedulerStatus] = useState(null);
-  const [syncingScheduler, setSyncingScheduler] = useState(false);
 
   const canEdit = ['PMO', 'Program Director'].includes(user?.role);
 
@@ -314,16 +259,6 @@ const SettingsPage = () => {
           }
         }).catch(() => {});
       }
-
-      // Fetch scheduler status
-      try {
-        const schedRes = await settingsApi.getSchedulerStatus();
-        if (schedRes.data) {
-          setSchedulerStatus(schedRes.data);
-        }
-      } catch (sErr) {
-        console.warn("Scheduler status fetch warning:", sErr);
-      }
     } catch (err) {
       console.error("Failed to load settings:", err);
       showToast("Failed to load enterprise settings.", "error");
@@ -349,7 +284,7 @@ const SettingsPage = () => {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!canEdit || activeTab === 'scheduler') return;
+    if (!canEdit) return;
     
     try {
       setSaving(true);
@@ -415,7 +350,6 @@ const SettingsPage = () => {
   };
 
   const handleTestConnection = async () => {
-    if (activeTab === 'scheduler') return;
     try {
       setTesting(true);
       setTestResult(null);
@@ -480,7 +414,7 @@ const SettingsPage = () => {
   };
 
   const handleDisconnect = async (provider = activeTab) => {
-    if (!canEdit || provider === 'scheduler') return;
+    if (!canEdit) return;
     try {
       setDisconnecting(true);
       const res = await settingsApi.disconnectProvider(provider, activeProject?.id);
@@ -564,24 +498,6 @@ const SettingsPage = () => {
     }
   };
 
-  const handleTriggerSync = async () => {
-    try {
-      setSyncingScheduler(true);
-      const res = await settingsApi.triggerSchedulerSync();
-      showToast(res.message || "Manual sync sweep triggered!", "success");
-      setTimeout(async () => {
-        try {
-          const schedRes = await settingsApi.getSchedulerStatus();
-          if (schedRes.data) setSchedulerStatus(schedRes.data);
-        } catch (e) {}
-        setSyncingScheduler(false);
-      }, 2000);
-    } catch (err) {
-      setSyncingScheduler(false);
-      showToast("Failed to trigger background scheduler.", "error");
-    }
-  };
-
   const handleToggleNotify = (connId, connName) => {
     setNotifiedConnectors(prev => {
       const nextState = !prev[connId];
@@ -611,7 +527,7 @@ const SettingsPage = () => {
         <div>
           <h1 className="text-2xl sm:text-3xl font-black theme-heading tracking-tight">Enterprise Connectors Hub</h1>
           <p className="text-xs sm:text-sm theme-muted mt-1">
-            Configure live operational connectors (Jira, Azure DevOps, Google Drive, OneDrive) scoped to the active project.
+            Configure live operational connector connections (Jira, Azure DevOps, Google Drive, OneDrive) saved per project in database.
           </p>
         </div>
 
@@ -629,7 +545,7 @@ const SettingsPage = () => {
       </div>
 
       {/* Active Project Connector Context Banner */}
-      <div className="p-4 rounded-2xl bg-white dark:bg-[#131A29] border border-[#FF5A14]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm dark:shadow-md">
+      <div className="p-4 rounded-2xl bg-white dark:bg-[#131A29] border border-[#FF5A14]/30 flex items-center justify-between gap-4 shadow-sm dark:shadow-md">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[#FF5A14]/15 text-[#FF5A14] flex items-center justify-center font-bold flex-shrink-0">
             <FolderKanban size={20} />
@@ -639,36 +555,25 @@ const SettingsPage = () => {
               <span className="text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded bg-[#FF5A14]/15 text-[#FF7A45] border border-[#FF5A14]/30">
                 Active Project Context: {activeProject?.jira_key || 'PRJ'} (ID: #{activeProject?.id || 1})
               </span>
-              <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">DB & Auto-Scoped</span>
+              <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">DB & Scoped per Project</span>
             </div>
             <h3 className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">
               {activeProject?.name || 'Enterprise Project'}
             </h3>
             <p className="text-[11px] text-slate-600 dark:text-slate-400">
-              Jira, Azure DevOps, Google Drive, and OneDrive are saved per project in MySQL. Connecting and syncing tools matches this project's key to fetch related issues, commits, and risk matrices.
+              Manage connector credentials and authentication for this project. All credentials and connection states are stored securely per project in MySQL.
             </p>
           </div>
         </div>
-
-        {canEdit && (
-          <button
-            onClick={handleSyncProjectTelemetry}
-            disabled={syncingProject || !activeProject?.id}
-            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] hover:brightness-110 text-white text-xs font-bold flex items-center gap-2 shadow-md disabled:opacity-50 transition-all flex-shrink-0 cursor-pointer"
-          >
-            {syncingProject ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-            <span>{syncingProject ? 'Matching & Syncing...' : `Sync [${activeProject?.jira_key || 'Project'}] Telemetry`}</span>
-          </button>
-        )}
       </div>
 
       {/* Main Grid: Left Primary Connectors & Right Upcoming Integrations */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        {/* Left Workbench: Jira, Azure DevOps, Google Drive, OneDrive, Scheduler (8 cols) */}
+        {/* Left Workbench: Jira, Azure DevOps, Google Drive, OneDrive (8 cols) */}
         <div className="lg:col-span-8 space-y-4">
-          {/* Primary Connector Tabs (Now 5 tabs: Jira, Azure, GDrive, OneDrive, Scheduler) */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2 pb-2">
+          {/* Primary Connector Tabs (4 project connectors: Jira, Azure, GDrive, OneDrive) */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pb-2">
             {PRIMARY_PROVIDERS.map((prov) => {
               const Icon = prov.icon;
               const isActive = activeTab === prov.id;
@@ -692,449 +597,352 @@ const SettingsPage = () => {
                     <Icon size={17} className={isActive ? 'text-white' : prov.color} />
                     <span className="truncate">{prov.name}</span>
                   </div>
-                  {prov.id !== 'scheduler' ? (
-                    <span 
-                      title={isConnected ? `${prov.name} is Connected` : `${prov.name} is Disconnected`}
-                      className={`w-2.5 h-2.5 rounded-full shrink-0 transition-all ${
-                        isConnected 
-                          ? (isActive ? 'bg-emerald-300 ring-4 ring-white/30 animate-pulse' : 'bg-emerald-400 ring-4 ring-emerald-400/30 animate-pulse') 
-                          : (isActive ? 'bg-white/30' : 'bg-slate-400/30')
-                      }`}
-                    />
-                  ) : (
-                    <span className="text-[9px] uppercase font-mono tracking-wider opacity-80">Daemon</span>
-                  )}
+                  <span 
+                    title={isConnected ? `${prov.name} is Connected to Project #${activeProject?.id}` : `${prov.name} is Disconnected`}
+                    className={`w-2.5 h-2.5 rounded-full shrink-0 transition-all ${
+                      isConnected 
+                        ? (isActive ? 'bg-emerald-300 ring-4 ring-white/30 animate-pulse' : 'bg-emerald-400 ring-4 ring-emerald-400/30 animate-pulse') 
+                        : (isActive ? 'bg-white/30' : 'bg-slate-400/30')
+                    }`}
+                  />
                 </button>
               );
             })}
           </div>
 
-          {/* Tab Content: Scheduler Panel */}
-          {activeTab === 'scheduler' ? (
-            <div className="theme-card rounded-2xl overflow-hidden shadow-sm border theme-border">
-              <div className="p-6 border-b theme-border flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-[#FF5A14]/10 text-[#FF5A14] rounded-xl border border-[#FF5A14]/20">
-                    <Clock size={22} />
-                  </div>
-                  <div>
-                    <h2 className="text-base font-bold theme-heading">Autonomous Background Sync Engine</h2>
-                    <p className="text-xs theme-muted">Daemon worker periodically polling external connectors and refreshing executive snapshots.</p>
-                  </div>
+          {/* Connector Form Card (Jira, Azure DevOps, Google Drive, or OneDrive) */}
+          <div className="theme-card rounded-2xl overflow-hidden shadow-sm border theme-border">
+            <div className="p-6 border-b theme-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className={`p-3 rounded-xl border ${currentProviderDef.bgActive} ${currentProviderDef.color} ${currentProviderDef.borderActive}`}>
+                  <currentProviderDef.icon size={22} />
                 </div>
-
-                <button
-                  type="button"
-                  onClick={handleTriggerSync}
-                  disabled={syncingScheduler}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white rounded-xl text-xs font-bold shadow hover:brightness-110 disabled:opacity-50 transition-all cursor-pointer"
-                >
-                  {syncingScheduler ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-                  <span>{syncingScheduler ? 'Syncing...' : 'Trigger Sync Now'}</span>
-                </button>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base font-bold theme-heading">{currentProviderDef.name}</h2>
+                    {connectedProviders[activeTab] ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block" />
+                        Connected to Project #{activeProject?.id || 1}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-500/10 text-slate-400 border border-slate-500/20">
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-400 inline-block" />
+                        Disconnected
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs theme-muted">{currentProviderDef.desc}</p>
+                </div>
               </div>
 
-              <div className="p-6 space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="p-4 rounded-xl theme-subtle border theme-border">
-                    <span className="text-[11px] theme-muted font-medium">Scheduler State</span>
-                    <div className="mt-1 flex items-center gap-2">
-                      <div className={`w-2.5 h-2.5 rounded-full ${schedulerStatus?.is_running ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
-                      <span className="text-sm font-bold theme-heading">
-                        {schedulerStatus?.is_running ? 'Active (Daemon Running)' : 'Idle'}
+              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                {canEdit && connectedProviders[activeTab] && (
+                  <button
+                    type="button"
+                    onClick={() => handleDisconnect(activeTab)}
+                    disabled={disconnecting}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/30 rounded-xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
+                    title="Disconnect account manually for this project"
+                  >
+                    {disconnecting ? <Loader2 size={14} className="animate-spin" /> : <Unplug size={14} />}
+                    <span>Disconnect</span>
+                  </button>
+                )}
+
+                {canEdit && activeTab !== 'google_drive' && (
+                  <button
+                    type="button"
+                    onClick={() => handleLoadDemoPresets(activeTab)}
+                    disabled={testing}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-purple-500/15 to-indigo-500/15 text-purple-600 dark:text-purple-400 hover:bg-purple-500/25 border border-purple-500/30 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                    title="Seed demo credentials into database for this project"
+                  >
+                    <Sparkles size={14} />
+                    <span>Load Demo Sandbox</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Connected Identity HUD */}
+              {connectedProviders[activeTab] && (
+                <div className="relative rounded-2xl overflow-hidden border border-emerald-500/30 dark:border-emerald-500/40 bg-gradient-to-b from-emerald-500/[0.07] via-slate-50/90 to-white dark:from-[#101726]/95 dark:via-[#0D1322]/90 dark:to-[#0A0E1A]/95 shadow-sm dark:shadow-[0_10px_35px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+                  <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-emerald-400 to-transparent animate-pulse" />
+                  
+                  {/* Top HUD Telemetry Bar */}
+                  <div className="px-5 py-2.5 bg-emerald-500/[0.08] dark:bg-white/[0.03] border-b border-emerald-500/20 dark:border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-2 w-2 relative">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                      </span>
+                      <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
+                        LIVE PROJECT CONNECTOR CONNECTION
+                      </span>
+                      <span className="text-slate-300 dark:text-slate-600 hidden sm:inline">|</span>
+                      <span className="font-mono text-slate-500 dark:text-slate-400 hidden sm:inline">
+                        SCOPED TO PROJECT [{activeProject?.jira_key || 'PRJ'}]
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <span className="px-2 py-0.5 rounded-full font-mono text-[10px] font-bold bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30">
+                        TLS 1.3 ENCRYPTED
                       </span>
                     </div>
                   </div>
 
-                  <div className="p-4 rounded-xl theme-subtle border theme-border">
-                    <span className="text-[11px] theme-muted font-medium">Sync Interval</span>
-                    <div className="mt-1 text-sm font-bold theme-heading">
-                      {Math.round((schedulerStatus?.interval_seconds || 3600) / 60)} minutes
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-xl theme-subtle border theme-border">
-                    <span className="text-[11px] theme-muted font-medium">Total Sweeps Executed</span>
-                    <div className="mt-1 text-sm font-bold theme-heading">
-                      #{schedulerStatus?.sync_count ?? 0} cycles
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-xl theme-subtle border theme-border">
-                    <span className="text-[11px] theme-muted font-medium">Last Sweep Status</span>
-                    <div className="mt-1 flex items-center gap-1.5">
-                      {schedulerStatus?.last_status === 'success' ? (
-                        <span className="text-xs font-bold text-emerald-500 flex items-center gap-1">
-                          <CheckCircle2 size={14} /> Synced Cleanly
-                        </span>
-                      ) : schedulerStatus?.last_status === 'syncing' ? (
-                        <span className="text-xs font-bold text-amber-500 flex items-center gap-1">
-                          <Loader2 size={14} className="animate-spin" /> In Progress
-                        </span>
-                      ) : (
-                        <span className="text-xs font-bold text-slate-400">Ready</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-xl bg-slate-900 text-slate-200 border border-slate-800 font-mono text-xs space-y-1">
-                  <div className="text-slate-400 text-[11px] mb-2 font-sans font-bold flex items-center gap-1">
-                    <Activity size={14} className="text-[#FF5A14]" /> Daemon Diagnostic Metrics
-                  </div>
-                  <div>Last Execution: <span className="text-emerald-400">{schedulerStatus?.last_run || 'Pending first cycle'}</span></div>
-                  <div>Worker Thread: <span className="text-sky-400">VPMSchedulerThread (Daemon=True)</span></div>
-                  <div>Active Operational Connectors: <span className="text-amber-400">Jira Cloud, Azure DevOps, Google Drive, OneDrive</span></div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* Connector Form Card (Jira, Azure DevOps, Google Drive, or OneDrive) */
-            <div className="theme-card rounded-2xl overflow-hidden shadow-sm border theme-border">
-              <div className="p-6 border-b theme-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className={`p-3 rounded-xl border ${currentProviderDef.bgActive} ${currentProviderDef.color} ${currentProviderDef.borderActive}`}>
-                    <currentProviderDef.icon size={22} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-base font-bold theme-heading">{currentProviderDef.name}</h2>
-                      {connectedProviders[activeTab] ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block" />
-                          Connected to Project #{activeProject?.id || 1}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-500/10 text-slate-400 border border-slate-500/20">
-                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400 inline-block" />
-                          Disconnected
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs theme-muted">{currentProviderDef.desc}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                  {/* Dedicated Document Sync Button for Google Drive and OneDrive */}
-                  {(activeTab === 'google_drive' || activeTab === 'onedrive') && connectedProviders[activeTab] && canEdit && (
-                    <button
-                      type="button"
-                      onClick={() => handleSyncDriveFiles(activeTab)}
-                      disabled={syncingDrive}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
-                    >
-                      {syncingDrive ? <Loader2 size={14} className="animate-spin" /> : <ArrowDownToLine size={14} />}
-                      <span>{syncingDrive ? 'Syncing...' : 'Sync Documents to DB'}</span>
-                    </button>
-                  )}
-
-                  {canEdit && connectedProviders[activeTab] && (
-                    <button
-                      type="button"
-                      onClick={() => handleDisconnect(activeTab)}
-                      disabled={disconnecting}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/30 rounded-xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
-                      title="Disconnect account manually"
-                    >
-                      {disconnecting ? <Loader2 size={14} className="animate-spin" /> : <Unplug size={14} />}
-                      <span>Disconnect</span>
-                    </button>
-                  )}
-
-                  {canEdit && activeTab !== 'google_drive' && (
-                    <button
-                      type="button"
-                      onClick={() => handleLoadDemoPresets(activeTab)}
-                      disabled={testing}
-                      className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-purple-500/15 to-indigo-500/15 text-purple-600 dark:text-purple-400 hover:bg-purple-500/25 border border-purple-500/30 rounded-xl text-xs font-bold transition-all cursor-pointer"
-                    >
-                      <Sparkles size={14} />
-                      <span>Load Demo Sandbox</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="p-6 space-y-6">
-                {/* Connected Identity HUD */}
-                {connectedProviders[activeTab] && (
-                  <div className="relative rounded-2xl overflow-hidden border border-emerald-500/30 dark:border-emerald-500/40 bg-gradient-to-b from-emerald-500/[0.07] via-slate-50/90 to-white dark:from-[#101726]/95 dark:via-[#0D1322]/90 dark:to-[#0A0E1A]/95 shadow-sm dark:shadow-[0_10px_35px_rgba(0,0,0,0.5)] backdrop-blur-xl">
-                    <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-emerald-400 to-transparent animate-pulse" />
-                    
-                    {/* Top HUD Telemetry Bar */}
-                    <div className="px-5 py-2.5 bg-emerald-500/[0.08] dark:bg-white/[0.03] border-b border-emerald-500/20 dark:border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-[11px]">
-                      <div className="flex items-center gap-2">
-                        <span className="flex h-2 w-2 relative">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                        </span>
-                        <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
-                          LIVE PROJECT CONNECTOR PIPELINE
-                        </span>
-                        <span className="text-slate-300 dark:text-slate-600 hidden sm:inline">|</span>
-                        <span className="font-mono text-slate-500 dark:text-slate-400 hidden sm:inline">
-                          SCOPED TO PROJECT [{activeProject?.jira_key || 'PRJ'}]
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <span className="px-2 py-0.5 rounded-full font-mono text-[10px] font-bold bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30">
-                          TLS 1.3 ENCRYPTED
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Main Identity Information Block */}
-                    <div className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative z-10">
-                      <div className="flex items-start sm:items-center gap-4.5">
-                        <div className="relative shrink-0">
-                          {connectedProfiles[activeTab]?.avatar_url && !imgLoadFailed ? (
-                            <img 
-                              src={connectedProfiles[activeTab].avatar_url} 
-                              alt={connectedProfiles[activeTab]?.user || 'Account Avatar'} 
-                              onError={() => setImgLoadFailed(true)}
-                              className="w-14 h-14 rounded-2xl object-cover border-2 border-emerald-400/80 shadow-[0_0_20px_rgba(16,185,129,0.25)] ring-4 ring-emerald-500/20"
-                            />
-                          ) : (
-                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FF5A14] via-purple-600 to-emerald-400 p-[1.5px] shadow-[0_0_20px_rgba(255,90,20,0.25)]">
-                              <div className="w-full h-full rounded-[13px] bg-emerald-50/90 dark:bg-[#0C111E] flex flex-col items-center justify-center">
-                                <span className="text-lg font-black tracking-wider text-emerald-950 dark:text-emerald-300">
-                                  {getInitials(connectedProfiles[activeTab]?.user, currentSettings.username_email)}
-                                </span>
-                              </div>
+                  {/* Main Identity Information Block */}
+                  <div className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative z-10">
+                    <div className="flex items-start sm:items-center gap-4.5">
+                      <div className="relative shrink-0">
+                        {connectedProfiles[activeTab]?.avatar_url && !imgLoadFailed ? (
+                          <img 
+                            src={connectedProfiles[activeTab].avatar_url} 
+                            alt={connectedProfiles[activeTab]?.user || 'Account Avatar'} 
+                            onError={() => setImgLoadFailed(true)}
+                            className="w-14 h-14 rounded-2xl object-cover border-2 border-emerald-400/80 shadow-[0_0_20px_rgba(16,185,129,0.25)] ring-4 ring-emerald-500/20"
+                          />
+                        ) : (
+                          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FF5A14] via-purple-600 to-emerald-400 p-[1.5px] shadow-[0_0_20px_rgba(255,90,20,0.25)]">
+                            <div className="w-full h-full rounded-[13px] bg-emerald-50/90 dark:bg-[#0C111E] flex flex-col items-center justify-center">
+                              <span className="text-lg font-black tracking-wider text-emerald-950 dark:text-emerald-300">
+                                {getInitials(connectedProfiles[activeTab]?.user, currentSettings.username_email)}
+                              </span>
                             </div>
-                          )}
-                          <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shadow-md ring-2 ring-white dark:ring-slate-900">
-                            <CheckCircle2 size={10} strokeWidth={3} className="text-white dark:text-slate-950" />
                           </div>
+                        )}
+                        <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shadow-md ring-2 ring-white dark:ring-slate-900">
+                          <CheckCircle2 size={10} strokeWidth={3} className="text-white dark:text-slate-950" />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
+                            {connectedProfiles[activeTab]?.user || currentSettings.username_email || 'Enterprise Verified Account'}
+                          </h3>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-500/40">
+                            Verified {currentProviderDef.name}
+                          </span>
                         </div>
 
-                        <div className="space-y-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
-                              {connectedProfiles[activeTab]?.user || currentSettings.username_email || 'Enterprise Verified Account'}
-                            </h3>
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-500/40">
-                              Verified {currentProviderDef.name}
+                        <div className="text-xs text-slate-700 dark:text-slate-300 space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-slate-500 font-medium">Account / ID:</span>
+                            <span className="font-mono text-emerald-700 dark:text-emerald-300 font-bold">
+                              {connectedProfiles[activeTab]?.email || currentSettings.username_email}
                             </span>
                           </div>
 
-                          <div className="text-xs text-slate-700 dark:text-slate-300 space-y-0.5">
-                            <div className="flex items-center gap-2">
-                              <span className="text-slate-500 font-medium">Account / ID:</span>
-                              <span className="font-mono text-emerald-700 dark:text-emerald-300 font-bold">
-                                {connectedProfiles[activeTab]?.email || currentSettings.username_email}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              <span className="text-slate-500 font-medium">Host / Drive:</span>
-                              <a 
-                                href={currentSettings.base_url} 
-                                target="_blank" 
-                                rel="noreferrer" 
-                                className="font-mono text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1 font-semibold truncate max-w-xs"
-                              >
-                                <span className="truncate">{currentSettings.base_url}</span>
-                                <ExternalLink size={10} className="shrink-0" />
-                              </a>
-                            </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-slate-500 font-medium">Host / Drive:</span>
+                            <a 
+                              href={currentSettings.base_url} 
+                              target="_blank" 
+                              rel="noreferrer" 
+                              className="font-mono text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1 font-semibold truncate max-w-xs"
+                            >
+                              <span className="truncate">{currentSettings.base_url}</span>
+                              <ExternalLink size={10} className="shrink-0" />
+                            </a>
                           </div>
                         </div>
                       </div>
+                    </div>
 
-                      <div className="text-right">
-                        <span className="text-[10px] uppercase font-mono text-slate-500 block tracking-wider">Project Telemetry</span>
-                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 justify-end">
-                          <Activity size={13} className="animate-pulse" /> Linked to #{activeProject?.id || 1}
+                    <div className="text-right">
+                      <span className="text-[10px] uppercase font-mono text-slate-500 block tracking-wider">Project Telemetry</span>
+                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 justify-end">
+                        <Activity size={13} className="animate-pulse" /> Linked to #{activeProject?.id || 1}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={handleSave} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold theme-heading">
+                      {currentProviderDef.urlLabel}
+                    </label>
+                    <input
+                      type="text"
+                      value={currentSettings.base_url}
+                      onChange={(e) => handleFieldChange(activeTab, 'base_url', e.target.value)}
+                      placeholder={currentProviderDef.urlPlaceholder}
+                      disabled={!canEdit}
+                      className="w-full px-4 py-2.5 theme-input rounded-xl text-xs focus:outline-none focus:border-[#FF5A14] disabled:opacity-50 transition-colors"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold theme-heading">
+                      {currentProviderDef.userLabel}
+                    </label>
+                    <input
+                      type="text"
+                      value={currentSettings.username_email}
+                      onChange={(e) => handleFieldChange(activeTab, 'username_email', e.target.value)}
+                      placeholder={currentProviderDef.userPlaceholder}
+                      disabled={!canEdit}
+                      className="w-full px-4 py-2.5 theme-input rounded-xl text-xs focus:outline-none focus:border-[#FF5A14] disabled:opacity-50 transition-colors"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1.5 md:col-span-2">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold theme-heading flex items-center gap-1.5">
+                        <Key size={13} className="text-[#FF5A14]" />
+                        <span>{currentProviderDef.tokenLabel}</span>
+                      </label>
+                      
+                      {tokenStatus[activeTab] ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                          <CheckCircle2 size={11} />
+                          Token Saved in DB for Project #{activeProject?.id || 1}
                         </span>
+                      ) : (
+                        <span className="text-[11px] theme-muted font-normal">
+                          (Enter secret/token to authenticate)
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="relative">
+                      <input
+                        type={showToken ? "text" : "password"}
+                        value={currentSettings.api_token}
+                        onChange={(e) => handleFieldChange(activeTab, 'api_token', e.target.value)}
+                        placeholder={
+                          tokenStatus[activeTab] 
+                            ? "•••••••••••••••••••••••• (Encrypted Secret Configured - Type to change)" 
+                            : "Paste API token / Secret key here"
+                        }
+                        disabled={!canEdit}
+                        className="w-full pl-4 pr-20 py-2.5 theme-input rounded-xl text-xs focus:outline-none focus:border-[#FF5A14] disabled:opacity-50 transition-colors font-mono"
+                      />
+                      <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                        {currentSettings.api_token && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(currentSettings.api_token);
+                              showToast("Token copied to clipboard!", "success");
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-[#FF5A14] rounded-md transition-colors cursor-pointer"
+                            title="Copy token to clipboard"
+                          >
+                            <Copy size={15} />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setShowToken(!showToken)}
+                          className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-md transition-colors cursor-pointer"
+                          title={showToken ? "Hide secret token" : "Show secret token"}
+                        >
+                          {showToken ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
                       </div>
+                    </div>
+                    <p className="text-[11px] theme-muted">
+                      {tokenStatus[activeTab] && !currentSettings.api_token
+                        ? `A secure encrypted token is active in DB for Project [${activeProject?.jira_key || ''}]. Leave blank to keep existing token.`
+                        : "Click the eye icon to view or verify the token before saving."}
+                    </p>
+                    {activeTab === 'google_drive' && (
+                      <p className="text-[11px] text-emerald-600 dark:text-emerald-400/90 font-medium bg-emerald-500/10 p-2.5 rounded-lg border border-emerald-500/20">
+                        <strong>Live Connector:</strong> Supports either a <strong>Google Service Account Private Key</strong> (<code className="font-mono bg-emerald-500/20 px-1 py-0.5 rounded">-----BEGIN PRIVATE KEY-----</code>) with its Service Account Email, or an <strong>OAuth 2.0 Bearer Token</strong> (<code className="font-mono bg-emerald-500/20 px-1 py-0.5 rounded">ya29.</code>). Invalid or mismatched keys will be strictly rejected.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Test Result Callout */}
+                {testResult && (
+                  <div className={`p-4 rounded-xl border flex items-start gap-3 text-xs ${
+                    testResult.success 
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400' 
+                      : 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400'
+                  }`}>
+                    {testResult.success ? <CheckCircle2 size={18} className="shrink-0 mt-0.5" /> : <AlertCircle size={18} className="shrink-0 mt-0.5" />}
+                    <div>
+                      <span className="font-bold">
+                        {testResult.success ? 'Handshake Successful' : 'Connection Failed'}:
+                      </span>{' '}
+                      {testResult.success ? (
+                        <span>
+                          Verified endpoint at <span className="font-mono">{testResult.server}</span> for user{' '}
+                          <span className="font-semibold">{testResult.user}</span>
+                          {testResult.is_sandbox && (
+                            <span className="ml-2 px-2 py-0.5 bg-purple-500/20 text-purple-700 dark:text-purple-300 font-bold rounded-full text-[10px]">
+                              Sandbox Mode
+                            </span>
+                          )}
+                        </span>
+                      ) : (
+                        <span>{testResult.error}</span>
+                      )}
                     </div>
                   </div>
                 )}
 
-                <form onSubmit={handleSave} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-bold theme-heading">
-                        {currentProviderDef.urlLabel}
-                      </label>
-                      <input
-                        type="text"
-                        value={currentSettings.base_url}
-                        onChange={(e) => handleFieldChange(activeTab, 'base_url', e.target.value)}
-                        placeholder={currentProviderDef.urlPlaceholder}
-                        disabled={!canEdit}
-                        className="w-full px-4 py-2.5 theme-input rounded-xl text-xs focus:outline-none focus:border-[#FF5A14] disabled:opacity-50 transition-colors"
-                        required
-                      />
+                <div className="pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t theme-border">
+                  {!canEdit ? (
+                    <p className="text-xs text-[#FF5A14] font-medium italic">
+                      Read-only mode. Only PMO or Program Directors can update enterprise credentials.
+                    </p>
+                  ) : connectedProviders[activeTab] ? (
+                    <div className="flex items-center gap-2 text-xs text-emerald-500 font-medium">
+                      <CheckCircle2 size={15} />
+                      <span>Connection active for Project [{activeProject?.jira_key || 'PRJ'}]. Stored securely in database.</span>
                     </div>
-
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-bold theme-heading">
-                        {currentProviderDef.userLabel}
-                      </label>
-                      <input
-                        type="text"
-                        value={currentSettings.username_email}
-                        onChange={(e) => handleFieldChange(activeTab, 'username_email', e.target.value)}
-                        placeholder={currentProviderDef.userPlaceholder}
-                        disabled={!canEdit}
-                        className="w-full px-4 py-2.5 theme-input rounded-xl text-xs focus:outline-none focus:border-[#FF5A14] disabled:opacity-50 transition-colors"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-1.5 md:col-span-2">
-                      <div className="flex items-center justify-between">
-                        <label className="block text-xs font-bold theme-heading flex items-center gap-1.5">
-                          <Key size={13} className="text-[#FF5A14]" />
-                          <span>{currentProviderDef.tokenLabel}</span>
-                        </label>
-                        
-                        {tokenStatus[activeTab] ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                            <CheckCircle2 size={11} />
-                            Token Saved for Project #{activeProject?.id || 1}
-                          </span>
-                        ) : (
-                          <span className="text-[11px] theme-muted font-normal">
-                            (Enter secret/token to authenticate)
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="relative">
-                        <input
-                          type={showToken ? "text" : "password"}
-                          value={currentSettings.api_token}
-                          onChange={(e) => handleFieldChange(activeTab, 'api_token', e.target.value)}
-                          placeholder={
-                            tokenStatus[activeTab] 
-                              ? "•••••••••••••••••••••••• (Encrypted Secret Configured - Type to change)" 
-                              : "Paste API token / Secret key here"
-                          }
-                          disabled={!canEdit}
-                          className="w-full pl-4 pr-20 py-2.5 theme-input rounded-xl text-xs focus:outline-none focus:border-[#FF5A14] disabled:opacity-50 transition-colors font-mono"
-                        />
-                        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                          {currentSettings.api_token && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                navigator.clipboard.writeText(currentSettings.api_token);
-                                showToast("Token copied to clipboard!", "success");
-                              }}
-                              className="p-1.5 text-slate-400 hover:text-[#FF5A14] rounded-md transition-colors cursor-pointer"
-                              title="Copy token to clipboard"
-                            >
-                              <Copy size={15} />
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => setShowToken(!showToken)}
-                            className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-md transition-colors cursor-pointer"
-                            title={showToken ? "Hide secret token" : "Show secret token"}
-                          >
-                            {showToken ? <EyeOff size={15} /> : <Eye size={15} />}
-                          </button>
-                        </div>
-                      </div>
-                      <p className="text-[11px] theme-muted">
-                        {tokenStatus[activeTab] && !currentSettings.api_token
-                          ? `A secure encrypted token is active for Project ${activeProject?.jira_key || ''}. Leave blank to keep existing token.`
-                          : "Click the eye icon to view or verify the token before saving."}
-                      </p>
-                      {activeTab === 'google_drive' && (
-                        <p className="text-[11px] text-emerald-600 dark:text-emerald-400/90 font-medium bg-emerald-500/10 p-2.5 rounded-lg border border-emerald-500/20">
-                          <strong>Live Connector:</strong> Supports either a <strong>Google Service Account Private Key</strong> (<code className="font-mono bg-emerald-500/20 px-1 py-0.5 rounded">-----BEGIN PRIVATE KEY-----</code>) with its Service Account Email, or an <strong>OAuth 2.0 Bearer Token</strong> (<code className="font-mono bg-emerald-500/20 px-1 py-0.5 rounded">ya29.</code>). Invalid or mismatched keys will be strictly rejected.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Test Result Callout */}
-                  {testResult && (
-                    <div className={`p-4 rounded-xl border flex items-start gap-3 text-xs ${
-                      testResult.success 
-                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400' 
-                        : 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400'
-                    }`}>
-                      {testResult.success ? <CheckCircle2 size={18} className="shrink-0 mt-0.5" /> : <AlertCircle size={18} className="shrink-0 mt-0.5" />}
-                      <div>
-                        <span className="font-bold">
-                          {testResult.success ? 'Handshake Successful' : 'Connection Failed'}:
-                        </span>{' '}
-                        {testResult.success ? (
-                          <span>
-                            Verified endpoint at <span className="font-mono">{testResult.server}</span> for user{' '}
-                            <span className="font-semibold">{testResult.user}</span>
-                            {testResult.is_sandbox && (
-                              <span className="ml-2 px-2 py-0.5 bg-purple-500/20 text-purple-700 dark:text-purple-300 font-bold rounded-full text-[10px]">
-                                Sandbox Mode
-                              </span>
-                            )}
-                          </span>
-                        ) : (
-                          <span>{testResult.error}</span>
-                        )}
-                      </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-xs theme-muted">
+                      <span>Credentials will be saved exclusively for Project [{activeProject?.jira_key || 'PRJ'}].</span>
                     </div>
                   )}
-
-                  <div className="pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t theme-border">
-                    {!canEdit ? (
-                      <p className="text-xs text-[#FF5A14] font-medium italic">
-                        Read-only mode. Only PMO or Program Directors can update enterprise credentials.
-                      </p>
-                    ) : connectedProviders[activeTab] ? (
-                      <div className="flex items-center gap-2 text-xs text-emerald-500 font-medium">
-                        <CheckCircle2 size={15} />
-                        <span>Account connected for Project [{activeProject?.jira_key || 'PRJ'}]. Stored securely in database.</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-xs theme-muted">
-                        <span>Credentials will be saved exclusively for Project [{activeProject?.jira_key || 'PRJ'}].</span>
-                      </div>
-                    )}
-                    
-                    <div className="flex items-center gap-3">
-                      {canEdit && connectedProviders[activeTab] && (
-                        <button
-                          type="button"
-                          onClick={() => handleDisconnect(activeTab)}
-                          disabled={disconnecting}
-                          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/30 transition-colors disabled:opacity-50 cursor-pointer"
-                        >
-                          {disconnecting ? <Loader2 size={15} className="animate-spin" /> : <Unplug size={15} />}
-                          <span>Disconnect</span>
-                        </button>
-                      )}
+                  
+                  <div className="flex items-center gap-3">
+                    {canEdit && connectedProviders[activeTab] && (
                       <button
                         type="button"
-                        onClick={handleTestConnection}
-                        disabled={testing}
-                        className="flex items-center gap-2 px-4 py-2.5 theme-card rounded-xl text-xs font-bold hover:border-[#FF5A14]/40 disabled:opacity-50 transition-colors cursor-pointer"
+                        onClick={() => handleDisconnect(activeTab)}
+                        disabled={disconnecting}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/30 transition-colors disabled:opacity-50 cursor-pointer"
                       >
-                        {testing ? <Loader2 size={15} className="animate-spin" /> : <Activity size={15} />}
-                        <span>{testing ? 'Verifying...' : 'Test Connection'}</span>
+                        {disconnecting ? <Loader2 size={15} className="animate-spin" /> : <Unplug size={15} />}
+                        <span>Disconnect</span>
                       </button>
-                      <button
-                        type="submit"
-                        disabled={!canEdit || saving}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white rounded-xl text-xs font-bold shadow-md hover:brightness-110 disabled:opacity-50 transition-all cursor-pointer"
-                      >
-                        {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-                        <span>{saving ? 'Saving...' : 'Save for Project'}</span>
-                      </button>
-                    </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleTestConnection}
+                      disabled={testing}
+                      className="flex items-center gap-2 px-4 py-2.5 theme-card rounded-xl text-xs font-bold hover:border-[#FF5A14]/40 disabled:opacity-50 transition-colors cursor-pointer"
+                    >
+                      {testing ? <Loader2 size={15} className="animate-spin" /> : <Activity size={15} />}
+                      <span>{testing ? 'Verifying...' : 'Test Connection'}</span>
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={!canEdit || saving}
+                      className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white rounded-xl text-xs font-bold shadow-md hover:brightness-110 disabled:opacity-50 transition-all cursor-pointer"
+                    >
+                      {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+                      <span>{saving ? 'Saving...' : 'Save for Project'}</span>
+                    </button>
                   </div>
-                </form>
-              </div>
+                </div>
+              </form>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Right Side Panel: Upcoming Integrations (4 cols) */}
@@ -1156,7 +964,7 @@ const SettingsPage = () => {
             </div>
 
             <p className="text-xs theme-muted mb-4 leading-relaxed">
-              <strong>Jira</strong>, <strong>Azure DevOps</strong>, <strong>Google Drive</strong>, and <strong>OneDrive</strong> are now fully functional. The remaining tools below are on the platform roadmap:
+              <strong>Jira</strong>, <strong>Azure DevOps</strong>, <strong>Google Drive</strong>, and <strong>OneDrive</strong> are active connectors configured project-wise. The remaining tools below are on the platform roadmap:
             </p>
 
             {/* Upcoming Connectors List */}
@@ -1234,7 +1042,7 @@ const SettingsPage = () => {
             <div className="mt-4 p-3 rounded-xl bg-purple-500/5 border border-purple-500/20 text-[11px] theme-muted flex items-start gap-2">
               <Sparkles size={15} className="text-purple-400 shrink-0 mt-0.5" />
               <span>
-                Want documents analyzed immediately? You can also upload local SOWs or MOM files (.docx, .pdf, .xlsx) via the <strong className="theme-heading">Document Ingestion</strong> module.
+                Want documents analyzed immediately? You can upload local SOWs or MOM files (.docx, .pdf, .xlsx) via the <strong className="theme-heading">Document Ingestion</strong> module.
               </span>
             </div>
           </div>
