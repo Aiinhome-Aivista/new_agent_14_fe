@@ -9,6 +9,7 @@ import { ingestionApi } from '../api/ingestionApi';
 import KPICard from '../components/dashboard/KPICard';
 import BurndownChart from '../components/dashboard/BurndownChart';
 import RiskHeatmap from '../components/dashboard/RiskHeatmap';
+import PMOLeadDashboard from '../components/dashboard/PMOLeadDashboard';
 import FuturisticLoader from '../components/common/FuturisticLoader';
 import { 
   FileUp, 
@@ -703,208 +704,19 @@ const InvestorDashboard = () => {
   // 2. PMO VIEW
   // ==========================================
   const renderPMOView = () => (
-    <div className="space-y-8">
-      {/* Dynamic Approval & Escalation Alert Banner */}
-      <div className="p-4 rounded-2xl theme-card border-l-4 border-[#FF5A14] flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#FF5A14]/15 text-[#FF5A14] flex items-center justify-center flex-shrink-0 shadow-sm">
-            <AlertTriangle size={18} />
-          </div>
-          <div>
-            <h4 className="text-xs sm:text-sm font-bold theme-heading">
-              Governance Gate Approval Required
-            </h4>
-            <p className="text-xs theme-muted">
-              {escalations.length} active supplier compliance items flagged for review.
-            </p>
-          </div>
-        </div>
-        <Link 
-          to="/guardrails" 
-          className="px-4 py-2 rounded-xl bg-[#FF5A14] text-white text-xs font-bold shadow-md hover:bg-[#FF7A45] transition-colors flex items-center gap-1.5"
-        >
-          <span>Audit in Guardrails</span>
-          <ArrowRight size={13} />
-        </Link>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div>
-          <RiskHeatmap data={risks} />
-        </div>
-
-        <div className="flex flex-col gap-6">
-          {/* Futuristic Ingestion Dropzone Panel */}
-          <div className="p-6 rounded-2xl theme-card relative overflow-hidden">
-            <h3 className="text-base font-bold theme-heading mb-1 flex items-center gap-2">
-              <FileUp className="text-[#FF5A14]" size={18} />
-              <span>Ingest MOM / Vendor Statement of Work</span>
-            </h3>
-            <p className="text-xs theme-muted mb-4">
-              Autonomous ingestion extracts deliverables, computes risk scores, and updates semantic memory.
-            </p>
-            
-            <div className="mb-4">
-              <label className="block text-[10px] font-bold theme-heading mb-1.5 uppercase tracking-wider">Map to Enterprise Project</label>
-              <select 
-                value={selectedUploadProjectId}
-                onChange={(e) => setSelectedUploadProjectId(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl theme-subtle border theme-border text-xs font-semibold theme-heading focus:outline-none focus:border-[#FF5A14]/50 cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23FF5A14%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center] bg-[length:10px_10px]"
-              >
-                {(data?.projects || []).map(p => (
-                  <option key={p.numeric_id} value={p.numeric_id}>{p.id}: {p.name}</option>
-                ))}
-                {(!data?.projects || data.projects.length === 0) && <option value="1">Default Project (Connect to Sync)</option>}
-              </select>
-            </div>
-            
-            <input 
-              ref={fileInputRef} 
-              type="file" 
-              className="hidden" 
-              accept=".pdf,.docx,.xlsx,.txt" 
-              onChange={handleFileUpload} 
-            />
-
-            <button 
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingDoc}
-              className="w-full py-6 px-4 border-2 border-dashed border-[#FF5A14]/40 hover:border-[#FF5A14] theme-subtle rounded-2xl hover:bg-[#FF5A14]/5 transition-all flex flex-col items-center justify-center gap-2 cursor-pointer disabled:opacity-50 group relative overflow-hidden"
-            >
-              {uploadingDoc && (
-                <div className="absolute inset-0 bg-gradient-to-b from-[#FF5A14]/20 to-transparent animate-radar-sweep pointer-events-none"></div>
-              )}
-
-              {uploadingDoc ? (
-                <div className="flex flex-col items-center gap-2">
-                  <Loader2 className="animate-spin text-[#FF5A14]" size={24} />
-                  <span className="text-xs font-bold theme-heading">
-                    Ingesting Document Telemetry ({uploadProgress}%)...
-                  </span>
-                  <span className="text-[11px] theme-muted font-mono">
-                    {uploadProgress < 25 && "Chunking semantic embeddings & triggering Intake Agent..."}
-                    {uploadProgress >= 25 && uploadProgress < 50 && "Evaluating Financial Variances & Contract Risks..."}
-                    {uploadProgress >= 50 && uploadProgress < 75 && "Running Predictive Modeling & Schedule Forecasting..."}
-                    {uploadProgress >= 75 && uploadProgress < 90 && "Computing Governance KPIs & Quality Metrics..."}
-                    {uploadProgress >= 90 && "Synthesizing Executive Report & Risk Heatmaps..."}
-                  </span>
-                </div>
-              ) : (
-                <>
-                  <div className="w-10 h-10 rounded-full bg-[#FF5A14]/10 text-[#FF5A14] flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
-                    <FileUp size={20} />
-                  </div>
-                  <span className="text-xs font-bold theme-heading group-hover:text-[#FF7A45] transition-colors">
-                    Click to browse or drop supplier contract (.pdf, .docx, .xlsx)
-                  </span>
-                  <span className="text-[11px] theme-muted">
-                    Auto-enforces compliance guardrails & extracts milestone deliverables
-                  </span>
-                </>
-              )}
-            </button>
-
-            {/* Live Enterprise Jira Telemetry Ribbon */}
-            <div className="mt-3 pt-3 border-t theme-border flex items-center justify-between text-[11px]">
-              <div className="flex items-center gap-2">
-                {data?.jira_integration?.is_connected ? (
-                  <>
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                    </span>
-                    <span className="font-semibold theme-heading">Jira Cloud Telemetry:</span>
-                    <span className="theme-muted font-mono text-[10px]">{data.jira_integration.host || 'Connected'}</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="flex h-2 w-2 rounded-full bg-slate-400"></span>
-                    <span className="font-semibold theme-muted">Jira Cloud Connector:</span>
-                    <span className="theme-muted font-mono text-[10px]">Offline / Disconnected</span>
-                  </>
-                )}
-              </div>
-              {data?.jira_integration?.is_connected ? (
-                <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                  {data?.jira_synced ? `Live (${data?.jira_issues_count ?? 0} tickets)` : 'Live Connected'}
-                </span>
-              ) : (
-                <span className="font-mono text-slate-400 font-medium text-[10px] px-2 py-0.5 rounded-full bg-slate-500/10 border border-slate-500/20">
-                  Disconnected
-                </span>
-              )}
-            </div>
-          </div>
-          
-          {/* Active Escalations Feed */}
-          <div className="p-6 rounded-2xl theme-card flex-1">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-sm font-bold theme-heading flex items-center gap-2">
-                <Clock size={16} className="text-[#FF5A14]" />
-                <span>Active Governance Escalation Stream</span>
-              </h3>
-              <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full theme-badge">
-                {escalations.length} Active
-              </span>
-            </div>
-
-            {escalations.length === 0 ? (
-              <p className="text-xs theme-muted italic py-4 text-center">
-                All vendor streams compliant with current SOPs.
-              </p>
-            ) : (
-              <div className="space-y-2.5">
-                {escalations.map((esc, idx) => (
-                  <div key={idx} className="p-3 rounded-xl theme-subtle border theme-border flex justify-between items-center text-xs">
-                    <div>
-                      <span className="font-bold text-[#FF5A14] font-mono mr-2">{esc.id || `ESC-${idx + 1}`}</span>
-                      <span className="font-medium theme-heading">{esc.action || esc.title || 'SLA Threshold Warning'}</span>
-                    </div>
-                    <span className="text-[10px] theme-muted font-mono theme-badge px-2 py-0.5 rounded">
-                      {esc.time || '15m ago'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Synced Enterprise Projects Grid */}
-      <div className="p-6 rounded-2xl theme-card mt-8">
-        <h3 className="text-base font-bold theme-heading mb-4">
-          Synced Enterprise Projects
-        </h3>
-        {data?.projects && data.projects.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {data.projects.map((proj) => (
-              <Link
-                key={proj.id}
-                to={`/project/${proj.id}`}
-                className="p-4 rounded-xl border theme-border hover:border-[#FF5A14] theme-subtle hover:bg-[#FF5A14]/5 transition-all flex items-center justify-between group"
-              >
-                <div>
-                  <div className="font-bold theme-heading text-sm group-hover:text-[#FF7A45] transition-colors truncate max-w-[200px]">
-                    {proj.id}: {proj.name}
-                  </div>
-                  <div className="text-xs theme-muted mt-1">
-                    {proj.budget_summary} • Status: <span className="text-emerald-500 font-bold">{proj.status}</span>
-                  </div>
-                </div>
-                <ExternalLink size={16} className="text-[#FF5A14] group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div className="p-4 rounded-xl theme-card text-xs theme-muted italic text-center">
-            No projects loaded. Configure connectors and trigger a sync to populate this list.
-          </div>
-        )}
-      </div>
-
-    </div>
+    <PMOLeadDashboard
+      data={data}
+      risks={risks}
+      escalations={escalations}
+      activeProject={activeProject}
+      selectedUploadProjectId={selectedUploadProjectId}
+      setSelectedUploadProjectId={setSelectedUploadProjectId}
+      handleFileUpload={handleFileUpload}
+      uploadingDoc={uploadingDoc}
+      uploadProgress={uploadProgress}
+      fileInputRef={fileInputRef}
+      onRefresh={fetchDashboardData}
+    />
   );
 
   // ==========================================
@@ -1196,7 +1008,7 @@ const InvestorDashboard = () => {
           <h2 className={`${user?.role === 'Project Manager' ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-3xl'} font-black theme-heading tracking-tight`}>
             {user?.role === 'Investor' ? 'Portfolio Capital & ROI Overview' : 
              user?.role === 'Program Director' ? 'Multi-Program Governance Console' : 
-             user?.role === 'PMO' ? 'PMO Compliance & Guardrail Command' : 'Project Execution & Velocity Dashboard'}
+             user?.role === 'PMO' ? 'PMO Lead Command & Portfolio Governance Hub' : 'Project Execution & Velocity Dashboard'}
           </h2>
         </div>
 
