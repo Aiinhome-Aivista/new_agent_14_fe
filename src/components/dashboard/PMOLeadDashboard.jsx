@@ -26,8 +26,6 @@ import {
   AlertTriangle,
   CheckCircle2,
   ArrowRight,
-  ExternalLink,
-  FileUp,
   FileText,
   BarChart3,
   PieChart as PieChartIcon,
@@ -35,7 +33,6 @@ import {
   Layers,
   Building2,
   Check,
-  Loader2,
   FolderKanban,
   Activity
 } from 'lucide-react';
@@ -700,231 +697,56 @@ const PMOLeadDashboard = ({
 
       </div>
 
-      {/* ROW: SOW INGESTION & ESCALATIONS STREAM */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        {/* INGEST MOM / VENDOR SOW DROPZONE */}
-        <div className="p-6 rounded-2xl theme-card border border-white/10 relative overflow-hidden flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-base font-bold theme-heading flex items-center gap-2">
-                <FileUp className="text-[#FF5A14]" size={18} />
-                <span>Ingest MOM / Vendor Statement of Work</span>
-              </h4>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#FF5A14]/15 text-[#FF5A14] font-bold">
-                Auto-Vectorized RAG
-              </span>
-            </div>
-            <p className="text-xs theme-muted mb-4">
-              Upload vendor contracts, project status decks, or MOMs to extract deliverables and recalibrate KPIs.
-            </p>
-
-            <div className="mb-4">
-              <label className="block text-[10px] font-bold theme-heading mb-1.5 uppercase tracking-wider">
-                Map Telemetry to Project
-              </label>
-              <select
-                value={selectedUploadProjectId}
-                onChange={(e) => setSelectedUploadProjectId(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl theme-subtle border theme-border text-xs font-semibold theme-heading focus:outline-none focus:border-[#FF5A14]/50 cursor-pointer"
-              >
-                {(data?.projects || []).map((p) => (
-                  <option key={p.numeric_id || p.id} value={p.numeric_id || p.id}>
-                    {p.id}: {p.name}
-                  </option>
-                ))}
-                {(!data?.projects || data.projects.length === 0) && (
-                  <option value="1">Default Enterprise Project</option>
-                )}
-              </select>
-            </div>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              accept=".pdf,.docx,.xlsx,.txt"
-              onChange={handleFileUpload}
-            />
-
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingDoc}
-              className="w-full py-6 px-4 border-2 border-dashed border-[#FF5A14]/40 hover:border-[#FF5A14] theme-subtle rounded-2xl hover:bg-[#FF5A14]/5 transition-all flex flex-col items-center justify-center gap-2 cursor-pointer disabled:opacity-50 group relative overflow-hidden"
-            >
-              {uploadingDoc ? (
-                <div className="flex flex-col items-center gap-2">
-                  <Loader2 className="animate-spin text-[#FF5A14]" size={24} />
-                  <span className="text-xs font-bold theme-heading">
-                    Ingesting Document Telemetry ({uploadProgress}%)...
-                  </span>
-                  <span className="text-[11px] theme-muted font-mono">
-                    Chunking semantic embeddings & calculating variance...
-                  </span>
-                </div>
-              ) : (
-                <>
-                  <div className="w-10 h-10 rounded-full bg-[#FF5A14]/10 text-[#FF5A14] flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
-                    <FileUp size={20} />
-                  </div>
-                  <span className="text-xs font-bold theme-heading group-hover:text-[#FF7A45] transition-colors">
-                    Click to browse or drop supplier contract (.pdf, .docx, .xlsx)
-                  </span>
-                  <span className="text-[11px] theme-muted">
-                    Extracts milestone deliverables, rate cards, and updates burndown curves
-                  </span>
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Jira Integration Telemetry Ribbon */}
-          <div className="mt-4 pt-3 border-t theme-border flex items-center justify-between text-[11px]">
-            <div className="flex items-center gap-2">
-              {data?.jira_integration?.is_connected ? (
-                <>
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                  </span>
-                  <span className="font-semibold theme-heading">Jira Cloud Telemetry:</span>
-                  <span className="theme-muted font-mono text-[10px]">{data.jira_integration.host || 'Connected'}</span>
-                </>
-              ) : (
-                <>
-                  <span className="flex h-2 w-2 rounded-full bg-slate-400"></span>
-                  <span className="font-semibold theme-muted">Jira Cloud Connector:</span>
-                  <span className="theme-muted font-mono text-[10px]">Configured / Idle</span>
-                </>
-              )}
-            </div>
-            <span className="font-mono text-emerald-500 font-bold text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-              Live Connected
+      {/* ACTIVE GOVERNANCE ESCALATIONS STREAM */}
+      <div className="p-6 rounded-2xl theme-card border border-white/10 flex flex-col justify-between">
+        <div>
+          <div className="flex justify-between items-center mb-3">
+            <h4 className="text-base font-bold theme-heading flex items-center gap-2">
+              <Clock size={18} className="text-[#FF5A14]" />
+              <span>Active Governance Escalation Stream</span>
+            </h4>
+            <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-500 border border-amber-500/30">
+              {escalations.length} Flagged
             </span>
           </div>
-        </div>
+          <p className="text-xs theme-muted mb-4">
+            Real-time supplier compliance breaches, SLA thresholds, and gate approval requests.
+          </p>
 
-        {/* ACTIVE GOVERNANCE ESCALATIONS STREAM */}
-        <div className="p-6 rounded-2xl theme-card border border-white/10 flex flex-col justify-between">
-          <div>
-            <div className="flex justify-between items-center mb-3">
-              <h4 className="text-base font-bold theme-heading flex items-center gap-2">
-                <Clock size={18} className="text-[#FF5A14]" />
-                <span>Active Governance Escalation Stream</span>
-              </h4>
-              <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-500 border border-amber-500/30">
-                {escalations.length} Flagged
-              </span>
+          {escalations.length === 0 ? (
+            <div className="py-8 text-center">
+              <CheckCircle2 size={32} className="text-emerald-500 mx-auto mb-2" />
+              <p className="text-xs theme-muted font-medium">
+                All active vendor workstreams are currently compliant with baseline SOWs.
+              </p>
             </div>
-            <p className="text-xs theme-muted mb-4">
-              Real-time supplier compliance breaches, SLA thresholds, and gate approval requests.
-            </p>
-
-            {escalations.length === 0 ? (
-              <div className="py-8 text-center">
-                <CheckCircle2 size={32} className="text-emerald-500 mx-auto mb-2" />
-                <p className="text-xs theme-muted font-medium">
-                  All active vendor workstreams are currently compliant with baseline SOWs.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
-                {escalations.map((esc, idx) => (
-                  <div key={idx} className="p-3 rounded-xl theme-subtle border theme-border flex justify-between items-center text-xs">
-                    <div className="flex items-center gap-2.5 truncate">
-                      <span className="font-bold text-[#FF5A14] font-mono">{esc.id || `ESC-00${idx + 1}`}</span>
-                      <span className="font-medium theme-heading truncate">{esc.action || esc.title || 'SLA Threshold Warning'}</span>
-                    </div>
-                    <span className="text-[10px] theme-muted font-mono px-2 py-0.5 rounded theme-subtle border theme-border flex-shrink-0">
-                      {esc.time || 'Active'}
-                    </span>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-64 overflow-y-auto pr-1">
+              {escalations.map((esc, idx) => (
+                <div key={idx} className="p-3 rounded-xl theme-subtle border theme-border flex justify-between items-center text-xs">
+                  <div className="flex items-center gap-2.5 truncate">
+                    <span className="font-bold text-[#FF5A14] font-mono">{esc.id || `ESC-00${idx + 1}`}</span>
+                    <span className="font-medium theme-heading truncate">{esc.action || esc.title || 'SLA Threshold Warning'}</span>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="mt-4 pt-3 border-t theme-border flex items-center justify-between">
-            <span className="text-xs theme-muted">Autonomous compliance guardrails active</span>
-            <Link
-              to="/guardrails"
-              className="text-xs font-bold text-[#FF5A14] hover:text-[#FF7A45] flex items-center gap-1 transition-colors"
-            >
-              <span>Manage in Guardrails</span>
-              <ArrowRight size={13} />
-            </Link>
-          </div>
+                  <span className="text-[10px] theme-muted font-mono px-2 py-0.5 rounded theme-subtle border theme-border flex-shrink-0">
+                    {esc.time || 'Active'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-      </div>
-
-      {/* SYNCED ENTERPRISE PROJECTS DIRECTORY */}
-      <div className="p-6 rounded-2xl theme-card border border-white/10">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-          <div>
-            <h4 className="text-base font-bold theme-heading">
-              Governed Enterprise Projects Portfolio
-            </h4>
-            <p className="text-xs theme-muted">
-              Select any project to drill into specific workstreams, team headcount, and budget burn.
-            </p>
-          </div>
+        <div className="mt-4 pt-3 border-t theme-border flex items-center justify-between">
+          <span className="text-xs theme-muted">Autonomous compliance guardrails active</span>
           <Link
-            to="/projects"
-            className="text-xs font-bold text-[#FF5A14] hover:text-[#FF7A45] flex items-center gap-1 self-start sm:self-auto"
+            to="/guardrails"
+            className="text-xs font-bold text-[#FF5A14] hover:text-[#FF7A45] flex items-center gap-1 transition-colors"
           >
-            <span>View All in Projects Hub</span>
+            <span>Manage in Guardrails</span>
             <ArrowRight size={13} />
           </Link>
         </div>
-
-        {data?.projects && data.projects.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {data.projects.map((proj) => {
-              const isSelected = activeProject?.id === proj.numeric_id || activeProject?.jira_key === proj.id;
-              return (
-                <div
-                  key={proj.id}
-                  onClick={() => selectProject(proj.numeric_id || proj.id)}
-                  className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between group ${
-                    isSelected
-                      ? 'border-[#FF5A14] bg-[#FF5A14]/10 shadow-[0_0_15px_rgba(255,90,20,0.2)]'
-                      : 'theme-border hover:border-[#FF5A14]/50 theme-subtle hover:bg-[#FF5A14]/5'
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-mono text-[11px] font-bold text-[#FF7A45]">
-                        [{proj.id}]
-                      </span>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                        {proj.status}
-                      </span>
-                    </div>
-                    <h5 className="font-bold theme-heading text-sm group-hover:text-[#FF7A45] transition-colors truncate mb-1">
-                      {proj.name}
-                    </h5>
-                    <p className="text-xs theme-muted">
-                      {proj.budget_summary}
-                    </p>
-                  </div>
-
-                  <div className="mt-3 pt-2.5 border-t theme-border flex items-center justify-between text-xs">
-                    <span className="text-[11px] font-semibold text-[#FF5A14]">
-                      {isSelected ? 'Active Scope' : 'Select Scope'}
-                    </span>
-                    <ExternalLink size={14} className="text-[#FF5A14] group-hover:translate-x-0.5 transition-transform" />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="p-6 rounded-xl theme-subtle text-xs theme-muted italic text-center">
-            No active enterprise projects synchronized. Use Projects Hub to create or sync projects.
-          </div>
-        )}
       </div>
 
     </div>
