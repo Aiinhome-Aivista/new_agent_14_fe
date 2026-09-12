@@ -650,7 +650,7 @@ const SettingsPage = () => {
                   </button>
                 )}
 
-                {canEdit && activeTab !== 'google_drive' && (
+                {canEdit && activeTab !== 'google_drive' && activeTab !== 'azure_devops' && activeTab !== 'onedrive' && (
                   <button
                     type="button"
                     onClick={() => handleLoadDemoPresets(activeTab)}
