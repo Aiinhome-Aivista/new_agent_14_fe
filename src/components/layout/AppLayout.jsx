@@ -277,64 +277,109 @@ const AppLayout = () => {
           <div className="flex items-center gap-3">
             
             {/* Active Project Switcher Dropdown */}
-            <div className="relative" ref={projectDropdownRef}>
-              <button
-                onClick={() => setIsProjectDropdownOpen(!isProjectDropdownOpen)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all select-none cursor-pointer ${
-                  theme === 'dark'
-                    ? 'bg-[#182236] border-white/10 hover:border-[#FF5A14]/50 text-white'
-                    : 'bg-slate-100 border-slate-300 hover:border-[#FF5A14]/50 text-slate-800'
-                }`}
-                title="Active Project Context - Click to switch"
-              >
-                <FolderKanban size={15} className="text-[#FF5A14]" />
-                <div className="flex items-center gap-1.5 max-w-[180px] sm:max-w-[240px] truncate">
-                  <span className="font-mono text-[#FF7A45] font-bold text-[11px]">
-                    [{activeProject?.jira_key || 'PRJ'}]
-                  </span>
-                  <span className="truncate font-bold">
-                    {activeProject?.name || 'Select Project'}
-                  </span>
-                </div>
-                <ChevronDown size={14} className="text-slate-400 ml-0.5" />
-              </button>
+            {(() => {
+              const isAllProjects = !activeProject || activeProject.id === 'all' || activeProject.jira_key === 'ALL';
+              return (
+                <div className="relative" ref={projectDropdownRef}>
+                  <button
+                    onClick={() => setIsProjectDropdownOpen(!isProjectDropdownOpen)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all select-none cursor-pointer ${
+                      theme === 'dark'
+                        ? 'bg-[#182236] border-white/10 hover:border-[#FF5A14]/50 text-white'
+                        : 'bg-slate-100 border-slate-300 hover:border-[#FF5A14]/50 text-slate-800'
+                    }`}
+                    title="Active Project Switcher - Switch project context for the entire application"
+                  >
+                    <FolderKanban size={15} className="text-[#FF5A14]" />
+                    <div className="flex items-center gap-1.5 max-w-[180px] sm:max-w-[240px] truncate">
+                      <span className="font-mono text-[#FF7A45] font-extrabold text-[11px]">
+                        [{isAllProjects ? 'ALL' : (activeProject?.jira_key || 'PRJ')}]
+                      </span>
+                      <span className="truncate font-bold">
+                        {isAllProjects ? 'All Projects (Portfolio)' : (activeProject?.name || 'Select Project')}
+                      </span>
+                    </div>
+                    <ChevronDown size={14} className="text-slate-400 ml-0.5" />
+                  </button>
 
-              {isProjectDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-white dark:bg-[#131A29] p-2 border border-slate-200 dark:border-white/15 shadow-xl dark:shadow-[0_15px_50px_rgba(0,0,0,0.6)] z-50 animate-fadeIn">
-                  <div className="px-3 py-2 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
-                    <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider">Switch Project</span>
-                    <button 
-                      onClick={() => { setIsProjectDropdownOpen(false); navigate('/projects'); }}
-                      className="text-[10px] font-bold text-[#FF7A45] hover:underline cursor-pointer"
-                    >
-                      All Projects
-                    </button>
-                  </div>
-                  <div className="max-h-56 overflow-y-auto py-1 space-y-1">
-                    {projects.map(p => (
-                      <button
-                        key={p.id}
-                        onClick={() => {
-                          selectProject(p);
-                          setIsProjectDropdownOpen(false);
-                        }}
-                        className={`w-full px-3 py-2 rounded-xl text-left text-xs flex items-center justify-between transition-colors cursor-pointer ${
-                          activeProject?.id === p.id 
-                            ? 'bg-[#FF5A14]/15 text-[#FF7A45] font-bold border border-[#FF5A14]/30' 
-                            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.05]'
-                        }`}
-                      >
-                        <div className="truncate pr-2">
-                          <span className="font-mono text-[10px] text-slate-400 mr-1.5">[{p.jira_key}]</span>
-                          <span>{p.name}</span>
-                        </div>
-                        {activeProject?.id === p.id && <Check size={14} className="text-[#FF5A14] flex-shrink-0" />}
-                      </button>
-                    ))}
-                  </div>
+                  {isProjectDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-80 rounded-2xl bg-white dark:bg-[#131A29] p-2 border border-slate-200 dark:border-white/15 shadow-xl dark:shadow-[0_15px_50px_rgba(0,0,0,0.6)] z-50 animate-fadeIn">
+                      <div className="px-3 py-2 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-extrabold text-slate-500 dark:text-slate-400 tracking-wider">
+                          Switch Project Context
+                        </span>
+                        <span className="text-[10px] font-mono text-[#FF7A45] font-semibold">
+                          {projects.length} Projects
+                        </span>
+                      </div>
+
+                      {/* Portfolio Level Option */}
+                      <div className="pt-2 pb-1">
+                        <button
+                          onClick={() => {
+                            selectProject('all');
+                            setIsProjectDropdownOpen(false);
+                          }}
+                          className={`w-full px-3 py-2 rounded-xl text-left text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                            isAllProjects 
+                              ? 'bg-[#FF5A14]/15 text-[#FF7A45] font-bold border border-[#FF5A14]/30' 
+                              : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.05]'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 truncate pr-2">
+                            <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-orange-500/20 text-[#FF5A14] font-extrabold">
+                              [ALL]
+                            </span>
+                            <span className="font-bold">All Projects (Portfolio View)</span>
+                          </div>
+                          {isAllProjects && <Check size={14} className="text-[#FF5A14] flex-shrink-0" />}
+                        </button>
+                      </div>
+
+                      {/* Individual Projects List */}
+                      <div className="px-3 pt-2 pb-1 text-[10px] uppercase font-bold text-slate-400 tracking-wider border-t border-slate-100 dark:border-white/5">
+                        Individual Projects
+                      </div>
+                      <div className="max-h-56 overflow-y-auto py-1 space-y-1">
+                        {projects.map(p => {
+                          const isSelected = !isAllProjects && (activeProject?.id === p.id || activeProject?.jira_key === p.jira_key);
+                          return (
+                            <button
+                              key={p.id}
+                              onClick={() => {
+                                selectProject(p);
+                                setIsProjectDropdownOpen(false);
+                              }}
+                              className={`w-full px-3 py-2 rounded-xl text-left text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                                isSelected 
+                                  ? 'bg-[#FF5A14]/15 text-[#FF7A45] font-bold border border-[#FF5A14]/30' 
+                                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.05]'
+                              }`}
+                            >
+                              <div className="truncate pr-2">
+                                <span className="font-mono text-[10px] text-[#FF7A45] font-bold mr-1.5">[{p.jira_key}]</span>
+                                <span>{p.name}</span>
+                              </div>
+                              {isSelected && <Check size={14} className="text-[#FF5A14] flex-shrink-0" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Footer Hub Link */}
+                      <div className="pt-2 mt-1 border-t border-slate-200 dark:border-white/10 px-1 text-center">
+                        <button 
+                          onClick={() => { setIsProjectDropdownOpen(false); navigate('/projects'); }}
+                          className="text-[11px] font-bold text-[#FF7A45] hover:underline cursor-pointer py-1"
+                        >
+                          Manage All Projects in Hub →
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              );
+            })()}
 
             {/* Active User Role Badge (Read-only, strictly derived from login session) */}
             <div

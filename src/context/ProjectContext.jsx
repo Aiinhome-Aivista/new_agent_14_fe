@@ -2,6 +2,12 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { projectApi } from '../api/projectApi';
 import { useAuth } from './AuthContext';
 
+export const ALL_PROJECTS_CONTEXT = {
+  id: 'all',
+  name: 'All Projects (Portfolio View)',
+  jira_key: 'ALL'
+};
+
 const ProjectContext = createContext(null);
 
 export const ProjectProvider = ({ children }) => {
@@ -10,7 +16,14 @@ export const ProjectProvider = ({ children }) => {
   const [activeProject, setActiveProject] = useState(() => {
     try {
       const saved = localStorage.getItem('vpm_active_project');
-      return saved ? JSON.parse(saved) : null;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed?.id === 'all' || parsed?.jira_key === 'ALL') {
+          return ALL_PROJECTS_CONTEXT;
+        }
+        return parsed;
+      }
+      return null;
     } catch (e) {
       return null;
     }
@@ -28,6 +41,10 @@ export const ProjectProvider = ({ children }) => {
 
       // Verify or auto-select active project
       setActiveProject(prev => {
+        if (prev && (prev.id === 'all' || prev.jira_key === 'ALL')) {
+          localStorage.setItem('vpm_active_project', JSON.stringify(ALL_PROJECTS_CONTEXT));
+          return ALL_PROJECTS_CONTEXT;
+        }
         if (!prev && list.length > 0) {
           const defaultProj = list[0];
           localStorage.setItem('vpm_active_project', JSON.stringify(defaultProj));
@@ -65,7 +82,9 @@ export const ProjectProvider = ({ children }) => {
 
   const selectProject = (projectOrId) => {
     let target = null;
-    if (typeof projectOrId === 'object' && projectOrId !== null) {
+    if (!projectOrId || projectOrId === 'all' || (typeof projectOrId === 'object' && (projectOrId.id === 'all' || projectOrId.jira_key === 'ALL'))) {
+      target = ALL_PROJECTS_CONTEXT;
+    } else if (typeof projectOrId === 'object' && projectOrId !== null) {
       target = projectOrId;
     } else {
       target = projects.find(p => p.id === Number(projectOrId) || p.jira_key === String(projectOrId));
