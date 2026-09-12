@@ -4,7 +4,7 @@ import {
   CheckCircle2, Clock, AlertTriangle, Edit3, Save, UserCheck,
   Send, ExternalLink, Loader2, Share2, ShieldAlert, Sparkles, Check,
   Layers, Server, Building2, DollarSign, Activity, FileText,
-  FolderKanban, LayoutGrid, ListFilter
+  FolderKanban
 } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { risksApi } from '../../api/risksApi';
@@ -37,7 +37,6 @@ const RiskRegisterTable = ({ risks, activeProject, onUpdateRisk, onRiskUpdated }
   const [selectedSeverity, setSelectedSeverity] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
-  const [viewMode, setViewMode] = useState('grouped'); // 'grouped' (Project-wise divide) | 'flat'
   const [collapsedProjects, setCollapsedProjects] = useState({});
   const [expandedRiskId, setExpandedRiskId] = useState(null);
   const [editingMitigationId, setEditingMitigationId] = useState(null);
@@ -527,38 +526,10 @@ const RiskRegisterTable = ({ risks, activeProject, onUpdateRisk, onRiskUpdated }
       {/* Search, View Mode, and Filters Card */}
       <div className="theme-card rounded-2xl overflow-hidden shadow-sm border theme-border p-4 sm:p-5 flex flex-col gap-4">
         
-        {/* Row 1: View Mode Switcher + Project Filter Pills + Search */}
+        {/* Row 1: Severity Quick Filter + Status Quick Filter + Search */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b theme-border">
           
           <div className="flex flex-wrap items-center gap-2.5">
-            {/* View Mode: Grouped (Project-wise divide) vs Flat List */}
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 p-1 rounded-xl border theme-border">
-              <button
-                onClick={() => setViewMode('grouped')}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                  viewMode === 'grouped'
-                    ? 'bg-[#FF5A14] text-white shadow-sm'
-                    : 'theme-muted hover:theme-heading'
-                }`}
-                title="Divide risks clearly by project"
-              >
-                <FolderKanban size={13} />
-                <span>Divide by Project</span>
-              </button>
-              <button
-                onClick={() => setViewMode('flat')}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                  viewMode === 'flat'
-                    ? 'bg-[#FF5A14] text-white shadow-sm'
-                    : 'theme-muted hover:theme-heading'
-                }`}
-                title="View all risks in a single consolidated table"
-              >
-                <ListFilter size={13} />
-                <span>Consolidated List</span>
-              </button>
-            </div>
-
             {/* Severity Quick Filter */}
             <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 p-1 rounded-xl border theme-border">
               {['ALL', 'Critical', 'High', 'Medium', 'Low'].map(sev => (
@@ -646,150 +617,104 @@ const RiskRegisterTable = ({ risks, activeProject, onUpdateRisk, onRiskUpdated }
 
       </div>
 
-      {/* ========================================================= */}
-      {/* MODE 1: DIVIDE BY PROJECT (GROUPED PROJECT-WISE SECTIONS) */}
-      {/* ========================================================= */}
-      {viewMode === 'grouped' ? (
-        projectGroups.length === 0 ? (
-          <div className="theme-card rounded-2xl p-12 text-center theme-muted italic border theme-border">
-            No matching program risks found for the current filters.
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {projectGroups.map((group) => {
-              const isCollapsed = !!collapsedProjects[group.project_key];
+      {/* Program Risk Register Project Cards */}
+      {projectGroups.length === 0 ? (
+        <div className="theme-card rounded-2xl p-12 text-center theme-muted italic border theme-border">
+          No matching program risks found for the current filters.
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {projectGroups.map((group) => {
+            const isCollapsed = !!collapsedProjects[group.project_key];
 
-              return (
+            return (
+              <div 
+                key={group.project_key}
+                className="theme-card rounded-2xl overflow-hidden shadow-sm border border-white/10 transition-all hover:border-[#FF5A14]/30"
+              >
+                {/* Project Header Banner */}
                 <div 
-                  key={group.project_key}
-                  className="theme-card rounded-2xl overflow-hidden shadow-sm border border-white/10 transition-all hover:border-[#FF5A14]/30"
+                  onClick={() => toggleProjectCollapse(group.project_key)}
+                  className="p-4 sm:p-5 border-b theme-border bg-gradient-to-r from-slate-100 via-slate-50 to-transparent dark:from-slate-800/60 dark:via-slate-900/40 dark:to-transparent flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer select-none"
                 >
-                  {/* Project Header Banner */}
-                  <div 
-                    onClick={() => toggleProjectCollapse(group.project_key)}
-                    className="p-4 sm:p-5 border-b theme-border bg-gradient-to-r from-slate-100 via-slate-50 to-transparent dark:from-slate-800/60 dark:via-slate-900/40 dark:to-transparent flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer select-none"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF5A14] to-[#E04808] flex items-center justify-center text-white font-mono font-extrabold text-xs shadow-[0_0_15px_rgba(255,90,20,0.35)] flex-shrink-0 tracking-tight">
-                        {group.project_key.replace('PRJ-', 'P').substring(0, 4)}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-bold text-[#FF7A45]">
-                            [{group.project_key}]
-                          </span>
-                          <h4 className="text-base font-extrabold theme-heading tracking-tight">
-                            {group.project_name}
-                          </h4>
-                        </div>
-                        <p className="text-xs theme-muted mt-0.5">
-                          {group.total} Monitored Risk(s) • {group.criticalCount > 0 ? `${group.criticalCount} Critical Showstopper(s)` : 'Zero Critical Blockers'}
-                        </p>
-                      </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF5A14] to-[#E04808] flex items-center justify-center text-white font-mono font-extrabold text-xs shadow-[0_0_15px_rgba(255,90,20,0.35)] flex-shrink-0 tracking-tight">
+                      {group.project_key.replace('PRJ-', 'P').substring(0, 4)}
                     </div>
-
-                    {/* Project Badges & Collapse Toggle */}
-                    <div className="flex items-center gap-2.5 self-start sm:self-auto">
-                      {group.criticalCount > 0 && (
-                        <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-red-500/15 text-red-500 border border-red-500/30 flex items-center gap-1">
-                          <ShieldAlert size={12} />
-                          <span>{group.criticalCount} Critical</span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold text-[#FF7A45]">
+                          [{group.project_key}]
                         </span>
-                      )}
-                      {group.highCount > 0 && (
-                        <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-amber-500/15 text-amber-500 border border-amber-500/30">
-                          {group.highCount} High
-                        </span>
-                      )}
-                      {group.mitigatedCount > 0 && (
-                        <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-sky-500/15 text-sky-500 border border-sky-500/30">
-                          {group.mitigatedCount} Mitigated
-                        </span>
-                      )}
-                      
-                      <div className="p-1.5 rounded-lg theme-card border theme-border text-slate-400 hover:text-white transition-colors ml-1">
-                        {isCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                        <h4 className="text-base font-extrabold theme-heading tracking-tight">
+                          {group.project_name}
+                        </h4>
                       </div>
+                      <p className="text-xs theme-muted mt-0.5">
+                        {group.total} Monitored Risk(s) • {group.criticalCount > 0 ? `${group.criticalCount} Critical Showstopper(s)` : 'Zero Critical Blockers'}
+                      </p>
                     </div>
                   </div>
 
-                  {/* Project Table (Rendered if not collapsed) */}
-                  {!isCollapsed && (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse text-xs">
-                        <thead>
-                          <tr className="theme-subtle border-b theme-border uppercase tracking-wider font-bold theme-muted text-[11px]">
-                            <th className="p-4 cursor-pointer hover:text-[#FF5A14] transition-colors whitespace-nowrap" onClick={() => handleSort('risk_id')}>
-                              <div className="flex items-center gap-1">Risk ID & Category <ArrowUpDown size={11} /></div>
-                            </th>
-                            <th className="p-4 cursor-pointer hover:text-[#FF5A14] transition-colors" onClick={() => handleSort('title')}>
-                              <div className="flex items-center gap-1">Risk Title & Plain English Impact <ArrowUpDown size={11} /></div>
-                            </th>
-                            <th className="p-4 cursor-pointer hover:text-[#FF5A14] transition-colors whitespace-nowrap" onClick={() => handleSort('severity')}>
-                              <div className="flex items-center gap-1">Severity & Score <ArrowUpDown size={11} /></div>
-                            </th>
-                            <th className="p-4 cursor-pointer hover:text-[#FF5A14] transition-colors whitespace-nowrap" onClick={() => handleSort('status')}>
-                              <div className="flex items-center gap-1">Governance Status <ArrowUpDown size={11} /></div>
-                            </th>
-                            <th className="p-4 cursor-pointer hover:text-[#FF5A14] transition-colors whitespace-nowrap" onClick={() => handleSort('owner')}>
-                              <div className="flex items-center gap-1">Owner Assignment <ArrowUpDown size={11} /></div>
-                            </th>
-                            <th className="p-4 text-center whitespace-nowrap">Jira Sync</th>
-                            <th className="p-4 text-center whitespace-nowrap">Plan & Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y theme-border">
-                          {group.risks.map((risk) => renderRiskRow(risk))}
-                        </tbody>
-                      </table>
+                  {/* Project Badges & Collapse Toggle */}
+                  <div className="flex items-center gap-2.5 self-start sm:self-auto">
+                    {group.criticalCount > 0 && (
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-red-500/15 text-red-500 border border-red-500/30 flex items-center gap-1">
+                        <ShieldAlert size={12} />
+                        <span>{group.criticalCount} Critical</span>
+                      </span>
+                    )}
+                    {group.highCount > 0 && (
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-amber-500/15 text-amber-500 border border-amber-500/30">
+                        {group.highCount} High
+                      </span>
+                    )}
+                    {group.mitigatedCount > 0 && (
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-sky-500/15 text-sky-500 border border-sky-500/30">
+                        {group.mitigatedCount} Mitigated
+                      </span>
+                    )}
+                    
+                    <div className="p-1.5 rounded-lg theme-card border theme-border text-slate-400 hover:text-white transition-colors ml-1">
+                      {isCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
                     </div>
-                  )}
+                  </div>
                 </div>
-              );
-            })}
-          </div>
-        )
-      ) : (
-        /* ========================================================= */
-        /* MODE 2: FLAT CONSOLIDATED TABLE */
-        /* ========================================================= */
-        <div className="theme-card rounded-2xl overflow-hidden shadow-sm border theme-border">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="theme-subtle border-b theme-border uppercase tracking-wider font-bold theme-muted text-[11px]">
-                  <th className="p-4 cursor-pointer hover:text-[#FF5A14] transition-colors whitespace-nowrap" onClick={() => handleSort('risk_id')}>
-                    <div className="flex items-center gap-1">Risk ID & Project <ArrowUpDown size={11} /></div>
-                  </th>
-                  <th className="p-4 cursor-pointer hover:text-[#FF5A14] transition-colors" onClick={() => handleSort('title')}>
-                    <div className="flex items-center gap-1">Risk Title & Plain English Impact <ArrowUpDown size={11} /></div>
-                  </th>
-                  <th className="p-4 cursor-pointer hover:text-[#FF5A14] transition-colors whitespace-nowrap" onClick={() => handleSort('severity')}>
-                    <div className="flex items-center gap-1">Severity & Score <ArrowUpDown size={11} /></div>
-                  </th>
-                  <th className="p-4 cursor-pointer hover:text-[#FF5A14] transition-colors whitespace-nowrap" onClick={() => handleSort('status')}>
-                    <div className="flex items-center gap-1">Governance Status <ArrowUpDown size={11} /></div>
-                  </th>
-                  <th className="p-4 cursor-pointer hover:text-[#FF5A14] transition-colors whitespace-nowrap" onClick={() => handleSort('owner')}>
-                    <div className="flex items-center gap-1">Owner Assignment <ArrowUpDown size={11} /></div>
-                  </th>
-                  <th className="p-4 text-center whitespace-nowrap">Jira Sync</th>
-                  <th className="p-4 text-center whitespace-nowrap">Plan & Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y theme-border">
-                {sortedRisks.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="p-12 text-center theme-muted italic">
-                      No matching program risks found. Try adjusting your search query or category filter.
-                    </td>
-                  </tr>
-                ) : (
-                  sortedRisks.map((risk) => renderRiskRow(risk))
+
+                {/* Project Table (Rendered if not collapsed) */}
+                {!isCollapsed && (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="theme-subtle border-b theme-border uppercase tracking-wider font-bold theme-muted text-[11px]">
+                          <th className="p-4 cursor-pointer hover:text-[#FF5A14] transition-colors whitespace-nowrap" onClick={() => handleSort('risk_id')}>
+                            <div className="flex items-center gap-1">Risk ID & Category <ArrowUpDown size={11} /></div>
+                          </th>
+                          <th className="p-4 cursor-pointer hover:text-[#FF5A14] transition-colors" onClick={() => handleSort('title')}>
+                            <div className="flex items-center gap-1">Risk Title & Plain English Impact <ArrowUpDown size={11} /></div>
+                          </th>
+                          <th className="p-4 cursor-pointer hover:text-[#FF5A14] transition-colors whitespace-nowrap" onClick={() => handleSort('severity')}>
+                            <div className="flex items-center gap-1">Severity & Score <ArrowUpDown size={11} /></div>
+                          </th>
+                          <th className="p-4 cursor-pointer hover:text-[#FF5A14] transition-colors whitespace-nowrap" onClick={() => handleSort('status')}>
+                            <div className="flex items-center gap-1">Governance Status <ArrowUpDown size={11} /></div>
+                          </th>
+                          <th className="p-4 cursor-pointer hover:text-[#FF5A14] transition-colors whitespace-nowrap" onClick={() => handleSort('owner')}>
+                            <div className="flex items-center gap-1">Owner Assignment <ArrowUpDown size={11} /></div>
+                          </th>
+                          <th className="p-4 text-center whitespace-nowrap">Jira Sync</th>
+                          <th className="p-4 text-center whitespace-nowrap">Plan & Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y theme-border">
+                        {group.risks.map((risk) => renderRiskRow(risk))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
-              </tbody>
-            </table>
-          </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
