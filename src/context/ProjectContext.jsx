@@ -92,6 +92,12 @@ export const ProjectProvider = ({ children }) => {
     return res;
   };
 
+  const updateProject = async (id, projectData) => {
+    const res = await projectApi.updateProject(id, projectData);
+    await refreshProjects();
+    return res;
+  };
+
   return (
     <ProjectContext.Provider
       value={{
@@ -102,6 +108,7 @@ export const ProjectProvider = ({ children }) => {
         selectProject,
         refreshProjects,
         createProject,
+        updateProject,
         setActiveProject
       }}
     >

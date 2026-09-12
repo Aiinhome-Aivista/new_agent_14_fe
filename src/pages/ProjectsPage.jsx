@@ -20,12 +20,13 @@ import {
   Loader2, 
   AlertCircle,
   Briefcase,
-  ExternalLink
+  ExternalLink,
+  Edit3
 } from 'lucide-react';
 
 const ProjectsPage = () => {
   const { user } = useAuth();
-  const { projects, loadingProjects, selectProject, createProject, refreshProjects } = useProject();
+  const { projects, loadingProjects, selectProject, createProject, updateProject, refreshProjects } = useProject();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -34,12 +35,21 @@ const ProjectsPage = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Edit Project Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState(null);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    status: 'Active',
+    planned_spend: 1000000,
+    description: ''
+  });
+
   // New Project Form State
   const [form, setForm] = useState({
     name: '',
     jira_key: '',
     description: '',
-    program_name: 'Alpha Migration',
     planned_spend: 1500000,
     status: 'Active'
   });
@@ -50,6 +60,45 @@ const ProjectsPage = () => {
     selectProject(proj);
     showToast(`Switched workspace context to: ${proj.name} [${proj.jira_key}]`, 'info');
     navigate('/dashboard');
+  };
+
+  const handleOpenEditModal = (proj, e) => {
+    if (e) e.stopPropagation();
+    setEditingProject(proj);
+    setEditForm({
+      name: proj.name || '',
+      status: proj.status || 'Active',
+      planned_spend: proj.planned_spend || 1000000,
+      description: proj.description || ''
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editForm.name.trim()) {
+      showToast('Project Name is required', 'error');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await updateProject(editingProject.id, {
+        name: editForm.name.trim(),
+        status: editForm.status,
+        planned_spend: Number(editForm.planned_spend) || 1000000,
+        description: editForm.description.trim()
+      });
+      showToast(`Project "${editForm.name}" updated successfully!`, 'success');
+      setIsEditModalOpen(false);
+      setEditingProject(null);
+    } catch (err) {
+      console.error(err);
+      const errDetail = err.response?.data?.error || 'Failed to update project.';
+      showToast(errDetail, 'error');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleFormChange = (e) => {
@@ -66,15 +115,14 @@ const ProjectsPage = () => {
       showToast('Please provide a Project Name', 'error');
       return;
     }
-    if (!form.jira_key.trim()) {
-      showToast('Please provide a Jira Project Key (e.g. PRJ-103)', 'error');
-      return;
-    }
 
     try {
       setSubmitting(true);
       const res = await createProject({
-        ...form,
+        name: form.name.trim(),
+        jira_key: form.jira_key.trim(),
+        description: form.description.trim(),
+        status: form.status,
         planned_spend: Number(form.planned_spend) || 1000000
       });
       showToast(res.message || `Project ${form.name} created successfully!`, 'success');
@@ -83,7 +131,6 @@ const ProjectsPage = () => {
         name: '',
         jira_key: '',
         description: '',
-        program_name: 'Alpha Migration',
         planned_spend: 1500000,
         status: 'Active'
       });
@@ -286,14 +333,27 @@ const ProjectsPage = () => {
                 <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#FF5A14]/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
                 <div>
-                  {/* Top Card Row: Jira Key & Status */}
+                  {/* Top Card Row: Jira Key, Status & Actions */}
                   <div className="flex items-center justify-between gap-2 mb-3">
-                    <span className="font-mono text-xs font-extrabold px-2.5 py-1 rounded-lg bg-[#FF5A14]/15 text-[#FF7A45] border border-[#FF5A14]/30 tracking-wider">
-                      {proj.jira_key}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-extrabold px-2.5 py-1 rounded-lg bg-[#FF5A14]/15 text-[#FF7A45] border border-[#FF5A14]/30 tracking-wider">
+                        {proj.jira_key}
+                      </span>
+                      {isPMO && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleOpenEditModal(proj, e)}
+                          className="p-1 rounded-lg text-slate-400 hover:text-[#FF5A14] hover:bg-[#FF5A14]/10 transition-colors cursor-pointer"
+                          title="Edit Project Details"
+                        >
+                          <Edit3 size={13} />
+                        </button>
+                      )}
+                    </div>
                     <span className={`text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full ${
                       proj.status === 'Active' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' :
                       proj.status === 'On Hold' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' :
+                      proj.status === 'Completed' ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30' :
                       'bg-blue-500/15 text-blue-400 border border-blue-500/30'
                     }`}>
                       {proj.status || 'Active'}
@@ -305,7 +365,7 @@ const ProjectsPage = () => {
                     {proj.name}
                   </h3>
                   <p className="text-xs theme-muted mt-1.5 line-clamp-2 min-h-[32px]">
-                    {proj.description || `Enterprise software governance and delivery framework under ${proj.program_name || 'Alpha Migration'}.`}
+                    {proj.description || `Enterprise software governance and delivery framework under ${proj.program_name || 'Enterprise Portfolio'}.`}
                   </p>
 
                   {/* Health Score & Program Info */}
@@ -320,7 +380,7 @@ const ProjectsPage = () => {
                       </span>
                     </div>
                     <span className="text-[11px] theme-muted font-medium truncate max-w-[140px]" title={proj.program_name}>
-                      {proj.program_name || 'Program Alpha'}
+                      {proj.program_name || 'Enterprise Portfolio'}
                     </span>
                   </div>
 
@@ -412,29 +472,18 @@ const ProjectsPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Jira Key *</label>
+                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
+                    Project Code <span className="text-[10px] text-slate-400 font-normal">(Optional)</span>
+                  </label>
                   <input
                     type="text"
                     name="jira_key"
                     value={form.jira_key}
                     onChange={handleFormChange}
-                    placeholder="e.g., CBM"
+                    placeholder="Auto (e.g. CBM)"
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#0E1422] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-mono placeholder-slate-400 dark:placeholder-slate-500 focus:border-[#FF5A14] focus:ring-1 focus:ring-[#FF5A14] outline-none uppercase transition-all"
-                    required
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Program Portfolio</label>
-                <input
-                  type="text"
-                  name="program_name"
-                  value={form.program_name}
-                  onChange={handleFormChange}
-                  placeholder="e.g., Alpha Migration"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#0E1422] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-[#FF5A14] focus:ring-1 focus:ring-[#FF5A14] outline-none transition-all"
-                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -459,9 +508,9 @@ const ProjectsPage = () => {
                     onChange={handleFormChange}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#0E1422] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:border-[#FF5A14] focus:ring-1 focus:ring-[#FF5A14] outline-none transition-all cursor-pointer"
                   >
-                    <option value="Active" className="bg-white dark:bg-[#141A28] text-slate-900 dark:text-white">Active</option>
-                    <option value="Planning" className="bg-white dark:bg-[#141A28] text-slate-900 dark:text-white">Planning</option>
-                    <option value="On Hold" className="bg-white dark:bg-[#141A28] text-slate-900 dark:text-white">On Hold</option>
+                    <option value="Active">Active</option>
+                    <option value="Planning">Planning</option>
+                    <option value="On Hold">On Hold</option>
                   </select>
                 </div>
               </div>
@@ -494,6 +543,112 @@ const ProjectsPage = () => {
                 >
                   {submitting ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
                   <span>{submitting ? 'Creating Project...' : 'Initialize Project'}</span>
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================== */}
+      {/* PMO ONLY: EDIT PROJECT MODAL DIALOG                 */}
+      {/* ==================================================== */}
+      {isEditModalOpen && isPMO && editingProject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fadeIn">
+          <div className="max-w-xl w-full bg-white dark:bg-[#131A29] rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-white/15 shadow-[0_25px_80px_rgba(0,0,0,0.25)] dark:shadow-[0_25px_80px_rgba(0,0,0,0.85)] relative overflow-hidden transition-colors">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-white/10 mb-6">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-[#FF5A14]/15 text-[#FF5A14] border border-[#FF5A14]/30 flex items-center justify-center">
+                  <Edit3 size={20} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white">Edit Project Settings</h3>
+                  <span className="text-[11px] text-[#FF5A14] font-mono font-semibold">
+                    Identifier: {editingProject.jira_key}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleEditSubmit} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Project Name *</label>
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  placeholder="e.g., Core Banking Modernization"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#0E1422] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-[#FF5A14] focus:ring-1 focus:ring-[#FF5A14] outline-none transition-all"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Planned Budget ($)</label>
+                  <input
+                    type="number"
+                    value={editForm.planned_spend}
+                    onChange={(e) => setEditForm({ ...editForm, planned_spend: e.target.value })}
+                    placeholder="1500000"
+                    step="50000"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#0E1422] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-mono placeholder-slate-400 dark:placeholder-slate-500 focus:border-[#FF5A14] focus:ring-1 focus:ring-[#FF5A14] outline-none transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Project Status</label>
+                  <select
+                    value={editForm.status}
+                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#0E1422] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:border-[#FF5A14] focus:ring-1 focus:ring-[#FF5A14] outline-none transition-all cursor-pointer"
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Planning">Planning</option>
+                    <option value="On Hold">On Hold</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Archived">Archived</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Description</label>
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  rows={3}
+                  placeholder="High-level objectives, architectural scope, and delivery milestones..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#0E1422] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-[#FF5A14] focus:ring-1 focus:ring-[#FF5A14] outline-none transition-all resize-none"
+                />
+              </div>
+
+              {/* Modal Footer Actions */}
+              <div className="pt-4 border-t border-slate-200 dark:border-white/10 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.05] dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] hover:brightness-110 text-white text-xs font-bold flex items-center gap-2 shadow-lg disabled:opacity-50 transition-all cursor-pointer"
+                >
+                  {submitting ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
+                  <span>{submitting ? 'Updating Project...' : 'Save Changes'}</span>
                 </button>
               </div>
 

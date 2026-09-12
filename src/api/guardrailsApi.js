@@ -19,6 +19,10 @@ export const guardrailsApi = {
     const response = await api.post('/guardrails/policies', policyData);
     return response.data;
   },
+  updatePolicy: async (policyId, policyData) => {
+    const response = await api.put(`/guardrails/policies/${encodeURIComponent(policyId)}`, policyData);
+    return response.data;
+  },
   togglePolicy: async (policyId) => {
     const response = await api.patch(`/guardrails/policies/${encodeURIComponent(policyId)}/toggle`);
     return response.data;

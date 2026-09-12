@@ -24,7 +24,8 @@ import {
   ChevronDown,
   ChevronUp,
   Cpu,
-  FolderKanban
+  FolderKanban,
+  Edit3
 } from 'lucide-react';
 import FuturisticLoader from '../components/common/FuturisticLoader';
 
@@ -75,8 +76,9 @@ const GuardrailsPage = () => {
   const [error, setError] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
 
-  // New Guardrail Modal & Form State
+  // New & Edit Guardrail Modal & Form State
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingPolicy, setEditingPolicy] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [newPolicy, setNewPolicy] = useState({
     name: '',
@@ -132,10 +134,36 @@ const GuardrailsPage = () => {
   }, [activeProject?.id]);
 
   useEffect(() => {
-    if (showAddModal && aiSuggestions.length === 0) {
+    if (showAddModal && !editingPolicy && aiSuggestions.length === 0) {
       fetchAiSuggestions();
     }
-  }, [showAddModal]);
+  }, [showAddModal, editingPolicy]);
+
+  const handleOpenEditPolicy = (policy) => {
+    setEditingPolicy(policy);
+    setNewPolicy({
+      name: policy.name || '',
+      category: policy.category || 'Security & PII',
+      level: policy.level || 'Strict',
+      description: policy.description || '',
+      status: policy.status || 'Active',
+      scope: policy.is_global ? 'global' : 'project'
+    });
+    setShowAddModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowAddModal(false);
+    setEditingPolicy(null);
+    setNewPolicy({
+      name: '',
+      category: 'Security & PII',
+      level: 'Strict',
+      description: '',
+      status: 'Active',
+      scope: 'project'
+    });
+  };
 
   const handleResolve = async (itemId, decision) => {
     try {
@@ -156,7 +184,7 @@ const GuardrailsPage = () => {
     }
   };
 
-  const handleCreatePolicy = async (e) => {
+  const handleSubmitPolicy = async (e) => {
     e.preventDefault();
     if (!newPolicy.name.trim()) {
       showToast("Policy name is required", "error");
@@ -173,22 +201,21 @@ const GuardrailsPage = () => {
         status: newPolicy.status,
         project_id: newPolicy.scope === 'global' ? null : (activeProject?.id || 1)
       };
-      const res = await guardrailsApi.createPolicy(payload);
-      const scopeLabel = newPolicy.scope === 'global' ? 'Global Standard' : `Project [${activeProject?.jira_key || 'PRJ'}]`;
-      showToast(`Guardrail "${res.policy?.name || newPolicy.name}" deployed (${scopeLabel})!`, 'success');
-      setShowAddModal(false);
-      setNewPolicy({
-        name: '',
-        category: 'Security & PII',
-        level: 'Strict',
-        description: '',
-        status: 'Active',
-        scope: 'project'
-      });
+
+      if (editingPolicy) {
+        await guardrailsApi.updatePolicy(editingPolicy.id, payload);
+        showToast(`Guardrail "${newPolicy.name}" updated successfully!`, 'success');
+      } else {
+        const res = await guardrailsApi.createPolicy(payload);
+        const scopeLabel = newPolicy.scope === 'global' ? 'Global Standard' : `Project [${activeProject?.jira_key || 'PRJ'}]`;
+        showToast(`Guardrail "${res.policy?.name || newPolicy.name}" deployed (${scopeLabel})!`, 'success');
+      }
+
+      handleCloseModal();
       await fetchData();
     } catch (err) {
-      console.error("Failed to create policy:", err);
-      const msg = err.response?.data?.error || "Failed to create guardrail policy.";
+      console.error("Failed to save policy:", err);
+      const msg = err.response?.data?.error || "Failed to save guardrail policy.";
       showToast(msg, 'error');
     } finally {
       setSubmitting(false);
@@ -509,14 +536,24 @@ const GuardrailsPage = () => {
                         </div>
                       </td>
                       <td className="py-3 px-4 text-right whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => handleDeletePolicy(p.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-                          title="Delete policy"
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditPolicy(p)}
+                            className="p-1.5 text-slate-400 hover:text-[#FF5A14] hover:bg-[#FF5A14]/10 rounded-lg transition-colors cursor-pointer"
+                            title="Edit Guardrail Rule"
+                          >
+                            <Edit3 size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePolicy(p.id)}
+                            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+                            title="Delete Guardrail Rule"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -621,128 +658,134 @@ const GuardrailsPage = () => {
                   <ShieldCheck size={20} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black theme-heading">Deploy New Guardrail Rule</h3>
-                  <p className="text-xs theme-muted">Define custom autonomous constraints, format filters, or review gates.</p>
+                  <h3 className="text-lg font-black theme-heading">
+                    {editingPolicy ? `Edit Guardrail Policy (${editingPolicy.id})` : 'Deploy New Guardrail Rule'}
+                  </h3>
+                  <p className="text-xs theme-muted">
+                    {editingPolicy ? 'Update policy constraints, severity level, or project scope.' : 'Define custom autonomous constraints, format filters, or review gates.'}
+                  </p>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => setShowAddModal(false)}
+                onClick={handleCloseModal}
                 className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
               >
                 <X size={18} />
               </button>
             </div>
 
-            {/* AI Dynamic Policy Recommendations */}
-            <div className="mb-5 p-3.5 rounded-2xl bg-gradient-to-br from-[#FF5A14]/10 via-purple-500/5 to-transparent border border-[#FF5A14]/25 shadow-inner">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-lg bg-[#FF5A14]/20 flex items-center justify-center text-[#FF5A14]">
-                    <Sparkles size={12} className={aiLoading ? "animate-spin" : ""} />
-                  </div>
-                  <div>
-                    <span className="text-xs font-black theme-heading flex items-center gap-1.5">
-                      AI Telemetry Suggestions
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-extrabold uppercase tracking-wider">
-                        Live Risk & Spend Engine
+            {/* AI Dynamic Policy Recommendations (Only shown when deploying new policies) */}
+            {!editingPolicy && (
+              <div className="mb-5 p-3.5 rounded-2xl bg-gradient-to-br from-[#FF5A14]/10 via-purple-500/5 to-transparent border border-[#FF5A14]/25 shadow-inner">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-lg bg-[#FF5A14]/20 flex items-center justify-center text-[#FF5A14]">
+                      <Sparkles size={12} className={aiLoading ? "animate-spin" : ""} />
+                    </div>
+                    <div>
+                      <span className="text-xs font-black theme-heading flex items-center gap-1.5">
+                        AI Telemetry Suggestions
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-extrabold uppercase tracking-wider">
+                          Live Risk & Spend Engine
+                        </span>
                       </span>
-                    </span>
+                    </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => fetchAiSuggestions(true)}
+                    disabled={aiLoading}
+                    className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-[#FF5A14] hover:bg-[#FF5A14]/10 rounded-lg transition-colors disabled:opacity-50"
+                    title="Re-run AI analysis on live database telemetry"
+                  >
+                    <RotateCw size={11} className={aiLoading ? "animate-spin" : ""} />
+                    <span>{aiLoading ? "Analyzing..." : "Re-Analyze"}</span>
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => fetchAiSuggestions(true)}
-                  disabled={aiLoading}
-                  className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-[#FF5A14] hover:bg-[#FF5A14]/10 rounded-lg transition-colors disabled:opacity-50"
-                  title="Re-run AI analysis on live database telemetry"
-                >
-                  <RotateCw size={11} className={aiLoading ? "animate-spin" : ""} />
-                  <span>{aiLoading ? "Analyzing..." : "Re-Analyze"}</span>
-                </button>
-              </div>
 
-              {aiLoading ? (
-                <div className="py-4 text-center space-y-2">
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#FF5A14]/10 text-[#FF5A14] text-xs font-semibold animate-pulse">
-                    <Cpu size={14} className="animate-spin" />
-                    Auditing live project risks, budget burn & sprint telemetry with LLM...
+                {aiLoading ? (
+                  <div className="py-4 text-center space-y-2">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#FF5A14]/10 text-[#FF5A14] text-xs font-semibold animate-pulse">
+                      <Cpu size={14} className="animate-spin" />
+                      Auditing live project risks, budget burn & sprint telemetry with LLM...
+                    </div>
                   </div>
+                ) : aiSuggestions.length > 0 ? (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-1 gap-2 max-h-44 overflow-y-auto pr-1">
+                      {aiSuggestions.map((sug, idx) => (
+                        <div
+                          key={idx}
+                          onClick={() => applyTemplate(sug)}
+                          className="group p-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border theme-border hover:border-[#FF5A14] hover:shadow-md cursor-pointer transition-all text-left flex flex-col gap-1"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-bold theme-heading group-hover:text-[#FF5A14] transition-colors line-clamp-1">
+                              + {sug.name}
+                            </span>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${
+                                sug.level === 'Strict' ? 'bg-red-500/15 text-red-600 dark:text-red-400' :
+                                sug.level === 'High' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' :
+                                'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                              }`}>
+                                {sug.level}
+                              </span>
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700/60 theme-muted font-medium">
+                                {sug.category}
+                              </span>
+                            </div>
+                          </div>
+                          {sug.rationale && (
+                            <div className="text-[10px] text-[#FF5A14] font-medium flex items-center gap-1">
+                              <span>⚡ {sug.rationale}</span>
+                            </div>
+                          )}
+                          <div className="text-[11px] theme-muted line-clamp-2">
+                            {sug.description}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-[11px] theme-muted py-2 text-center">
+                    Click "Re-Analyze" to generate custom AI policies based on real project risk data.
+                  </div>
+                )}
+
+                {/* Collapsible standard templates */}
+                <div className="mt-2.5 pt-2 border-t theme-border flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setShowTemplates(!showTemplates)}
+                    className="text-[10px] font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 flex items-center gap-1"
+                  >
+                    <span>Quick Industry Templates (Static)</span>
+                    {showTemplates ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+                  </button>
                 </div>
-              ) : aiSuggestions.length > 0 ? (
-                <div className="space-y-2">
-                  <div className="grid grid-cols-1 gap-2 max-h-44 overflow-y-auto pr-1">
-                    {aiSuggestions.map((sug, idx) => (
-                      <div
+
+                {showTemplates && (
+                  <div className="flex flex-wrap gap-1.5 mt-2 animate-in fade-in duration-150">
+                    {QUICK_TEMPLATES.map((tpl, idx) => (
+                      <button
                         key={idx}
-                        onClick={() => applyTemplate(sug)}
-                        className="group p-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border theme-border hover:border-[#FF5A14] hover:shadow-md cursor-pointer transition-all text-left flex flex-col gap-1"
+                        type="button"
+                        onClick={() => applyTemplate(tpl)}
+                        className="text-[10px] font-bold px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border theme-border hover:border-[#FF5A14] hover:text-[#FF5A14] transition-all text-left shadow-sm"
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-bold theme-heading group-hover:text-[#FF5A14] transition-colors line-clamp-1">
-                            + {sug.name}
-                          </span>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${
-                              sug.level === 'Strict' ? 'bg-red-500/15 text-red-600 dark:text-red-400' :
-                              sug.level === 'High' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' :
-                              'bg-blue-500/15 text-blue-600 dark:text-blue-400'
-                            }`}>
-                              {sug.level}
-                            </span>
-                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700/60 theme-muted font-medium">
-                              {sug.category}
-                            </span>
-                          </div>
-                        </div>
-                        {sug.rationale && (
-                          <div className="text-[10px] text-[#FF5A14] font-medium flex items-center gap-1">
-                            <span>⚡ {sug.rationale}</span>
-                          </div>
-                        )}
-                        <div className="text-[11px] theme-muted line-clamp-2">
-                          {sug.description}
-                        </div>
-                      </div>
+                        + {tpl.name}
+                      </button>
                     ))}
                   </div>
-                </div>
-              ) : (
-                <div className="text-[11px] theme-muted py-2 text-center">
-                  Click "Re-Analyze" to generate custom AI policies based on real project risk data.
-                </div>
-              )}
-
-              {/* Collapsible standard templates */}
-              <div className="mt-2.5 pt-2 border-t theme-border flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => setShowTemplates(!showTemplates)}
-                  className="text-[10px] font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 flex items-center gap-1"
-                >
-                  <span>Quick Industry Templates (Static)</span>
-                  {showTemplates ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
-                </button>
+                )}
               </div>
-
-              {showTemplates && (
-                <div className="flex flex-wrap gap-1.5 mt-2 animate-in fade-in duration-150">
-                  {QUICK_TEMPLATES.map((tpl, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => applyTemplate(tpl)}
-                      className="text-[10px] font-bold px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border theme-border hover:border-[#FF5A14] hover:text-[#FF5A14] transition-all text-left shadow-sm"
-                    >
-                      + {tpl.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            )}
 
             {/* Guardrail Policy Form */}
-            <form onSubmit={handleCreatePolicy} className="space-y-4">
+            <form onSubmit={handleSubmitPolicy} className="space-y-4">
               {/* Policy Scope Selection */}
               <div>
                 <label className="block text-xs font-bold theme-heading mb-1.5">
@@ -863,11 +906,15 @@ const GuardrailsPage = () => {
                 ></textarea>
               </div>
 
-              {/* Initial Status Toggle */}
+              {/* Policy Status Toggle */}
               <div className="flex items-center justify-between p-3 rounded-xl theme-card border theme-border">
                 <div>
-                  <div className="text-xs font-bold theme-heading">Initial Policy Status</div>
-                  <div className="text-[11px] theme-muted">Enable real-time enforcement immediately upon creation</div>
+                  <div className="text-xs font-bold theme-heading">
+                    {editingPolicy ? 'Policy Status' : 'Initial Policy Status'}
+                  </div>
+                  <div className="text-[11px] theme-muted">
+                    {editingPolicy ? 'Enable or disable real-time enforcement for this guardrail' : 'Enable real-time enforcement immediately upon creation'}
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -888,7 +935,7 @@ const GuardrailsPage = () => {
               <div className="flex items-center justify-end gap-3 pt-3 border-t theme-border">
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
+                  onClick={handleCloseModal}
                   className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
                 >
                   Cancel
@@ -898,10 +945,12 @@ const GuardrailsPage = () => {
                   disabled={submitting}
                   className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] hover:brightness-110 text-white rounded-xl text-xs font-bold shadow-md transition-all disabled:opacity-50"
                 >
-                  {submitting ? <span>Deploying Policy...</span> : (
+                  {submitting ? (
+                    <span>{editingPolicy ? 'Saving Changes...' : 'Deploying Policy...'}</span>
+                  ) : (
                     <>
                       <Check size={14} />
-                      <span>Deploy Guardrail</span>
+                      <span>{editingPolicy ? 'Save Policy Changes' : 'Deploy Guardrail'}</span>
                     </>
                   )}
                 </button>
