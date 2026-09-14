@@ -10,6 +10,7 @@ import KPICard from '../components/dashboard/KPICard';
 import BurndownChart from '../components/dashboard/BurndownChart';
 import RiskHeatmap from '../components/dashboard/RiskHeatmap';
 import PMOLeadDashboard from '../components/dashboard/PMOLeadDashboard';
+import ProjectThreatRegister from '../components/dashboard/ProjectThreatRegister';
 import FuturisticLoader from '../components/common/FuturisticLoader';
 import { 
   FileUp, 
@@ -296,6 +297,8 @@ const InvestorDashboard = () => {
   const kpis = data?.kpis || [];
   const burndown = data?.burndown || [];
   const risks = data?.risks || [];
+  const projectRisks = data?.project_risks || data?.recent_risks || data?.risks || [];
+  const totalProjectRisks = data?.total_project_risks !== undefined ? data.total_project_risks : projectRisks.length;
   const healthScore = data?.healthScore || 84;
   const crossProjectStatus = data?.cross_project_status || "Active & Governed";
   const scheduleVariance = data?.schedule_variance || "+2.4% Ahead";
@@ -711,6 +714,14 @@ const InvestorDashboard = () => {
 
         </div>
 
+        {/* RECENT 5 PROJECT RISKS & THREAT REGISTER */}
+        <ProjectThreatRegister
+          risks={projectRisks}
+          activeProject={activeProject}
+          totalCount={totalProjectRisks}
+          maxDisplay={5}
+        />
+
       </div>
     );
   };
@@ -844,6 +855,14 @@ const InvestorDashboard = () => {
           </table>
         </div>
       </div>
+
+      {/* RECENT 5 PROJECT RISKS & THREAT REGISTER */}
+      <ProjectThreatRegister
+        risks={projectRisks}
+        activeProject={activeProject}
+        totalCount={totalProjectRisks}
+        maxDisplay={5}
+      />
 
       {/* Portfolio Projects Drilldown Grid */}
       <div className="p-6 rounded-2xl theme-card">
@@ -1044,6 +1063,14 @@ const InvestorDashboard = () => {
         </div>
 
       </div>
+
+      {/* RECENT 5 PROJECT RISKS & THREAT REGISTER */}
+      <ProjectThreatRegister
+        risks={projectRisks}
+        activeProject={activeProject}
+        totalCount={totalProjectRisks}
+        maxDisplay={5}
+      />
 
     </div>
   );

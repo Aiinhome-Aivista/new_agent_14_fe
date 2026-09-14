@@ -46,6 +46,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import RiskHeatmap from './RiskHeatmap';
+import ProjectThreatRegister from './ProjectThreatRegister';
 
 const PMOLeadDashboard = ({
   data,
@@ -198,6 +199,10 @@ const PMOLeadDashboard = ({
     open_escalations: escalations.length || 2,
     gate_clearance_status: 'Gate 3 Approved'
   };
+
+  // Real-time project risks calibrated for active project workspace
+  const projectRisks = data?.project_risks || data?.recent_risks || (Array.isArray(risks) ? risks : []);
+  const totalProjectRisks = data?.total_project_risks !== undefined ? data.total_project_risks : projectRisks.length;
 
   // Format currency helpers
   const fmtMoney = (val) => {
@@ -859,6 +864,15 @@ const PMOLeadDashboard = ({
 
       </div>
 
+      {/* PROGRAM ISSUES & THREAT REGISTER (RECENT 5 RISKS & DRILLDOWN) */}
+      <ProjectThreatRegister
+        risks={projectRisks}
+        activeProject={activeProject}
+        totalCount={totalProjectRisks}
+        maxDisplay={5}
+        title="Program Issues & Threat Register"
+      />
+
       {/* ACTIVE GOVERNANCE ESCALATIONS STREAM */}
       <div className="p-6 rounded-2xl theme-card border border-white/10 flex flex-col justify-between">
         <div>
@@ -934,7 +948,7 @@ const PMOLeadDashboard = ({
           onClick={() => setActiveDrilldown(null)}
         >
           <div 
-            className="theme-card border border-white/10 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto"
+            className="theme-card border border-white/10 rounded-2xl max-w-4xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}

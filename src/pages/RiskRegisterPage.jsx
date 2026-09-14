@@ -23,8 +23,9 @@ const RiskRegisterPage = () => {
   const [searchParams] = useSearchParams();
   const urlSearch = searchParams.get('search') || searchParams.get('risk_id') || '';
   const urlSeverity = searchParams.get('severity') || 'ALL';
+  const urlProjectId = searchParams.get('project_id') || '';
 
-  const { activeProject, projects } = useProject();
+  const { activeProject, projects, selectProject } = useProject();
   const [risks, setRisks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -32,7 +33,7 @@ const RiskRegisterPage = () => {
   const [creating, setCreating] = useState(false);
   const { showToast } = useToast();
 
-  const isAllProjects = !activeProject || activeProject.id === 'all' || activeProject.jira_key === 'ALL';
+  const isAllProjects = !urlProjectId && (!activeProject || activeProject.id === 'all' || activeProject.jira_key === 'ALL');
 
   const [newRisk, setNewRisk] = useState({
     title: '',
@@ -45,11 +46,21 @@ const RiskRegisterPage = () => {
     project_id: ''
   });
 
+  // Sync active project if navigated with project_id in URL
+  useEffect(() => {
+    if (urlProjectId && projects?.length > 0) {
+      const matched = projects.find(p => String(p.id) === String(urlProjectId) || p.jira_key === urlProjectId);
+      if (matched && (!activeProject || String(activeProject.id) !== String(matched.id))) {
+        selectProject(matched);
+      }
+    }
+  }, [urlProjectId, projects]);
+
   const fetchRisks = async () => {
     try {
       setLoading(true);
       setError(null);
-      const targetParam = isAllProjects ? 'all' : (activeProject?.id || activeProject?.jira_key || 'all');
+      const targetParam = urlProjectId || (isAllProjects ? 'all' : (activeProject?.id || activeProject?.jira_key || 'all'));
       const data = await risksApi.getRisks(targetParam);
       setRisks(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -62,7 +73,7 @@ const RiskRegisterPage = () => {
 
   useEffect(() => {
     fetchRisks();
-  }, [activeProject?.id, activeProject?.jira_key]);
+  }, [activeProject?.id, activeProject?.jira_key, urlProjectId]);
 
   const handleUpdateRisk = async (id, updates) => {
     // Optimistic update

@@ -4,6 +4,7 @@ import { dashboardApi } from '../api/dashboardApi';
 import KPICard from '../components/dashboard/KPICard';
 import BurndownChart from '../components/dashboard/BurndownChart';
 import RiskHeatmap from '../components/dashboard/RiskHeatmap';
+import ProjectThreatRegister from '../components/dashboard/ProjectThreatRegister';
 
 import FuturisticLoader from '../components/common/FuturisticLoader';
 import { Link } from 'react-router-dom';
@@ -78,6 +79,14 @@ const ProjectDrilldown = () => {
           <RiskHeatmap data={data.risks} />
         </div>
       </div>
+
+      {/* PROGRAM ISSUES & THREAT REGISTER (RECENT 5 RISKS & DRILLDOWN) */}
+      <ProjectThreatRegister
+        risks={data.risk_details || data.recent_risks || []}
+        activeProject={{ id: data.numeric_id || data.id, jira_key: data.id, name: data.name }}
+        totalCount={data.total_project_risks !== undefined ? data.total_project_risks : (data.risk_details?.length || 0)}
+        maxDisplay={5}
+      />
     </div>
   );
 };
