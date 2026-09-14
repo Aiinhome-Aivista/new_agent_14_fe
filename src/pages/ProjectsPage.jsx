@@ -48,7 +48,6 @@ const ProjectsPage = () => {
   // New Project Form State
   const [form, setForm] = useState({
     name: '',
-    jira_key: '',
     description: '',
     planned_spend: 1500000,
     status: 'Active'
@@ -105,7 +104,7 @@ const ProjectsPage = () => {
     const { name, value } = e.target;
     setForm(prev => ({
       ...prev,
-      [name]: name === 'jira_key' ? value.toUpperCase().replace(/\s+/g, '-') : value
+      [name]: value
     }));
   };
 
@@ -120,7 +119,6 @@ const ProjectsPage = () => {
       setSubmitting(true);
       const res = await createProject({
         name: form.name.trim(),
-        jira_key: form.jira_key.trim(),
         description: form.description.trim(),
         status: form.status,
         planned_spend: Number(form.planned_spend) || 1000000
@@ -129,7 +127,6 @@ const ProjectsPage = () => {
       setIsCreateModalOpen(false);
       setForm({
         name: '',
-        jira_key: '',
         description: '',
         planned_spend: 1500000,
         status: 'Active'
@@ -276,7 +273,7 @@ const ProjectsPage = () => {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by project name, Jira Key (e.g. PRJ-101)..."
+            placeholder="Search projects by name or description..."
             className="w-full pl-10 pr-4 py-2 rounded-xl text-xs bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 focus:border-[#FF5A14] outline-none text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 transition-all"
           />
         </div>
@@ -457,33 +454,17 @@ const ProjectsPage = () => {
             {/* Form */}
             <form onSubmit={handleCreateSubmit} className="space-y-4 text-xs">
               
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="sm:col-span-2">
-                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Project Name *</label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={form.name}
-                    onChange={handleFormChange}
-                    placeholder="e.g., Core Banking Modernization"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#0E1422] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-[#FF5A14] focus:ring-1 focus:ring-[#FF5A14] outline-none transition-all"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
-                    Project Code <span className="text-[10px] text-slate-400 font-normal">(Optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="jira_key"
-                    value={form.jira_key}
-                    onChange={handleFormChange}
-                    placeholder="Auto (e.g. CBM)"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#0E1422] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-mono placeholder-slate-400 dark:placeholder-slate-500 focus:border-[#FF5A14] focus:ring-1 focus:ring-[#FF5A14] outline-none uppercase transition-all"
-                  />
-                </div>
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Project Name *</label>
+                <input
+                  type="text"
+                  name="name"
+                  value={form.name}
+                  onChange={handleFormChange}
+                  placeholder="e.g., Core Banking Modernization"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#0E1422] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-[#FF5A14] focus:ring-1 focus:ring-[#FF5A14] outline-none transition-all"
+                  required
+                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
