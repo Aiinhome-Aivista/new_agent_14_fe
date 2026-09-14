@@ -579,7 +579,7 @@ const RiskRegisterTable = ({ risks, activeProject, onUpdateRisk, onRiskUpdated }
         </div>
 
         {/* Header Governance Scope Context */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs py-1 border-b theme-border">
+        {/* <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs py-1 border-b theme-border">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#FF5A14]" />
             <span className="theme-muted font-medium">Active Governance Scope:</span>
@@ -592,7 +592,7 @@ const RiskRegisterTable = ({ risks, activeProject, onUpdateRisk, onRiskUpdated }
               ? 'Divided project-wise below. Switch active project via the header dropdown above.' 
               : 'Filtered strictly to active project. Switch to All Projects via the top header.'}
           </span>
-        </div>
+        </div> */}
 
         {/* Row 3: Category Quick Filter Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs scrollbar-none pt-1 border-t theme-border">
