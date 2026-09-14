@@ -276,8 +276,33 @@ const AppLayout = () => {
           {/* Right Header Actions: Project Switcher, Theme Switcher, Role Badge, User Badge */}
           <div className="flex items-center gap-3">
             
-            {/* Active Project Switcher Dropdown */}
+            {/* Active Project Switcher Dropdown / All Projects Indicator */}
             {(() => {
+              const isProjectsHub = location.pathname.startsWith('/projects');
+
+              if (isProjectsHub) {
+                return (
+                  <div
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold select-none ${
+                      theme === 'dark'
+                        ? 'bg-[#182236] border-white/10 text-white'
+                        : 'bg-slate-100 border-slate-300 text-slate-800'
+                    }`}
+                    title="All Projects (Portfolio View)"
+                  >
+                    <FolderKanban size={15} className="text-[#FF5A14]" />
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono text-[#FF7A45] font-extrabold text-[11px]">
+                        [ALL]
+                      </span>
+                      <span className="font-bold">
+                        All Projects
+                      </span>
+                    </div>
+                  </div>
+                );
+              }
+
               const isAllProjects = !activeProject || activeProject.id === 'all' || activeProject.jira_key === 'ALL';
               return (
                 <div className="relative" ref={projectDropdownRef}>
