@@ -54,7 +54,7 @@ const ProjectsPage = () => {
     status: 'Active'
   });
 
-  const isPMO = user?.role === 'PMO';
+  const isPMO = ['PMO', 'Program Director'].includes(user?.role);
 
   const handleOpenWorkspace = (proj) => {
     selectProject(proj);
@@ -365,10 +365,10 @@ const ProjectsPage = () => {
                     {proj.name}
                   </h3>
                   <p className="text-xs theme-muted mt-1.5 line-clamp-2 min-h-[32px]">
-                    {proj.description || `Enterprise software governance and delivery framework under ${proj.program_name || 'Enterprise Portfolio'}.`}
+                    {proj.description || 'Enterprise delivery and autonomous agent governance framework.'}
                   </p>
 
-                  {/* Health Score & Program Info */}
+                  {/* Health Score & Status Badge */}
                   <div className="flex items-center justify-between py-3 my-3 border-y border-slate-200 dark:border-white/5 text-xs">
                     <div className="flex items-center gap-1.5">
                       <span className="text-[11px] theme-muted font-medium">Health Index:</span>
@@ -379,8 +379,8 @@ const ProjectsPage = () => {
                         {health}%
                       </span>
                     </div>
-                    <span className="text-[11px] theme-muted font-medium truncate max-w-[140px]" title={proj.program_name}>
-                      {proj.program_name || 'Enterprise Portfolio'}
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-[#FF5A14]/10 text-[#FF7A45] font-semibold border border-[#FF5A14]/20">
+                      {proj.status || 'Active'}
                     </span>
                   </div>
 

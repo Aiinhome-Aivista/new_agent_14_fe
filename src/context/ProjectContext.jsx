@@ -41,6 +41,10 @@ export const ProjectProvider = ({ children }) => {
 
       // Verify or auto-select active project
       setActiveProject(prev => {
+        if (!list || list.length === 0) {
+          localStorage.removeItem('vpm_active_project');
+          return null;
+        }
         if (prev && (prev.id === 'all' || prev.jira_key === 'ALL')) {
           localStorage.setItem('vpm_active_project', JSON.stringify(ALL_PROJECTS_CONTEXT));
           return ALL_PROJECTS_CONTEXT;
@@ -56,8 +60,11 @@ export const ProjectProvider = ({ children }) => {
             localStorage.setItem('vpm_active_project', JSON.stringify(matched));
             return matched;
           }
+          const defaultProj = list[0];
+          localStorage.setItem('vpm_active_project', JSON.stringify(defaultProj));
+          return defaultProj;
         }
-        return prev;
+        return null;
       });
 
       return list;

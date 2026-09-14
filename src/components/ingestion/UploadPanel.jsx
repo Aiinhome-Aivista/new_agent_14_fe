@@ -61,6 +61,11 @@ const UploadPanel = ({ onUploadSuccess }) => {
 
   const handleUpload = async () => {
     if (!file) return;
+    const targetProjId = selectedProjectId || (activeProject?.id !== 'all' ? activeProject?.id : null);
+    if (!targetProjId) {
+      showToast('Please create or select an Enterprise Project before uploading documents.', 'warning');
+      return;
+    }
     setUploading(true);
     setProgress(0);
     
@@ -71,7 +76,7 @@ const UploadPanel = ({ onUploadSuccess }) => {
         { 
           uploaded_by: user?.name || user?.email, 
           uploaded_by_role: user?.role,
-          project_id: selectedProjectId || activeProject?.id || '1'
+          project_id: targetProjId
         }
       );
       if (res?.ai_processing_status === 'degraded_fallback') {
@@ -111,7 +116,7 @@ const UploadPanel = ({ onUploadSuccess }) => {
           {projects.map(p => (
             <option key={p.numeric_id} value={p.numeric_id}>{p.id}: {p.name}</option>
           ))}
-          {projects.length === 0 && <option value="1">Default Project (Connect to Sync)</option>}
+          {projects.length === 0 && <option value="">No projects available (Create a project first)</option>}
         </select>
       </div>
       
