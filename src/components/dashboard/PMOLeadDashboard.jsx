@@ -312,7 +312,7 @@ const PMOLeadDashboard = ({
 
           <div className="flex items-center justify-between text-xs font-semibold mb-3">
             <span className="px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-400 font-mono text-[11px]">
-              {timeline.days_remaining} Days Remaining
+              {timeline.days_remaining > 0 ? `${timeline.days_remaining} Days Remaining` : 'Timeline Pending'}
             </span>
             <span className="font-mono text-slate-400 text-[11px]">
               SPI: <strong className="text-emerald-400">{timeline.spi}</strong>
@@ -389,41 +389,53 @@ const PMOLeadDashboard = ({
           </div>
 
           {/* Donut Chart Container */}
-          <div className="relative h-56 w-full flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={tasks.breakdown}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={55}
-                  outerRadius={80}
-                  paddingAngle={4}
-                  dataKey="count"
-                >
-                  {tasks.breakdown.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <RechartsTooltip 
-                  contentStyle={{
-                    borderRadius: '12px',
-                    backgroundColor: isDark ? '#141A28' : '#FFFFFF',
-                    borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : '#CBD5E1',
-                    fontSize: '11px',
-                    boxShadow: '0 10px 25px rgba(0,0,0,0.3)'
-                  }}
-                  formatter={(val, name) => [`${val} tasks (${Math.round((val / tasks.total) * 100)}%)`, name]}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-
-            {/* Inner Center Label */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-2xl font-black theme-heading">{tasks.total}</span>
-              <span className="text-[10px] uppercase font-bold theme-muted tracking-wider">Total Tasks</span>
+          {tasks.total === 0 ? (
+            <div className="relative h-56 w-full flex flex-col items-center justify-center text-center p-4">
+              <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-white/10 flex items-center justify-center mb-3">
+                <PieChartIcon size={24} className="theme-muted opacity-40" />
+              </div>
+              <span className="text-xl font-black theme-heading">0 Tasks Logged</span>
+              <p className="text-xs theme-muted mt-1 max-w-[220px]">
+                No workstream tasks or deliverables logged yet. Ingest documents or connect Jira to track progress.
+              </p>
             </div>
-          </div>
+          ) : (
+            <div className="relative h-56 w-full flex items-center justify-center">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={tasks.breakdown}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={55}
+                    outerRadius={80}
+                    paddingAngle={4}
+                    dataKey="count"
+                  >
+                    {tasks.breakdown.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip 
+                    contentStyle={{
+                      borderRadius: '12px',
+                      backgroundColor: isDark ? '#141A28' : '#FFFFFF',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : '#CBD5E1',
+                      fontSize: '11px',
+                      boxShadow: '0 10px 25px rgba(0,0,0,0.3)'
+                    }}
+                    formatter={(val, name) => [`${val} tasks (${Math.round((val / tasks.total) * 100)}%)`, name]}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+
+              {/* Inner Center Label */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-2xl font-black theme-heading">{tasks.total}</span>
+                <span className="text-[10px] uppercase font-bold theme-muted tracking-wider">Total Tasks</span>
+              </div>
+            </div>
+          )}
 
           {/* Interactive Legend Breakdown */}
           <div className="grid grid-cols-2 gap-2 pt-4 border-t theme-border">
@@ -557,7 +569,7 @@ const PMOLeadDashboard = ({
                 Enterprise Delivery Roadmaps & Target Completion Schedule
               </span>
               <span className="text-xs font-mono font-bold text-[#FF5A14]">
-                Target Go-Live: {timeline.target_completion_date} ({timeline.days_remaining}d Left)
+                Target Go-Live: {timeline.target_completion_date} {timeline.days_remaining > 0 ? `(${timeline.days_remaining}d Left)` : ''}
               </span>
             </div>
 
@@ -584,10 +596,12 @@ const PMOLeadDashboard = ({
                       </div>
                       <div className="flex items-center gap-3 text-xs theme-muted mt-1">
                         <span>Target Deadline: <strong className="theme-heading">{phase.target_date}</strong></span>
-                        {phase.days_left > 0 ? (
+                        {phase.status === 'Completed' ? (
+                          <span className="font-mono text-emerald-500 font-semibold">(Milestone Cleared)</span>
+                        ) : phase.days_left > 0 ? (
                           <span className="font-mono text-purple-400 font-semibold">({phase.days_left} days remaining)</span>
                         ) : (
-                          <span className="font-mono text-emerald-500 font-semibold">(Milestone Cleared)</span>
+                          <span className="font-mono text-slate-400 font-semibold">(Scheduled)</span>
                         )}
                       </div>
                     </div>
@@ -632,67 +646,79 @@ const PMOLeadDashboard = ({
 
         {/* TAB 2: RESOURCE ALLOCATION BY ROLE & VENDOR */}
         {activeTab === 'resources' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Roles Breakdown */}
-            <div>
-              <h5 className="text-xs font-bold uppercase tracking-wider theme-muted mb-3 flex items-center gap-2">
-                <Users size={14} className="text-[#FF5A14]" />
-                <span>Resource Allocation by Engineering Discipline</span>
-              </h5>
-              <div className="space-y-3">
-                {headcount.roles.map((r, idx) => (
-                  <div key={idx} className="p-3.5 rounded-xl theme-subtle border theme-border">
-                    <div className="flex justify-between items-center text-xs mb-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: r.color }}></span>
-                        <span className="font-bold theme-heading">{r.role}</span>
+          headcount.total === 0 || (!headcount.roles?.length && !headcount.vendors?.length) ? (
+            <div className="p-12 rounded-2xl theme-subtle border theme-border text-center flex flex-col items-center justify-center">
+              <div className="w-14 h-14 rounded-2xl bg-[#FF5A14]/10 text-[#FF5A14] flex items-center justify-center mb-3">
+                <Users size={28} />
+              </div>
+              <h5 className="text-sm font-bold theme-heading mb-1">No Team Resources Allocated Yet</h5>
+              <p className="text-xs theme-muted max-w-md">
+                Resource allocation and vendor contractor tracking will populate once project SOW contracts or team rosters are ingested into this project workspace.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Roles Breakdown */}
+              <div>
+                <h5 className="text-xs font-bold uppercase tracking-wider theme-muted mb-3 flex items-center gap-2">
+                  <Users size={14} className="text-[#FF5A14]" />
+                  <span>Resource Allocation by Engineering Discipline</span>
+                </h5>
+                <div className="space-y-3">
+                  {headcount.roles.map((r, idx) => (
+                    <div key={idx} className="p-3.5 rounded-xl theme-subtle border theme-border">
+                      <div className="flex justify-between items-center text-xs mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: r.color }}></span>
+                          <span className="font-bold theme-heading">{r.role}</span>
+                        </div>
+                        <span className="font-mono font-bold theme-heading">{r.count} Staff ({r.allocation_pct}%)</span>
                       </div>
-                      <span className="font-mono font-bold theme-heading">{r.count} Staff ({r.allocation_pct}%)</span>
+                      <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                        <div 
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{ width: `${r.allocation_pct}%`, backgroundColor: r.color }}
+                        ></div>
+                      </div>
                     </div>
-                    <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-                      <div 
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${r.allocation_pct}%`, backgroundColor: r.color }}
-                      ></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Vendor Partner Split */}
-            <div>
-              <h5 className="text-xs font-bold uppercase tracking-wider theme-muted mb-3 flex items-center gap-2">
-                <Building2 size={14} className="text-[#FF5A14]" />
-                <span>Vendor Partner & Contractor Distribution</span>
-              </h5>
-              <div className="space-y-3">
-                {headcount.vendors.map((v, idx) => (
-                  <div key={idx} className="p-3.5 rounded-xl theme-subtle border theme-border flex items-center justify-between">
-                    <div>
-                      <h6 className="text-xs font-bold theme-heading">{v.name}</h6>
-                      <span className="text-[11px] theme-muted">{v.type} • Contract Share: {v.share}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-sm font-black font-mono text-[#FF5A14]">{v.headcount} Staff</span>
-                      <span className="block text-[10px] font-mono text-emerald-500 font-bold">SLA: {v.sla}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Total Headcount Summary Card */}
-              <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-[#FF5A14]/10 via-[#FF7A45]/5 to-transparent border border-[#FF5A14]/30 flex items-center justify-between">
-                <div>
-                  <span className="text-[11px] font-bold uppercase text-[#FF7A45] block">Total Delivery Capacity</span>
-                  <span className="text-xs theme-muted">Internal core leadership augmented with specialized vendor contractor pods</span>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <span className="text-xl font-black theme-heading font-mono">{headcount.total} FTE & Contractors</span>
+                  ))}
                 </div>
               </div>
+
+              {/* Vendor Partner Split */}
+              <div>
+                <h5 className="text-xs font-bold uppercase tracking-wider theme-muted mb-3 flex items-center gap-2">
+                  <Building2 size={14} className="text-[#FF5A14]" />
+                  <span>Vendor Partner & Contractor Distribution</span>
+                </h5>
+                <div className="space-y-3">
+                  {headcount.vendors.map((v, idx) => (
+                    <div key={idx} className="p-3.5 rounded-xl theme-subtle border theme-border flex items-center justify-between">
+                      <div>
+                        <h6 className="text-xs font-bold theme-heading">{v.name}</h6>
+                        <span className="text-[11px] theme-muted">{v.type} • Contract Share: {v.share}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-black font-mono text-[#FF5A14]">{v.headcount} Staff</span>
+                        <span className="block text-[10px] font-mono text-emerald-500 font-bold">SLA: {v.sla}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Total Headcount Summary Card */}
+                <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-[#FF5A14]/10 via-[#FF7A45]/5 to-transparent border border-[#FF5A14]/30 flex items-center justify-between">
+                  <div>
+                    <span className="text-[11px] font-bold uppercase text-[#FF7A45] block">Total Delivery Capacity</span>
+                    <span className="text-xs theme-muted">Internal core leadership augmented with specialized vendor contractor pods</span>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <span className="text-xl font-black theme-heading font-mono">{headcount.total} FTE & Contractors</span>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
+          )
         )}
 
       </div>
