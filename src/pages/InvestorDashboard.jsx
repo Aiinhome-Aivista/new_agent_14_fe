@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useProject } from '../context/ProjectContext';
@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 
 const InvestorDashboard = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { showToast } = useToast();
   const { activeProject } = useProject();
@@ -327,21 +328,35 @@ const InvestorDashboard = () => {
         {/* KPI Cards Grid - Strictly Live Backend Data, No Fallbacks */}
         {kpis && kpis.length > 0 ? (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {kpis.map((kpi, idx) => (
-              <KPICard 
-                key={idx}
-                title={kpi.title} 
-                value={kpi.value} 
-                trend={kpi.trend} 
-                trendLabel={kpi.trendLabel}
-                icon={
-                  idx === 0 ? <DollarSign size={18} /> :
-                  idx === 1 ? <TrendingUp size={18} /> :
-                  idx === 2 ? <ShieldCheck size={18} /> :
-                  <Sparkles size={18} />
+            {kpis.map((kpi, idx) => {
+              const getKpiAction = () => {
+                const titleLower = (kpi.title || '').toLowerCase();
+                if (titleLower.includes('risk')) return () => navigate('/risks');
+                if (titleLower.includes('budget') || titleLower.includes('variance') || titleLower.includes('capital')) {
+                  return () => navigate(activeProject?.id ? `/project/${activeProject.id}` : '/projects');
                 }
-              />
-            ))}
+                if (titleLower.includes('health')) return () => navigate('/guardrails');
+                return () => navigate(activeProject?.id ? `/project/${activeProject.id}` : '/projects');
+              };
+
+              return (
+                <KPICard 
+                  key={idx}
+                  title={kpi.title} 
+                  value={kpi.value} 
+                  trend={kpi.trend} 
+                  trendLabel={kpi.trendLabel}
+                  onClick={getKpiAction()}
+                  clickable={true}
+                  icon={
+                    idx === 0 ? <DollarSign size={18} /> :
+                    idx === 1 ? <TrendingUp size={18} /> :
+                    idx === 2 ? <ShieldCheck size={18} /> :
+                    <Sparkles size={18} />
+                  }
+                />
+              );
+            })}
           </div>
         ) : (
           <div className="p-4 rounded-xl theme-card text-xs theme-muted italic border theme-border flex items-center justify-between">
@@ -670,7 +685,7 @@ const InvestorDashboard = () => {
                                     <div className="space-y-1.5 text-[11px] theme-muted">
                                       <div>Tranche Allocation: <span className="font-bold theme-heading">${(milestone.trancheAmount || 0).toLocaleString()} USD</span></div>
                                       <div>Disbursement Status: <span className="font-bold theme-heading">{milestone.payoutDate}</span></div>
-                                      <div>Linked Blocker Ticket: <span className="font-mono text-[#FF5A14] font-bold">{milestone.id === 'M-03' ? 'Risk R-802 (PRJ-1-103)' : 'None (Cleared)'}</span></div>
+                                      <div>Linked Blocker Ticket: <span className="font-mono text-[#FF5A14] font-bold">{milestone.id === 'M-03' ? <Link to="/risks?search=R-802" className="hover:underline inline-flex items-center gap-1">Risk R-802 (PRJ-1-103) <ExternalLink size={11} /></Link> : 'None (Cleared)'}</span></div>
                                     </div>
                                   </div>
 
@@ -726,23 +741,47 @@ const InvestorDashboard = () => {
     <div className="space-y-8">
       {/* 3 Executive Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="p-6 rounded-2xl theme-card">
-          <h4 className="text-xs font-bold theme-muted uppercase tracking-wider mb-2">Cross-Project Status</h4>
-          <div className="text-2xl sm:text-3xl font-black theme-heading flex items-center gap-2">
+        <div 
+          onClick={() => navigate('/projects')}
+          className="p-6 rounded-2xl theme-card cursor-pointer hover:border-[#FF5A14]/60 hover:shadow-lg group transition-all"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-xs font-bold theme-muted uppercase tracking-wider">Cross-Project Status</h4>
+            <span className="text-[10px] font-mono text-[#FF5A14] font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+              Projects Hub →
+            </span>
+          </div>
+          <div className="text-2xl sm:text-3xl font-black theme-heading flex items-center gap-2 group-hover:text-[#FF7A45] transition-colors">
             <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
             {crossProjectStatus}
           </div>
         </div>
 
-        <div className="p-6 rounded-2xl theme-card">
-          <h4 className="text-xs font-bold theme-muted uppercase tracking-wider mb-2">Schedule Variance</h4>
+        <div 
+          onClick={() => navigate(activeProject?.id ? `/project/${activeProject.id}` : '/projects')}
+          className="p-6 rounded-2xl theme-card cursor-pointer hover:border-[#FF5A14]/60 hover:shadow-lg group transition-all"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-xs font-bold theme-muted uppercase tracking-wider">Schedule Variance</h4>
+            <span className="text-[10px] font-mono text-[#FF5A14] font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+              Program Details →
+            </span>
+          </div>
           <div className={`text-2xl sm:text-3xl font-black ${scheduleVariance.includes('-') ? 'text-red-500' : 'text-emerald-500'}`}>
             {scheduleVariance}
           </div>
         </div>
 
-        <div className="p-6 rounded-2xl theme-card">
-          <h4 className="text-xs font-bold theme-muted uppercase tracking-wider mb-2">Total Budget Burn</h4>
+        <div 
+          onClick={() => navigate(activeProject?.id ? `/project/${activeProject.id}` : '/projects')}
+          className="p-6 rounded-2xl theme-card cursor-pointer hover:border-[#FF5A14]/60 hover:shadow-lg group transition-all"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-xs font-bold theme-muted uppercase tracking-wider">Total Budget Burn</h4>
+            <span className="text-[10px] font-mono text-[#FF5A14] font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+              Financials →
+            </span>
+          </div>
           <div className="text-2xl sm:text-3xl font-black text-[#FF5A14]">
             {totalBudgetBurn}
           </div>
@@ -754,7 +793,7 @@ const InvestorDashboard = () => {
         <div className="flex justify-between items-center mb-4">
           <div>
             <h3 className="text-base font-bold theme-heading">Active Showstoppers & Delivery Blockers</h3>
-            <p className="text-xs theme-muted">Autonomous blocker detection across Jira epics and vendor rate cards</p>
+            <p className="text-xs theme-muted">Autonomous blocker detection across Jira epics and vendor rate cards (Click to drill down)</p>
           </div>
           <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">
             {showstoppers.length} Flagged
@@ -768,23 +807,34 @@ const InvestorDashboard = () => {
                 <th className="px-5 py-3">Risk ID</th>
                 <th className="px-5 py-3">Description</th>
                 <th className="px-5 py-3">Severity</th>
+                <th className="px-5 py-3 text-right">Drilldown</th>
               </tr>
             </thead>
             <tbody className="divide-y theme-border">
               {showstoppers.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="px-5 py-4 text-center theme-muted italic">
+                  <td colSpan={4} className="px-5 py-4 text-center theme-muted italic">
                     No critical showstoppers detected across portfolio.
                   </td>
                 </tr>
               ) : (
                 showstoppers.map((item, idx) => (
-                  <tr key={idx} className="theme-subtle-hover transition-colors">
-                    <td className="px-5 py-3.5 font-mono font-bold text-[#FF5A14]">{item.id}</td>
-                    <td className="px-5 py-3.5 font-medium theme-heading">{item.title}</td>
+                  <tr 
+                    key={idx} 
+                    onClick={() => navigate(`/risks?search=${item.id}`)}
+                    className="theme-subtle-hover transition-colors cursor-pointer group"
+                    title={`Drill down into exact risk ${item.id} in Risk Register`}
+                  >
+                    <td className="px-5 py-3.5 font-mono font-bold text-[#FF5A14] group-hover:underline">{item.id}</td>
+                    <td className="px-5 py-3.5 font-medium theme-heading group-hover:text-[#FF7A45]">{item.title}</td>
                     <td className="px-5 py-3.5">
                       <span className="px-2.5 py-1 bg-red-500/15 text-red-500 border border-red-500/30 rounded-full text-[10px] font-bold uppercase">
                         {item.impact || 'CRITICAL'}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-right">
+                      <span className="text-xs font-bold text-[#FF5A14] group-hover:underline inline-flex items-center gap-1">
+                        Investigate Issue <ArrowRight size={12} />
                       </span>
                     </td>
                   </tr>
@@ -968,15 +1018,23 @@ const InvestorDashboard = () => {
             ) : (
               <ul className="space-y-2 text-xs max-h-48 sm:max-h-56 overflow-y-auto pr-1">
                 {openBlockers.map((b, idx) => (
-                  <li key={idx} className="p-2.5 rounded-xl theme-subtle border theme-border flex justify-between items-center text-xs">
+                  <li 
+                    key={idx} 
+                    onClick={() => navigate(`/risks?search=${b.id}`)}
+                    className="p-2.5 rounded-xl theme-subtle border theme-border flex justify-between items-center text-xs hover:border-[#FF5A14]/50 hover:bg-[#FF5A14]/5 transition-all cursor-pointer group"
+                    title={`Click to drill down into blocker ${b.id} in Risk Register`}
+                  >
                     <span className="theme-heading font-medium truncate max-w-[280px]">
-                      <strong className="text-[#FF5A14] font-mono mr-1.5">{b.id}:</strong> {b.title}
+                      <strong className="text-[#FF5A14] font-mono mr-1.5 group-hover:underline">{b.id}:</strong> {b.title}
                     </span>
-                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ml-2 flex-shrink-0 ${
-                      b.status === 'Blocked' ? 'bg-red-500/15 text-red-500 border border-red-500/30' : 'bg-amber-500/15 text-amber-500'
-                    }`}>
-                      {b.status}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ml-2 flex-shrink-0 ${
+                        b.status === 'Blocked' ? 'bg-red-500/15 text-red-500 border border-red-500/30' : 'bg-amber-500/15 text-amber-500'
+                      }`}>
+                        {b.status}
+                      </span>
+                      <ArrowRight size={11} className="text-[#FF5A14] opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -1024,27 +1082,6 @@ const InvestorDashboard = () => {
         </div>
       </div>
 
-      {/* AI PROCESSING DEGRADED: ADVANCED HIGH-TECH SENTINEL ALERT */}
-      {data?.ai_processing_status === 'degraded_fallback' && (
-        <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-500/30 shadow-sm flex items-start gap-3.5">
-          <div className="p-2.5 rounded-xl bg-amber-500 text-white dark:bg-amber-500/20 dark:text-amber-400 flex-shrink-0 mt-0.5 shadow-sm">
-            <AlertTriangle size={18} />
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <h4 className="text-xs sm:text-sm font-extrabold text-amber-950 dark:text-amber-300">
-                AI Sentinel Notice: Fallback Heuristics Active
-              </h4>
-              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-amber-200/80 dark:bg-amber-900/50 text-amber-900 dark:text-amber-300 border border-amber-300/80 dark:border-amber-700/50">
-                degraded_fallback
-              </span>
-            </div>
-            <p className="text-xs text-amber-900 dark:text-amber-200/90 mt-1.5 leading-relaxed font-medium">
-              Remote AI inference endpoint timed out or returned unstructured data. Deterministic fallback heuristics applied to maintain uninterrupted dashboard telemetry.
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Active Persona Profile Rendering */}
       {user?.role === 'Investor' && renderInvestorView()}

@@ -1,19 +1,32 @@
 import React from 'react';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, ArrowUpRight } from 'lucide-react';
 
-const KPICard = ({ title, value, trend, trendLabel, icon }) => {
+const KPICard = ({ title, value, trend, trendLabel, icon, onClick, clickable = false }) => {
   const numTrend = trend !== undefined && trend !== null ? Number(trend) : null;
   const hasValidTrend = numTrend !== null && !isNaN(numTrend);
   const isPositive = hasValidTrend ? numTrend >= 0 : true;
+  const isInteractive = Boolean(onClick || clickable);
   
   return (
-    <div className="p-5 rounded-2xl theme-card hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group relative overflow-hidden">
+    <div 
+      onClick={onClick}
+      role={isInteractive ? 'button' : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
+      className={`p-5 rounded-2xl theme-card hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group relative overflow-hidden ${
+        isInteractive ? 'cursor-pointer hover:border-[#FF5A14]/50 hover:shadow-[0_0_25px_rgba(255,90,20,0.15)] focus:outline-none focus:ring-1 focus:ring-[#FF5A14]' : ''
+      }`}
+    >
       
       {/* Subtle top ambient glow on hover */}
       <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#FF5A14] to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
       <div className="flex justify-between items-start mb-4">
-        <h3 className="text-xs font-bold theme-muted uppercase tracking-wider">{title}</h3>
+        <div className="flex items-center gap-1.5">
+          <h3 className="text-xs font-bold theme-muted uppercase tracking-wider">{title}</h3>
+          {isInteractive && (
+            <ArrowUpRight size={13} className="text-[#FF5A14] opacity-0 group-hover:opacity-100 transition-all -translate-x-1 group-hover:translate-x-0" />
+          )}
+        </div>
         {icon ? (
           <div className="text-[#FF5A14] bg-[#FF5A14]/10 p-2 rounded-xl border border-[#FF5A14]/20 group-hover:scale-110 transition-transform">
             {icon}
@@ -43,8 +56,13 @@ const KPICard = ({ title, value, trend, trendLabel, icon }) => {
             )}
           </div>
         ) : trendLabel ? (
-          <div className="text-xs theme-muted font-medium truncate">
-            {trendLabel}
+          <div className="text-xs theme-muted font-medium truncate flex items-center justify-between">
+            <span>{trendLabel}</span>
+            {isInteractive && (
+              <span className="text-[10px] font-mono text-[#FF5A14] font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+                Drill down →
+              </span>
+            )}
           </div>
         ) : null}
       </div>

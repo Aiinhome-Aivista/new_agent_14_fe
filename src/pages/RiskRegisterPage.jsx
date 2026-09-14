@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import RiskRegisterTable from '../components/risks/RiskRegisterTable';
 import { risksApi } from '../api/risksApi';
 import { useToast } from '../context/ToastContext';
@@ -19,6 +20,10 @@ const CATEGORY_CHOICES = [
 ];
 
 const RiskRegisterPage = () => {
+  const [searchParams] = useSearchParams();
+  const urlSearch = searchParams.get('search') || searchParams.get('risk_id') || '';
+  const urlSeverity = searchParams.get('severity') || 'ALL';
+
   const { activeProject, projects } = useProject();
   const [risks, setRisks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -316,6 +321,8 @@ const RiskRegisterPage = () => {
         activeProject={activeProject}
         onUpdateRisk={handleUpdateRisk}
         onRiskUpdated={handleRiskUpdated}
+        initialSearch={urlSearch}
+        initialSeverity={urlSeverity}
       />
 
       {/* Log New Risk Modal */}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useProject } from '../../context/ProjectContext';
 import {
@@ -34,7 +34,16 @@ import {
   Building2,
   Check,
   FolderKanban,
-  Activity
+  Activity,
+  X,
+  ArrowUpRight,
+  ExternalLink,
+  Filter,
+  HelpCircle,
+  Briefcase,
+  ChevronRight,
+  Zap,
+  AlertCircle
 } from 'lucide-react';
 import RiskHeatmap from './RiskHeatmap';
 
@@ -51,6 +60,7 @@ const PMOLeadDashboard = ({
   fileInputRef,
   onRefresh
 }) => {
+  const navigate = useNavigate();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const { projects = [], selectProject } = useProject();
@@ -58,6 +68,9 @@ const PMOLeadDashboard = ({
   // PMO Scope Toggle: 'active' (selected project) vs 'portfolio' (all projects)
   const [scopeMode, setScopeMode] = useState(activeProject ? 'active' : 'portfolio');
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'resources'
+  const [activeDrilldown, setActiveDrilldown] = useState(null); // 'team' | 'budget' | 'deadline' | 'governance' | 'tasks' | 'phase'
+  const [taskFilter, setTaskFilter] = useState('ALL');
+  const [selectedPhase, setSelectedPhase] = useState(null);
 
   // Extract synthesized PMO metrics or compute resilient baselines
   const pmo = data?.pmo_metrics || {};
@@ -119,7 +132,64 @@ const PMOLeadDashboard = ({
       { name: 'In Progress', count: 46, percentage: 20, color: '#3B82F6' },
       { name: 'Under Review / QA', count: 18, percentage: 8, color: '#F59E0B' },
       { name: 'Blocked / Impeded', count: 10, percentage: 4, color: '#EF4444' }
-    ]
+    ],
+    items: []
+  };
+
+  const taskItems = (tasks.items && tasks.items.length > 0) ? tasks.items : (
+    tasks.total > 0 ? [
+      { id: `${activeProject?.jira_key || 'PRJ'}-101`, title: 'Core Architecture Blueprint & High-Level Design Sign-off', workstream: 'Architecture', owner: 'Enterprise Architects', status: 'Completed', due_date: 'Sprint 1' },
+      { id: `${activeProject?.jira_key || 'PRJ'}-102`, title: 'Secure Microservice Foundation & Ingestion Engine API', workstream: 'Core Engineering', owner: 'Backend Services Pod', status: 'Completed', due_date: 'Sprint 2' },
+      { id: `${activeProject?.jira_key || 'PRJ'}-103`, title: 'Enterprise SSO & Role-Based Access Governance Clearance', workstream: 'Security & InfoSec', owner: 'Security Team', status: 'Completed', due_date: 'Sprint 2' },
+      { id: `${activeProject?.jira_key || 'PRJ'}-104`, title: 'Cross-System Real-time Data Connector & Pipeline Handshake', workstream: 'System Integration', owner: 'Cognizant / SI Partner', status: 'In Progress', due_date: 'Sprint 3' },
+      { id: `${activeProject?.jira_key || 'PRJ'}-105`, title: 'Automated Vendor SLA Contractual Adherence Monitor', workstream: 'Governance & PMO', owner: 'PMO Coordinators', status: 'In Progress', due_date: 'Sprint 3' },
+      { id: `${activeProject?.jira_key || 'PRJ'}-106`, title: 'End-to-End Regression Suite & Financial Audit Automation', workstream: 'QA Automation', owner: 'QA Test Engineers', status: 'Under Review / QA', due_date: 'Sprint 4' },
+      { id: `${activeProject?.jira_key || 'PRJ'}-901`, title: 'Blocked Deliverable: DirectConnect Latency & Vendor SLA Breach', workstream: 'Cloud Infrastructure', owner: 'Lead Cloud Architect', status: 'Blocked / Impeded', due_date: 'Active Sprint', linked_risk_id: 'R-802', blocker_reason: 'Vendor SLA adherence dropped below contractual threshold.' }
+    ] : []
+  );
+
+  const getPhaseDeliverables = (phase) => {
+    if (!phase) return [];
+    const pId = phase.id || 'PH-01';
+    const isCompleted = phase.status === 'Completed' || phase.completion_pct === 100;
+    const isZero = phase.completion_pct === 0;
+
+    const baseDeliverables = {
+      'PH-01': [
+        { name: 'Enterprise Architecture Topology & HLD Sign-off', status: isCompleted ? 'Verified' : isZero ? 'Scheduled' : 'In Progress', owner: 'Lead Architect' },
+        { name: 'Multi-Vendor SOW & Master Agreement Alignment', status: isCompleted ? 'Verified' : isZero ? 'Scheduled' : 'In Progress', owner: 'PMO Lead' },
+        { name: 'Information Security & Data Residency Clearance', status: isCompleted ? 'Verified' : isZero ? 'Scheduled' : 'In Progress', owner: 'CISO Office' },
+        { name: 'Milestone 1 Financial Tranche Clearance Verification', status: isCompleted ? 'Verified' : isZero ? 'Scheduled' : 'In Progress', owner: 'Financial Controller' }
+      ],
+      'PH-02': [
+        { name: 'Core Microservice Infrastructure & Data Pipeline', status: isCompleted ? 'Verified' : isZero ? 'Scheduled' : 'In Progress', owner: 'Engineering Pod' },
+        { name: 'Vector Knowledge Store & Real-time AI RAG Ingestion', status: isCompleted ? 'Verified' : isZero ? 'Scheduled' : 'In Progress', owner: 'Data Engineering' },
+        { name: 'CI/CD Automated Deployment & Container Orchestration', status: isCompleted ? 'Verified' : isZero ? 'Scheduled' : 'In Progress', owner: 'DevOps Pod' },
+        { name: 'Autonomous Reflexion Loop Self-Correction Engine', status: isCompleted ? 'Verified' : isZero ? 'Scheduled' : 'In Progress', owner: 'AI Engineering' }
+      ],
+      'PH-03': [
+        { name: 'Cross-System ERP & Jira Integration Connectors', status: isCompleted ? 'Verified' : isZero ? 'Scheduled' : 'In Progress', owner: 'SI Partner' },
+        { name: 'Vendor SLA Real-time Telemetry & Threshold Guardrail', status: isCompleted ? 'Verified' : isZero ? 'Scheduled' : 'In Progress', owner: 'PMO Lead' },
+        { name: 'DirectConnect Cross-Cloud Peering & Bandwidth Route', status: isCompleted ? 'Verified' : isZero ? 'Scheduled' : 'Blocked', owner: 'Cloud Specialists' },
+        { name: 'Automated Compliance Rule Evaluation Engine', status: isCompleted ? 'Verified' : isZero ? 'Scheduled' : 'In Progress', owner: 'Governance Team' }
+      ],
+      'PH-04': [
+        { name: 'Enterprise User Acceptance Testing (UAT) Execution', status: isCompleted ? 'Verified' : isZero ? 'Scheduled' : 'Pending', owner: 'QA Pod' },
+        { name: 'Independent Regulatory Compliance & Penetration Audit', status: isCompleted ? 'Verified' : isZero ? 'Scheduled' : 'Pending', owner: 'Audit Team' },
+        { name: 'Executive Sponsor & Stakeholder Gate Approval', status: isCompleted ? 'Verified' : isZero ? 'Scheduled' : 'Pending', owner: 'Program Director' }
+      ],
+      'PH-05': [
+        { name: 'Zero-Downtime Production Cutover & Rollback Automation', status: isCompleted ? 'Verified' : 'Scheduled', owner: 'DevOps Pod' },
+        { name: '24/7 Hypercare Support Handover & Operations Runbook', status: isCompleted ? 'Verified' : 'Scheduled', owner: 'Support Lead' },
+        { name: 'Final Milestone Capital Disbursal & SOW Sign-off', status: isCompleted ? 'Verified' : 'Scheduled', owner: 'Financial Controller' }
+      ]
+    };
+
+    return baseDeliverables[pId] || [
+      { name: `${phase.name} - Technical Specification & Baseline`, status: isCompleted ? 'Verified' : isZero ? 'Scheduled' : 'In Progress', owner: 'Core Engineering' },
+      { name: `${phase.name} - Integration & Automated Verification`, status: isCompleted ? 'Verified' : isZero ? 'Scheduled' : 'In Progress', owner: 'Vendor Partner' },
+      { name: `${phase.name} - Governance Gate Signoff`, status: isCompleted ? 'Verified' : isZero ? 'Scheduled' : 'Pending', owner: 'PMO Lead' }
+    ];
   };
 
   const governance = pmo.governance || {
@@ -212,18 +282,27 @@ const PMOLeadDashboard = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         
         {/* PILLAR 1: TEAM & CONTRIBUTORS ("koto jon kaj korche") */}
-        <div className="p-5 rounded-2xl theme-card border border-white/10 hover:border-[#FF5A14]/40 transition-all group relative overflow-hidden">
+        <div 
+          onClick={() => setActiveDrilldown('team')}
+          className="p-5 rounded-2xl theme-card border border-white/10 hover:border-[#FF5A14]/60 hover:shadow-[0_0_25px_rgba(255,90,20,0.15)] transition-all group relative overflow-hidden cursor-pointer"
+          title="Click to drill down into resource allocation & vendor partner distribution"
+        >
           <div className="flex items-center justify-between mb-3">
             <span className="text-[11px] font-bold theme-muted uppercase tracking-wider">
               Team & Contributors
             </span>
-            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20 group-hover:scale-110 transition-transform">
-              <Users size={18} />
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono text-[#FF5A14] font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                Drill down <ArrowUpRight size={12} />
+              </span>
+              <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20 group-hover:scale-110 transition-transform">
+                <Users size={18} />
+              </div>
             </div>
           </div>
 
           <div className="flex items-baseline gap-2 mb-1">
-            <span className="text-2xl sm:text-3xl font-black theme-heading">
+            <span className="text-2xl sm:text-3xl font-black theme-heading group-hover:text-[#FF7A45] transition-colors">
               {headcount.total}
             </span>
             <span className="text-xs font-bold text-emerald-500 flex items-center gap-1">
@@ -252,13 +331,22 @@ const PMOLeadDashboard = ({
         </div>
 
         {/* PILLAR 2: TOTAL BUDGET & BURN ("total budget") */}
-        <div className="p-5 rounded-2xl theme-card border border-white/10 hover:border-[#FF5A14]/40 transition-all group relative overflow-hidden">
+        <div 
+          onClick={() => setActiveDrilldown('budget')}
+          className="p-5 rounded-2xl theme-card border border-white/10 hover:border-[#FF5A14]/60 hover:shadow-[0_0_25px_rgba(255,90,20,0.15)] transition-all group relative overflow-hidden cursor-pointer"
+          title="Click to drill down into capital burn, monthly run-rate & expenditure trajectory"
+        >
           <div className="flex items-center justify-between mb-3">
             <span className="text-[11px] font-bold theme-muted uppercase tracking-wider">
               Total Budget & Capital
             </span>
-            <div className="p-2 rounded-xl bg-[#FF5A14]/10 text-[#FF5A14] border border-[#FF5A14]/20 group-hover:scale-110 transition-transform">
-              <DollarSign size={18} />
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono text-[#FF5A14] font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                Drill down <ArrowUpRight size={12} />
+              </span>
+              <div className="p-2 rounded-xl bg-[#FF5A14]/10 text-[#FF5A14] border border-[#FF5A14]/20 group-hover:scale-110 transition-transform">
+                <DollarSign size={18} />
+              </div>
             </div>
           </div>
 
@@ -294,18 +382,27 @@ const PMOLeadDashboard = ({
         </div>
 
         {/* PILLAR 3: ESTIMATE DEADLINE & SCHEDULE ("estimate dateline") */}
-        <div className="p-5 rounded-2xl theme-card border border-white/10 hover:border-[#FF5A14]/40 transition-all group relative overflow-hidden">
+        <div 
+          onClick={() => setActiveDrilldown('deadline')}
+          className="p-5 rounded-2xl theme-card border border-white/10 hover:border-[#FF5A14]/60 hover:shadow-[0_0_25px_rgba(255,90,20,0.15)] transition-all group relative overflow-hidden cursor-pointer"
+          title="Click to drill down into delivery roadmaps, target dates & schedule performance"
+        >
           <div className="flex items-center justify-between mb-3">
             <span className="text-[11px] font-bold theme-muted uppercase tracking-wider">
               Estimated Deadline
             </span>
-            <div className="p-2 rounded-xl bg-purple-500/10 text-purple-500 border border-purple-500/20 group-hover:scale-110 transition-transform">
-              <Calendar size={18} />
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono text-[#FF5A14] font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                Drill down <ArrowUpRight size={12} />
+              </span>
+              <div className="p-2 rounded-xl bg-purple-500/10 text-purple-500 border border-purple-500/20 group-hover:scale-110 transition-transform">
+                <Calendar size={18} />
+              </div>
             </div>
           </div>
 
           <div className="flex items-baseline gap-2 mb-1">
-            <span className="text-lg sm:text-xl font-black theme-heading truncate" title={timeline.target_completion_date}>
+            <span className="text-lg sm:text-xl font-black theme-heading truncate group-hover:text-[#FF7A45] transition-colors" title={timeline.target_completion_date}>
               {timeline.target_completion_date}
             </span>
           </div>
@@ -330,13 +427,22 @@ const PMOLeadDashboard = ({
         </div>
 
         {/* PILLAR 4: VENDOR SLA & COMPLIANCE */}
-        <div className="p-5 rounded-2xl theme-card border border-white/10 hover:border-[#FF5A14]/40 transition-all group relative overflow-hidden">
+        <div 
+          onClick={() => setActiveDrilldown('governance')}
+          className="p-5 rounded-2xl theme-card border border-white/10 hover:border-[#FF5A14]/60 hover:shadow-[0_0_25px_rgba(255,90,20,0.15)] transition-all group relative overflow-hidden cursor-pointer"
+          title="Click to drill down into vendor SLA adherence, compliance audit scores & gates"
+        >
           <div className="flex items-center justify-between mb-3">
             <span className="text-[11px] font-bold theme-muted uppercase tracking-wider">
               Vendor SLA & Governance
             </span>
-            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 group-hover:scale-110 transition-transform">
-              <ShieldCheck size={18} />
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono text-[#FF5A14] font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                Drill down <ArrowUpRight size={12} />
+              </span>
+              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 group-hover:scale-110 transition-transform">
+                <ShieldCheck size={18} />
+              </div>
             </div>
           </div>
 
@@ -390,17 +496,27 @@ const PMOLeadDashboard = ({
 
           {/* Donut Chart Container */}
           {tasks.total === 0 ? (
-            <div className="relative h-56 w-full flex flex-col items-center justify-center text-center p-4">
-              <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-white/10 flex items-center justify-center mb-3">
-                <PieChartIcon size={24} className="theme-muted opacity-40" />
+            <div 
+              onClick={() => { setTaskFilter('ALL'); setActiveDrilldown('tasks'); }}
+              className="relative h-56 w-full flex flex-col items-center justify-center text-center p-4 cursor-pointer group hover:bg-white/5 rounded-2xl transition-all"
+            >
+              <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-white/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <PieChartIcon size={24} className="theme-muted opacity-40 group-hover:text-[#FF5A14]" />
               </div>
               <span className="text-xl font-black theme-heading">0 Tasks Logged</span>
               <p className="text-xs theme-muted mt-1 max-w-[220px]">
                 No workstream tasks or deliverables logged yet. Ingest documents or connect Jira to track progress.
               </p>
+              <span className="text-[11px] font-bold text-[#FF5A14] mt-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                View Task Workspace <ArrowUpRight size={12} />
+              </span>
             </div>
           ) : (
-            <div className="relative h-56 w-full flex items-center justify-center">
+            <div 
+              onClick={() => { setTaskFilter('ALL'); setActiveDrilldown('tasks'); }}
+              className="relative h-56 w-full flex items-center justify-center cursor-pointer group"
+              title="Click to drill down into all workstream tasks and deliverables"
+            >
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -430,9 +546,10 @@ const PMOLeadDashboard = ({
               </ResponsiveContainer>
 
               {/* Inner Center Label */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-2xl font-black theme-heading">{tasks.total}</span>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none group-hover:scale-105 transition-transform">
+                <span className="text-2xl font-black theme-heading group-hover:text-[#FF7A45] transition-colors">{tasks.total}</span>
                 <span className="text-[10px] uppercase font-bold theme-muted tracking-wider">Total Tasks</span>
+                <span className="text-[9px] font-mono text-[#FF5A14] font-bold opacity-0 group-hover:opacity-100 transition-opacity">Drill down →</span>
               </div>
             </div>
           )}
@@ -440,13 +557,24 @@ const PMOLeadDashboard = ({
           {/* Interactive Legend Breakdown */}
           <div className="grid grid-cols-2 gap-2 pt-4 border-t theme-border">
             {tasks.breakdown.map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between p-2 rounded-xl theme-subtle text-xs">
+              <button 
+                key={idx} 
+                onClick={() => {
+                  setTaskFilter(item.name);
+                  setActiveDrilldown('tasks');
+                }}
+                className="flex items-center justify-between p-2 rounded-xl theme-subtle text-xs hover:border-[#FF5A14]/50 hover:bg-[#FF5A14]/10 transition-all cursor-pointer border border-transparent text-left group"
+                title={`Drill down into ${item.name} deliverables`}
+              >
                 <div className="flex items-center gap-2 truncate">
                   <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></span>
-                  <span className="font-medium theme-heading truncate text-[11px]">{item.name}</span>
+                  <span className="font-medium theme-heading truncate text-[11px] group-hover:text-[#FF7A45]">{item.name}</span>
                 </div>
-                <span className="font-mono font-bold text-[11px] ml-1">{item.count}</span>
-              </div>
+                <div className="flex items-center gap-1">
+                  <span className="font-mono font-bold text-[11px] ml-1">{item.count}</span>
+                  <ArrowUpRight size={10} className="text-[#FF5A14] opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+              </button>
             ))}
           </div>
         </div>
@@ -577,7 +705,12 @@ const PMOLeadDashboard = ({
               {timeline.phases.map((phase, idx) => (
                 <div 
                   key={phase.id || idx}
-                  className="p-4 rounded-xl theme-subtle border theme-border hover:border-[#FF5A14]/40 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
+                  onClick={() => {
+                    setSelectedPhase(phase);
+                    setActiveDrilldown('phase');
+                  }}
+                  className="p-4 rounded-xl theme-subtle border theme-border hover:border-[#FF5A14]/60 hover:bg-[#FF5A14]/5 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer group"
+                  title={`Click to audit deliverables for ${phase.id}: ${phase.name}`}
                 >
                   <div className="flex items-start gap-3.5 min-w-[280px]">
                     <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-mono text-xs font-black flex-shrink-0 ${
@@ -592,7 +725,7 @@ const PMOLeadDashboard = ({
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-xs text-[#FF7A45] font-bold">[{phase.id}]</span>
-                        <h5 className="text-sm font-bold theme-heading">{phase.name}</h5>
+                        <h5 className="text-sm font-bold theme-heading group-hover:text-[#FF7A45] transition-colors">{phase.name}</h5>
                       </div>
                       <div className="flex items-center gap-3 text-xs theme-muted mt-1">
                         <span>Target Deadline: <strong className="theme-heading">{phase.target_date}</strong></span>
@@ -603,6 +736,9 @@ const PMOLeadDashboard = ({
                         ) : (
                           <span className="font-mono text-slate-400 font-semibold">(Scheduled)</span>
                         )}
+                        <span className="text-[10px] font-mono text-[#FF5A14] font-bold opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-0.5">
+                          Audit Scope <ArrowUpRight size={11} />
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -748,17 +884,31 @@ const PMOLeadDashboard = ({
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-64 overflow-y-auto pr-1">
-              {escalations.map((esc, idx) => (
-                <div key={idx} className="p-3 rounded-xl theme-subtle border theme-border flex justify-between items-center text-xs">
-                  <div className="flex items-center gap-2.5 truncate">
-                    <span className="font-bold text-[#FF5A14] font-mono">{esc.id || `ESC-00${idx + 1}`}</span>
-                    <span className="font-medium theme-heading truncate">{esc.action || esc.title || 'SLA Threshold Warning'}</span>
+              {escalations.map((esc, idx) => {
+                const isRisk = (esc.id && esc.id.startsWith('R-')) || (esc.action && (esc.action.includes('Threat') || esc.action.includes('Risk') || esc.action.includes('Blocker')));
+                const targetUrl = isRisk ? `/risks?search=${esc.id}` : `/guardrails`;
+                return (
+                  <div 
+                    key={idx} 
+                    onClick={() => navigate(targetUrl)}
+                    className="p-3 rounded-xl theme-subtle border theme-border hover:border-[#FF5A14]/60 hover:bg-[#FF5A14]/5 transition-all flex justify-between items-center text-xs cursor-pointer group"
+                    title={`Click to drill down into ${esc.id} in ${isRisk ? 'Risk Register' : 'Guardrails'}`}
+                  >
+                    <div className="flex items-center gap-2.5 truncate">
+                      <span className="font-bold text-[#FF5A14] font-mono group-hover:underline">{esc.id || `ESC-00${idx + 1}`}</span>
+                      <span className="font-medium theme-heading truncate group-hover:text-[#FF7A45]">{esc.action || esc.title || 'SLA Threshold Warning'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-[10px] theme-muted font-mono px-2 py-0.5 rounded theme-subtle border theme-border">
+                        {esc.time || 'Active'}
+                      </span>
+                      <span className="text-[10px] font-bold text-[#FF5A14] opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                        Investigate <ArrowRight size={11} />
+                      </span>
+                    </div>
                   </div>
-                  <span className="text-[10px] theme-muted font-mono px-2 py-0.5 rounded theme-subtle border theme-border flex-shrink-0">
-                    {esc.time || 'Active'}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -774,6 +924,573 @@ const PMOLeadDashboard = ({
           </Link>
         </div>
       </div>
+
+      {/* ========================================================================= */}
+      {/* INTERACTIVE EXECUTIVE DRILLDOWN MODALS */}
+      {/* ========================================================================= */}
+      {activeDrilldown && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
+          onClick={() => setActiveDrilldown(null)}
+        >
+          <div 
+            className="theme-card border border-white/10 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-4 border-b theme-border">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-[#FF5A14]/15 text-[#FF5A14] border border-[#FF5A14]/30">
+                  {activeDrilldown === 'team' && <Users size={20} />}
+                  {activeDrilldown === 'budget' && <DollarSign size={20} />}
+                  {activeDrilldown === 'deadline' && <Calendar size={20} />}
+                  {activeDrilldown === 'governance' && <ShieldCheck size={20} />}
+                  {activeDrilldown === 'tasks' && <PieChartIcon size={20} />}
+                  {activeDrilldown === 'phase' && <Layers size={20} />}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-extrabold theme-heading">
+                      {activeDrilldown === 'team' && 'Executive Resource & Contributor Allocation'}
+                      {activeDrilldown === 'budget' && 'Program Capital Burn & Expenditure Trajectory'}
+                      {activeDrilldown === 'deadline' && 'Delivery Schedule & Milestone Roadmaps'}
+                      {activeDrilldown === 'governance' && 'Vendor SLA Governance & Compliance Gate'}
+                      {activeDrilldown === 'tasks' && 'Workstream Deliverables & Backlog Drilldown'}
+                      {activeDrilldown === 'phase' && `Milestone Phase Scope: ${selectedPhase?.id || 'PH-01'}`}
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#FF5A14]/15 text-[#FF5A14] border border-[#FF5A14]/30">
+                      {activeProject?.jira_key || 'ACTIVE'}
+                    </span>
+                  </div>
+                  <p className="text-xs theme-muted mt-0.5">
+                    {activeDrilldown === 'team' && 'Headcount distribution, engineering disciplines, and vendor partner allocations'}
+                    {activeDrilldown === 'budget' && 'Planned capital baseline vs actual cumulative spend and burn rate'}
+                    {activeDrilldown === 'deadline' && 'Target go-live dates, schedule performance index (SPI), and critical path phases'}
+                    {activeDrilldown === 'governance' && 'Vendor SLA adherence, compliance audit scores, and autonomous gate clearances'}
+                    {activeDrilldown === 'tasks' && 'Real-time deliverable tracking across engineering pods and vendor deliverables'}
+                    {activeDrilldown === 'phase' && `${selectedPhase?.name || 'Milestone Phase Delivery'}`}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveDrilldown(null)}
+                className="p-1.5 rounded-xl theme-subtle border theme-border hover:text-[#FF5A14] transition-colors cursor-pointer"
+                title="Close Drilldown"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body: Team & Resource Allocation */}
+            {activeDrilldown === 'team' && (
+              <div className="space-y-5 text-xs">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                  <div className="p-3 rounded-xl theme-subtle border theme-border">
+                    <span className="theme-muted block text-[10px] uppercase font-bold">Total Staff</span>
+                    <span className="text-xl font-black theme-heading font-mono">{headcount.total}</span>
+                  </div>
+                  <div className="p-3 rounded-xl theme-subtle border theme-border">
+                    <span className="theme-muted block text-[10px] uppercase font-bold">Active Today</span>
+                    <span className="text-xl font-black text-emerald-500 font-mono">{headcount.active_today}</span>
+                  </div>
+                  <div className="p-3 rounded-xl theme-subtle border theme-border">
+                    <span className="theme-muted block text-[10px] uppercase font-bold">Internal FTEs</span>
+                    <span className="text-xl font-black text-blue-400 font-mono">{headcount.fte}</span>
+                  </div>
+                  <div className="p-3 rounded-xl theme-subtle border theme-border">
+                    <span className="theme-muted block text-[10px] uppercase font-bold">Contractors</span>
+                    <span className="text-xl font-black text-[#FF5A14] font-mono">{headcount.contractor}</span>
+                  </div>
+                </div>
+
+                {headcount.total === 0 ? (
+                  <div className="py-8 text-center theme-subtle border theme-border rounded-xl p-4">
+                    <Users size={32} className="text-[#FF5A14]/40 mx-auto mb-2" />
+                    <div className="font-bold theme-heading text-sm">No Resources Allocated Yet</div>
+                    <p className="text-xs theme-muted mt-1 max-w-sm mx-auto">
+                      Ingest project SOW contracts or team rosters in the Ingestion Portal to track engineering disciplines and vendor partners.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Engineering Disciplines */}
+                    <div>
+                      <h4 className="font-bold theme-heading uppercase tracking-wider text-[11px] mb-2.5 flex items-center gap-1.5">
+                        <Briefcase size={14} className="text-[#FF5A14]" />
+                        Resource Allocation by Discipline
+                      </h4>
+                      <div className="space-y-2.5">
+                        {headcount.roles.map((r, idx) => (
+                          <div key={idx} className="p-2.5 rounded-xl theme-subtle border theme-border">
+                            <div className="flex justify-between items-center text-xs mb-1">
+                              <span className="font-semibold theme-heading">{r.role}</span>
+                              <span className="font-mono font-bold">{r.count} Staff ({r.allocation_pct}%)</span>
+                            </div>
+                            <div className="w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                              <div className="h-full rounded-full" style={{ width: `${r.allocation_pct}%`, backgroundColor: r.color }}></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Vendor Partners */}
+                    <div>
+                      <h4 className="font-bold theme-heading uppercase tracking-wider text-[11px] mb-2.5 flex items-center gap-1.5">
+                        <Building2 size={14} className="text-[#FF5A14]" />
+                        Vendor Partner Pods
+                      </h4>
+                      <div className="space-y-2">
+                        {headcount.vendors.map((v, idx) => (
+                          <div key={idx} className="p-3 rounded-xl theme-subtle border theme-border flex items-center justify-between">
+                            <div>
+                              <div className="font-bold theme-heading">{v.name}</div>
+                              <span className="text-[11px] theme-muted">{v.type} • Contract Share: {v.share}</span>
+                            </div>
+                            <div className="text-right">
+                              <span className="font-mono font-bold text-sm text-[#FF5A14]">{v.headcount} Staff</span>
+                              <span className="block text-[10px] font-mono text-emerald-500 font-bold">SLA: {v.sla}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <div className="pt-3 border-t theme-border flex items-center justify-between">
+                  <button
+                    onClick={() => {
+                      setActiveTab('resources');
+                      setActiveDrilldown(null);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-[#FF5A14]/10 text-[#FF5A14] hover:bg-[#FF5A14]/20 font-bold transition-colors cursor-pointer"
+                  >
+                    View Resource Tab on Dashboard
+                  </button>
+                  <Link
+                    to="/projects"
+                    onClick={() => setActiveDrilldown(null)}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white font-bold transition-all shadow-sm hover:brightness-110 flex items-center gap-1"
+                  >
+                    <span>Manage in Projects Hub</span>
+                    <ArrowRight size={13} />
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {/* Modal Body: Budget & Capital */}
+            {activeDrilldown === 'budget' && (
+              <div className="space-y-5 text-xs">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                  <div className="p-3 rounded-xl theme-subtle border theme-border">
+                    <span className="theme-muted block text-[10px] uppercase font-bold">Planned Baseline</span>
+                    <span className="text-xl font-black theme-heading font-mono">{fmtMoney(budget.total_planned)}</span>
+                  </div>
+                  <div className="p-3 rounded-xl theme-subtle border theme-border">
+                    <span className="theme-muted block text-[10px] uppercase font-bold">Actual Spend</span>
+                    <span className="text-xl font-black text-[#FF5A14] font-mono">{fmtMoney(budget.total_actual)}</span>
+                  </div>
+                  <div className="p-3 rounded-xl theme-subtle border theme-border">
+                    <span className="theme-muted block text-[10px] uppercase font-bold">Remaining</span>
+                    <span className="text-xl font-black text-emerald-500 font-mono">{fmtMoney(budget.remaining)}</span>
+                  </div>
+                  <div className="p-3 rounded-xl theme-subtle border theme-border">
+                    <span className="theme-muted block text-[10px] uppercase font-bold">Cost Variance</span>
+                    <span className={`text-xl font-black font-mono ${budget.variance >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                      {budget.variance >= 0 ? `+${fmtMoney(budget.variance)}` : `-${fmtMoney(Math.abs(budget.variance))}`}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl theme-subtle border theme-border space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold theme-heading text-xs">Expenditure Velocity & Metrics</span>
+                    <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${budget.variance >= 0 ? 'bg-emerald-500/15 text-emerald-500' : 'bg-red-500/15 text-red-500'}`}>
+                      {budget.variance_status} Trajectory
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <span className="theme-muted text-[11px]">Monthly Burn Rate:</span>
+                      <strong className="block theme-heading font-mono text-sm mt-0.5">{fmtMoney(budget.monthly_run_rate)} / month</strong>
+                    </div>
+                    <div>
+                      <span className="theme-muted text-[11px]">Cost Performance Index (CPI):</span>
+                      <strong className="block text-emerald-500 font-mono text-sm mt-0.5">{budget.cpi} Favorable</strong>
+                    </div>
+                  </div>
+                  <div className="pt-2">
+                    <div className="flex justify-between text-[11px] mb-1">
+                      <span className="theme-muted">Capital Consumed:</span>
+                      <span className="font-mono font-bold text-[#FF5A14]">{budget.burn_percentage}%</span>
+                    </div>
+                    <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                      <div className="h-full rounded-full bg-gradient-to-r from-[#FF5A14] to-[#FF7A45]" style={{ width: `${budget.burn_percentage}%` }}></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t theme-border flex items-center justify-between">
+                  <button
+                    onClick={() => setActiveDrilldown(null)}
+                    className="px-4 py-2 rounded-xl theme-card border theme-border font-bold transition-colors cursor-pointer"
+                  >
+                    Close
+                  </button>
+                  <Link
+                    to={activeProject?.id ? `/project/${activeProject.id}` : '/projects'}
+                    onClick={() => setActiveDrilldown(null)}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white font-bold transition-all shadow-sm hover:brightness-110 flex items-center gap-1"
+                  >
+                    <span>Open Full Project Financials</span>
+                    <ArrowRight size={13} />
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {/* Modal Body: Deadline & Schedule */}
+            {activeDrilldown === 'deadline' && (
+              <div className="space-y-5 text-xs">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                  <div className="p-3 rounded-xl theme-subtle border theme-border">
+                    <span className="theme-muted block text-[10px] uppercase font-bold">Target Date</span>
+                    <span className="text-xs font-black theme-heading font-mono block mt-1 truncate">{timeline.target_completion_date}</span>
+                  </div>
+                  <div className="p-3 rounded-xl theme-subtle border theme-border">
+                    <span className="theme-muted block text-[10px] uppercase font-bold">Days Left</span>
+                    <span className="text-xl font-black text-purple-400 font-mono">{timeline.days_remaining}d</span>
+                  </div>
+                  <div className="p-3 rounded-xl theme-subtle border theme-border">
+                    <span className="theme-muted block text-[10px] uppercase font-bold">Schedule SPI</span>
+                    <span className="text-xl font-black text-emerald-500 font-mono">{timeline.spi}</span>
+                  </div>
+                  <div className="p-3 rounded-xl theme-subtle border theme-border">
+                    <span className="theme-muted block text-[10px] uppercase font-bold">Status</span>
+                    <span className="text-xs font-bold text-emerald-400 block mt-1 truncate">{timeline.schedule_status}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-bold theme-heading uppercase tracking-wider text-[11px] mb-2.5 flex items-center gap-1.5">
+                    <Layers size={14} className="text-[#FF5A14]" />
+                    Delivery Milestone Sequence
+                  </h4>
+                  <div className="space-y-2">
+                    {timeline.phases.map((ph, idx) => (
+                      <div 
+                        key={idx}
+                        onClick={() => {
+                          setSelectedPhase(ph);
+                          setActiveDrilldown('phase');
+                        }}
+                        className="p-3 rounded-xl theme-subtle border theme-border hover:border-[#FF5A14]/60 transition-all flex items-center justify-between cursor-pointer group"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-6 h-6 rounded-lg bg-[#FF5A14]/15 text-[#FF5A14] font-mono font-bold flex items-center justify-center text-[10px]">
+                            {ph.id}
+                          </span>
+                          <div>
+                            <div className="font-bold theme-heading group-hover:text-[#FF7A45] transition-colors">{ph.name}</div>
+                            <span className="text-[11px] theme-muted">Target: {ph.target_date}</span>
+                          </div>
+                        </div>
+                        <div className="text-right flex items-center gap-3">
+                          <span className="font-mono font-bold text-xs">{ph.completion_pct}%</span>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                            ph.status === 'Completed' ? 'bg-emerald-500/15 text-emerald-500' :
+                            ph.status === 'In Progress' ? 'bg-blue-500/15 text-blue-400' : 'bg-slate-500/15 text-slate-400'
+                          }`}>
+                            {ph.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t theme-border flex items-center justify-between">
+                  <button
+                    onClick={() => setActiveDrilldown(null)}
+                    className="px-4 py-2 rounded-xl theme-card border theme-border font-bold transition-colors cursor-pointer"
+                  >
+                    Close
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveTab('overview');
+                      setActiveDrilldown(null);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white font-bold transition-all shadow-sm hover:brightness-110 flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>View Roadmaps on Dashboard</span>
+                    <ArrowRight size={13} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Modal Body: Governance */}
+            {activeDrilldown === 'governance' && (
+              <div className="space-y-5 text-xs">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                  <div className="p-3 rounded-xl theme-subtle border theme-border">
+                    <span className="theme-muted block text-[10px] uppercase font-bold">SLA Adherence</span>
+                    <span className="text-xl font-black text-emerald-500 font-mono">{governance.vendor_sla_adherence}%</span>
+                  </div>
+                  <div className="p-3 rounded-xl theme-subtle border theme-border">
+                    <span className="theme-muted block text-[10px] uppercase font-bold">Audit Score</span>
+                    <span className="text-xl font-black text-emerald-400 font-mono">{governance.compliance_audit_score}%</span>
+                  </div>
+                  <div className="p-3 rounded-xl theme-subtle border theme-border">
+                    <span className="theme-muted block text-[10px] uppercase font-bold">Escalations</span>
+                    <span className="text-xl font-black text-amber-500 font-mono">{governance.open_escalations}</span>
+                  </div>
+                  <div className="p-3 rounded-xl theme-subtle border theme-border">
+                    <span className="theme-muted block text-[10px] uppercase font-bold">Gate Status</span>
+                    <span className="text-xs font-bold text-emerald-500 block mt-1 truncate">{governance.gate_clearance_status}</span>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl theme-subtle border theme-border space-y-2.5">
+                  <h4 className="font-bold theme-heading text-xs">Autonomous Compliance Guardrails</h4>
+                  <p className="text-xs theme-muted leading-relaxed">
+                    The platform continuously cross-checks active vendor rate cards, SOW deliverables, Jira sprint velocities, and AWS/Azure telemetry to enforce gate clearances autonomously.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-[11px]">
+                    <div className="p-2.5 rounded-lg theme-card border theme-border flex items-center gap-2">
+                      <CheckCircle2 size={14} className="text-emerald-500" />
+                      <span>Contractual SOW Baseline Verified</span>
+                    </div>
+                    <div className="p-2.5 rounded-lg theme-card border theme-border flex items-center gap-2">
+                      <CheckCircle2 size={14} className="text-emerald-500" />
+                      <span>Role & Rate Card Guardrails Enforced</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t theme-border flex items-center justify-between">
+                  <button
+                    onClick={() => setActiveDrilldown(null)}
+                    className="px-4 py-2 rounded-xl theme-card border theme-border font-bold transition-colors cursor-pointer"
+                  >
+                    Close
+                  </button>
+                  <Link
+                    to="/guardrails"
+                    onClick={() => setActiveDrilldown(null)}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white font-bold transition-all shadow-sm hover:brightness-110 flex items-center gap-1"
+                  >
+                    <span>Manage in Guardrails & Audits</span>
+                    <ArrowRight size={13} />
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {/* Modal Body: Tasks & Deliverables Drilldown */}
+            {activeDrilldown === 'tasks' && (
+              <div className="space-y-4 text-xs">
+                {/* Filter Pills */}
+                <div className="flex flex-wrap gap-1.5 pb-2 border-b theme-border">
+                  <button
+                    onClick={() => setTaskFilter('ALL')}
+                    className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+                      taskFilter === 'ALL'
+                        ? 'bg-[#FF5A14] text-white shadow-sm'
+                        : 'theme-subtle text-slate-400 hover:text-white border theme-border'
+                    }`}
+                  >
+                    All Deliverables ({tasks.total})
+                  </button>
+                  {tasks.breakdown.map((b, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setTaskFilter(b.name)}
+                      className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        taskFilter === b.name
+                          ? 'bg-[#FF5A14] text-white shadow-sm'
+                          : 'theme-subtle text-slate-400 hover:text-white border theme-border'
+                      }`}
+                    >
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: b.color }}></span>
+                      <span>{b.name} ({b.count})</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Task List */}
+                {taskItems.length === 0 ? (
+                  <div className="py-10 text-center theme-subtle border theme-border rounded-xl p-4">
+                    <PieChartIcon size={36} className="text-[#FF5A14]/40 mx-auto mb-2" />
+                    <div className="font-bold theme-heading text-sm">No Workstream Deliverables Found</div>
+                    <p className="text-xs theme-muted mt-1 max-w-sm mx-auto">
+                      Ingest project SOW contracts or connect Jira in Settings to populate live deliverable cards.
+                    </p>
+                    <Link
+                      to="/ingestion"
+                      onClick={() => setActiveDrilldown(null)}
+                      className="mt-4 inline-flex items-center gap-1 px-4 py-2 rounded-xl bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white font-bold text-xs"
+                    >
+                      <span>Go to Ingestion Portal</span>
+                      <ArrowRight size={13} />
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5 max-h-[50vh] overflow-y-auto pr-1">
+                    {taskItems
+                      .filter(t => {
+                        if (taskFilter === 'ALL') return true;
+                        if (taskFilter === 'Blocked / Impeded') return t.status.includes('Blocked');
+                        return t.status === taskFilter;
+                      })
+                      .map((t, idx) => {
+                        const isBlocked = t.status.includes('Blocked');
+                        return (
+                          <div 
+                            key={idx}
+                            className={`p-3.5 rounded-xl border transition-all ${
+                              isBlocked 
+                                ? 'bg-red-500/5 border-red-500/30' 
+                                : 'theme-subtle border theme-border'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="font-mono font-bold text-[#FF5A14]">{t.id}</span>
+                                  <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/10 theme-muted font-semibold text-[10px]">
+                                    {t.workstream}
+                                  </span>
+                                </div>
+                                <h5 className="font-bold theme-heading text-xs">{t.title}</h5>
+                                <div className="flex items-center gap-3 text-[11px] theme-muted mt-1">
+                                  <span>Owner: <strong className="theme-heading">{t.owner}</strong></span>
+                                  <span>Due: <strong className="theme-heading">{t.due_date}</strong></span>
+                                </div>
+                              </div>
+
+                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase flex-shrink-0 ${
+                                t.status === 'Completed' ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30' :
+                                t.status === 'In Progress' ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30' :
+                                t.status.includes('Review') ? 'bg-amber-500/15 text-amber-500 border border-amber-500/30' :
+                                'bg-red-500/15 text-red-500 border border-red-500/30 animate-pulse'
+                              }`}>
+                                {t.status}
+                              </span>
+                            </div>
+
+                            {/* Blocker Alert Box & Action Button */}
+                            {isBlocked && (
+                              <div className="mt-3 pt-2.5 border-t border-red-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                <div className="text-[11px] text-red-400 flex items-center gap-1.5">
+                                  <AlertCircle size={13} className="text-red-500 flex-shrink-0" />
+                                  <span>{t.blocker_reason || 'Delivery blocked pending mitigation.'}</span>
+                                </div>
+                                {t.linked_risk_id && (
+                                  <button
+                                    onClick={() => {
+                                      setActiveDrilldown(null);
+                                      navigate(`/risks?search=${t.linked_risk_id}`);
+                                    }}
+                                    className="px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-[11px] transition-colors flex items-center gap-1 self-start sm:self-auto cursor-pointer"
+                                  >
+                                    <span>Investigate Issue ({t.linked_risk_id})</span>
+                                    <ArrowRight size={11} />
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+
+                <div className="pt-3 border-t theme-border flex items-center justify-between">
+                  <span className="text-[11px] theme-muted">
+                    Showing deliverables for {taskFilter === 'ALL' ? 'all categories' : taskFilter}
+                  </span>
+                  <button
+                    onClick={() => setActiveDrilldown(null)}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white font-bold transition-all shadow-sm hover:brightness-110 cursor-pointer"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Modal Body: Milestone Phase Scope & Deliverables */}
+            {activeDrilldown === 'phase' && selectedPhase && (
+              <div className="space-y-4 text-xs">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                  <div className="p-3 rounded-xl theme-subtle border theme-border">
+                    <span className="theme-muted block text-[10px] uppercase font-bold">Phase Code</span>
+                    <span className="text-xl font-black text-[#FF5A14] font-mono">{selectedPhase.id}</span>
+                  </div>
+                  <div className="p-3 rounded-xl theme-subtle border theme-border">
+                    <span className="theme-muted block text-[10px] uppercase font-bold">Target Date</span>
+                    <span className="text-xs font-black theme-heading font-mono block mt-1 truncate">{selectedPhase.target_date}</span>
+                  </div>
+                  <div className="p-3 rounded-xl theme-subtle border theme-border">
+                    <span className="theme-muted block text-[10px] uppercase font-bold">Days Left</span>
+                    <span className="text-xl font-black text-purple-400 font-mono">{selectedPhase.days_left}d</span>
+                  </div>
+                  <div className="p-3 rounded-xl theme-subtle border theme-border">
+                    <span className="theme-muted block text-[10px] uppercase font-bold">Completion</span>
+                    <span className="text-xl font-black text-emerald-500 font-mono">{selectedPhase.completion_pct}%</span>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-bold theme-heading uppercase tracking-wider text-[11px] mb-2.5 flex items-center gap-1.5">
+                    <CheckCircle2 size={14} className="text-[#FF5A14]" />
+                    Contractual SOW Deliverables Checklist
+                  </h4>
+                  <div className="space-y-2">
+                    {getPhaseDeliverables(selectedPhase).map((del, idx) => (
+                      <div key={idx} className="p-3 rounded-xl theme-subtle border theme-border flex items-center justify-between">
+                        <div>
+                          <div className="font-bold theme-heading text-xs">{del.name}</div>
+                          <span className="text-[11px] theme-muted">Assigned: {del.owner}</span>
+                        </div>
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                          del.status === 'Verified' ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30' :
+                          del.status === 'In Progress' ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30' :
+                          del.status === 'Blocked' ? 'bg-red-500/15 text-red-500 border border-red-500/30' :
+                          'bg-slate-500/15 text-slate-400 border border-slate-500/30'
+                        }`}>
+                          {del.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t theme-border flex items-center justify-between">
+                  <Link
+                    to="/knowledge"
+                    onClick={() => setActiveDrilldown(null)}
+                    className="px-4 py-2 rounded-xl bg-[#FF5A14]/10 text-[#FF5A14] hover:bg-[#FF5A14]/20 font-bold transition-colors cursor-pointer"
+                  >
+                    Inspect SOW in Knowledge & RAG
+                  </Link>
+                  <button
+                    onClick={() => setActiveDrilldown(null)}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white font-bold transition-all shadow-sm hover:brightness-110 cursor-pointer"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
 
     </div>
   );

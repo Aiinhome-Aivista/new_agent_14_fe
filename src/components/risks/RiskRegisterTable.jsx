@@ -30,11 +30,11 @@ const CATEGORY_OPTIONS = [
   'Delivery & Schedule'
 ];
 
-const RiskRegisterTable = ({ risks, activeProject, onUpdateRisk, onRiskUpdated }) => {
+const RiskRegisterTable = ({ risks, activeProject, onUpdateRisk, onRiskUpdated, initialSearch = '', initialSeverity = 'ALL' }) => {
   const [sortField, setSortField] = useState('severity');
   const [sortAsc, setSortAsc] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSeverity, setSelectedSeverity] = useState('ALL');
+  const [searchQuery, setSearchQuery] = useState(initialSearch || '');
+  const [selectedSeverity, setSelectedSeverity] = useState(initialSeverity || 'ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [collapsedProjects, setCollapsedProjects] = useState({});
@@ -43,6 +43,22 @@ const RiskRegisterTable = ({ risks, activeProject, onUpdateRisk, onRiskUpdated }
   const [mitigationDraft, setMitigationDraft] = useState('');
   const [pushingJiraId, setPushingJiraId] = useState(null);
   const { showToast } = useToast();
+
+  React.useEffect(() => {
+    if (initialSearch) {
+      setSearchQuery(initialSearch);
+      const match = (risks || []).find(r => 
+        (r.risk_id || '').toLowerCase() === initialSearch.toLowerCase() ||
+        (r.title || '').toLowerCase().includes(initialSearch.toLowerCase())
+      );
+      if (match) {
+        setExpandedRiskId(match.id);
+      }
+    }
+    if (initialSeverity && initialSeverity !== 'ALL') {
+      setSelectedSeverity(initialSeverity);
+    }
+  }, [initialSearch, initialSeverity, risks]);
 
   const isAllProjects = !activeProject || activeProject.id === 'all' || activeProject.jira_key === 'ALL';
 
