@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import RiskRegisterTable from '../components/risks/RiskRegisterTable';
 import { risksApi } from '../api/risksApi';
+import { ingestionApi } from '../api/ingestionApi';
 import { useToast } from '../context/ToastContext';
 import { useProject } from '../context/ProjectContext';
 import FuturisticLoader from '../components/common/FuturisticLoader';
@@ -31,6 +32,8 @@ const RiskRegisterPage = () => {
   const [error, setError] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [isJiraConnected, setIsJiraConnected] = useState(false);
+  const [jiraBaseUrl, setJiraBaseUrl] = useState('');
   const { showToast } = useToast();
 
   const isAllProjects = !urlProjectId && (!activeProject || activeProject.id === 'all' || activeProject.jira_key === 'ALL');
@@ -74,6 +77,29 @@ const RiskRegisterPage = () => {
   useEffect(() => {
     fetchRisks();
   }, [activeProject?.id, activeProject?.jira_key, urlProjectId]);
+
+  useEffect(() => {
+    const checkJiraConnector = async () => {
+      const pid = activeProject?.id;
+      if (!pid || pid === 'all') {
+        setIsJiraConnected(false);
+        setJiraBaseUrl('');
+        return;
+      }
+      try {
+        const res = await ingestionApi.getProjectConnectors(pid);
+        if (res && res.connectors) {
+          const jira = res.connectors.find(c => c.id === 'jira');
+          setIsJiraConnected(Boolean(jira && jira.is_connected));
+          setJiraBaseUrl(jira?.base_url || '');
+        }
+      } catch (err) {
+        setIsJiraConnected(false);
+        setJiraBaseUrl('');
+      }
+    };
+    checkJiraConnector();
+  }, [activeProject?.id]);
 
   const handleUpdateRisk = async (id, updates) => {
     // Optimistic update
@@ -334,6 +360,8 @@ const RiskRegisterPage = () => {
         onRiskUpdated={handleRiskUpdated}
         initialSearch={urlSearch}
         initialSeverity={urlSeverity}
+        isJiraConnected={isJiraConnected}
+        jiraBaseUrl={jiraBaseUrl}
       />
 
       {/* Log New Risk Modal */}

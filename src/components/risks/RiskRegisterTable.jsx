@@ -30,7 +30,7 @@ const CATEGORY_OPTIONS = [
   'Delivery & Schedule'
 ];
 
-const RiskRegisterTable = ({ risks, activeProject, onUpdateRisk, onRiskUpdated, initialSearch = '', initialSeverity = 'ALL' }) => {
+const RiskRegisterTable = ({ risks, activeProject, onUpdateRisk, onRiskUpdated, initialSearch = '', initialSeverity = 'ALL', isJiraConnected = false, jiraBaseUrl = '' }) => {
   const [sortField, setSortField] = useState('severity');
   const [sortAsc, setSortAsc] = useState(false);
   const [searchQuery, setSearchQuery] = useState(initialSearch || '');
@@ -329,7 +329,7 @@ const RiskRegisterTable = ({ risks, activeProject, onUpdateRisk, onRiskUpdated, 
           <td className="p-4 text-center whitespace-nowrap">
             {risk.jira_issue_key ? (
               <a
-                href={`https://dipakkrsaha44.atlassian.net/browse/${risk.jira_issue_key}`}
+                href={risk.jira_url || (jiraBaseUrl ? `${jiraBaseUrl.replace(/\/$/, '')}/browse/${risk.jira_issue_key}` : `https://dipakkrsaha44.atlassian.net/browse/${risk.jira_issue_key}`)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-mono font-bold border border-blue-500/30 text-xs transition-all shadow-sm group"
@@ -342,10 +342,18 @@ const RiskRegisterTable = ({ risks, activeProject, onUpdateRisk, onRiskUpdated, 
             ) : (
               <button
                 type="button"
-                disabled={pushingJiraId === risk.id}
-                onClick={() => handlePushToJira(risk)}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:brightness-110 text-white font-bold text-xs shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
-                title="Push detected risk as a new ticket to Jira Cloud"
+                disabled={!isJiraConnected || pushingJiraId === risk.id}
+                onClick={() => isJiraConnected && handlePushToJira(risk)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl font-bold text-xs shadow-sm transition-all ${
+                  isJiraConnected
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:brightness-110 text-white cursor-pointer active:scale-95'
+                    : 'bg-slate-100 dark:bg-slate-800/60 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700/60 cursor-not-allowed opacity-60'
+                }`}
+                title={
+                  isJiraConnected
+                    ? "Push detected risk as a new ticket to Jira Cloud"
+                    : "Jira Cloud is not connected for this project. Please configure and connect Jira in Connectors Hub."
+                }
               >
                 {pushingJiraId === risk.id ? (
                   <>
