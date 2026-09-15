@@ -8,5 +8,10 @@ export const authApi = {
   register: async (email, password, role) => {
     const response = await api.post('/auth/register', { email, password, role });
     return response.data;
+  },
+  getUsers: async (role = null) => {
+    const params = role ? { role } : {};
+    const response = await api.get('/auth/users', { params });
+    return response.data;
   }
 };

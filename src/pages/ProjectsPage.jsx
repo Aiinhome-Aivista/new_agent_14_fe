@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useProject } from '../context/ProjectContext';
 import { useToast } from '../context/ToastContext';
+import { authApi } from '../api/authApi';
 import FuturisticLoader from '../components/common/FuturisticLoader';
 import { 
   FolderKanban, 
@@ -34,6 +35,7 @@ const ProjectsPage = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [projectManagers, setProjectManagers] = useState([]);
 
   // Edit Project Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -42,8 +44,27 @@ const ProjectsPage = () => {
     name: '',
     status: 'Active',
     planned_spend: 1000000,
-    description: ''
+    description: '',
+    project_manager_id: ''
   });
+
+  useEffect(() => {
+    if (isCreateModalOpen || isEditModalOpen) {
+      if (projectManagers.length > 0) return; // Only fetch if we haven't already
+      const fetchManagers = async () => {
+        try {
+          const res = await authApi.getUsers('Project Manager');
+          if (res?.success) {
+            setProjectManagers(res.users || []);
+          }
+        } catch (e) {
+          console.error('Failed to fetch project managers', e);
+        }
+      };
+      fetchManagers();
+    }
+  }, [isCreateModalOpen, isEditModalOpen, projectManagers.length]);
+
 
   // New Project Form State
   const [form, setForm] = useState({
@@ -51,7 +72,8 @@ const ProjectsPage = () => {
     jira_key: '',
     description: '',
     planned_spend: 1500000,
-    status: 'Active'
+    status: 'Active',
+    project_manager_id: ''
   });
 
   const isPMO = ['PMO', 'Program Director'].includes(user?.role);
@@ -69,7 +91,8 @@ const ProjectsPage = () => {
       name: proj.name || '',
       status: proj.status || 'Active',
       planned_spend: proj.planned_spend || 1000000,
-      description: proj.description || ''
+      description: proj.description || '',
+      project_manager_id: proj.project_manager_id || ''
     });
     setIsEditModalOpen(true);
   };
@@ -87,7 +110,8 @@ const ProjectsPage = () => {
         name: editForm.name.trim(),
         status: editForm.status,
         planned_spend: Number(editForm.planned_spend) || 1000000,
-        description: editForm.description.trim()
+        description: editForm.description.trim(),
+        project_manager_id: editForm.project_manager_id ? Number(editForm.project_manager_id) : null
       });
       showToast(`Project "${editForm.name}" updated successfully!`, 'success');
       setIsEditModalOpen(false);
@@ -123,7 +147,8 @@ const ProjectsPage = () => {
         jira_key: form.jira_key.trim(),
         description: form.description.trim(),
         status: form.status,
-        planned_spend: Number(form.planned_spend) || 1000000
+        planned_spend: Number(form.planned_spend) || 1000000,
+        project_manager_id: form.project_manager_id ? Number(form.project_manager_id) : null
       });
       showToast(res.message || `Project ${form.name} created successfully!`, 'success');
       setIsCreateModalOpen(false);
@@ -132,7 +157,8 @@ const ProjectsPage = () => {
         jira_key: '',
         description: '',
         planned_spend: 1500000,
-        status: 'Active'
+        status: 'Active',
+        project_manager_id: ''
       });
       if (res?.project) {
         handleOpenWorkspace(res.project);
@@ -486,7 +512,7 @@ const ProjectsPage = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Planned Budget ($)</label>
                   <input
@@ -511,6 +537,21 @@ const ProjectsPage = () => {
                     <option value="Active">Active</option>
                     <option value="Planning">Planning</option>
                     <option value="On Hold">On Hold</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Project Manager</label>
+                  <select
+                    name="project_manager_id"
+                    value={form.project_manager_id}
+                    onChange={handleFormChange}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#0E1422] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:border-[#FF5A14] focus:ring-1 focus:ring-[#FF5A14] outline-none transition-all cursor-pointer"
+                  >
+                    <option value="">Select Project Manager</option>
+                    {projectManagers.map(pm => (
+                      <option key={pm.id} value={pm.id}>{pm.name}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -593,7 +634,7 @@ const ProjectsPage = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Planned Budget ($)</label>
                   <input
@@ -618,6 +659,20 @@ const ProjectsPage = () => {
                     <option value="On Hold">On Hold</option>
                     <option value="Completed">Completed</option>
                     <option value="Archived">Archived</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Project Manager</label>
+                  <select
+                    value={editForm.project_manager_id}
+                    onChange={(e) => setEditForm({ ...editForm, project_manager_id: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#0E1422] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:border-[#FF5A14] focus:ring-1 focus:ring-[#FF5A14] outline-none transition-all cursor-pointer"
+                  >
+                    <option value="">Select Project Manager</option>
+                    {projectManagers.map(pm => (
+                      <option key={pm.id} value={pm.id}>{pm.name}</option>
+                    ))}
                   </select>
                 </div>
               </div>
