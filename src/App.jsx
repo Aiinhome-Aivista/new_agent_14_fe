@@ -20,6 +20,7 @@ import RiskRegisterPage from './pages/RiskRegisterPage';
 import KnowledgePage from './pages/KnowledgePage';
 import GuardrailsPage from './pages/GuardrailsPage';
 import SettingsPage from './pages/SettingsPage';
+import AddStakeholderPage from './pages/AddStakeholderPage';
 
 const Unauthorized = () => <div className="p-10 text-2xl font-bold text-hover text-center mt-20">Unauthorized Access</div>;
 
@@ -72,6 +73,11 @@ function App() {
                 {/* Ingestion: PMO, Project Manager */}
                 <Route element={<ProtectedRoute allowedRoles={['PMO', 'Project Manager']} />}>
                   <Route path="/ingestion" element={<IngestionPage />} />
+                </Route>
+
+                {/* Add Stakeholder: PMO */}
+                <Route element={<ProtectedRoute allowedRoles={['PMO']} />}>
+                  <Route path="/add-stakeholder" element={<AddStakeholderPage />} />
                 </Route>
               </Route>
             </Route>
