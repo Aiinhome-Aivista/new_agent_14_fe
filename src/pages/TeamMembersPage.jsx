@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useProject } from '../context/ProjectContext';
@@ -19,7 +19,9 @@ import {
   FolderKanban,
   ExternalLink,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  ChevronDown,
+  Check
 } from 'lucide-react';
 
 const TeamMembersPage = () => {
@@ -34,12 +36,40 @@ const TeamMembersPage = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [vendorFilter, setVendorFilter] = useState('All');
-
   // Role filter synced with URL query param '?role=...'
   const selectedRole = searchParams.get('role') || 'All';
 
   // Target project identifier from URL or active context
   const targetPid = routeId || activeProject?.jira_key || activeProject?.id || '1';
+
+  // Custom Dropdown Open States and Refs
+  const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
+  const [isVendorDropdownOpen, setIsVendorDropdownOpen] = useState(false);
+  const roleDropdownRef = useRef(null);
+  const vendorDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (roleDropdownRef.current && !roleDropdownRef.current.contains(e.target)) {
+        setIsRoleDropdownOpen(false);
+      }
+      if (vendorDropdownRef.current && !vendorDropdownRef.current.contains(e.target)) {
+        setIsVendorDropdownOpen(false);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setIsRoleDropdownOpen(false);
+        setIsVendorDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -196,7 +226,7 @@ const TeamMembersPage = () => {
         {/* Back Button */}
         <button 
           onClick={() => navigate(`/project/${project.id || targetPid}`)}
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl theme-subtle border theme-border hover:border-[#FF5A14]/50 text-xs font-bold text-slate-300 hover:text-white transition-all self-start sm:self-auto cursor-pointer"
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl theme-subtle border theme-border hover:border-[#FF5A14]/50 text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all self-start sm:self-auto cursor-pointer"
         >
           <ArrowLeft size={13} className="text-[#FF5A14]" />
           <span>Back to Project Dashboard</span>
@@ -253,52 +283,189 @@ const TeamMembersPage = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search contributors by name, skills, or email..."
-              className="w-full pl-10 pr-10 py-2 rounded-xl text-xs bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 focus:border-[#FF5A14] outline-none text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 transition-all"
+              className="w-full pl-10 pr-10 py-2 rounded-xl text-xs bg-slate-50 dark:bg-[#0E1422] border border-slate-200 dark:border-white/10 focus:border-[#FF5A14] outline-none text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 transition-all"
             />
             {searchTerm && (
               <button 
                 onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white"
               >
                 <X size={14} />
               </button>
             )}
           </div>
 
-          {/* Role Filter Dropdown */}
-          <div className="flex items-center gap-2">
-            <Filter size={15} className="text-[#FF5A14] flex-shrink-0" />
-            <span className="text-xs theme-muted font-bold whitespace-nowrap">Role Filter:</span>
-            <select
-              value={selectedRole}
-              onChange={(e) => handleRoleChange(e.target.value)}
-              className="px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 focus:border-[#FF5A14] outline-none text-slate-900 dark:text-slate-200 font-semibold cursor-pointer"
-            >
-              <option value="All">All Roles ({members.length})</option>
-              {availableRoles.map(r => (
-                <option key={r.role} value={r.role}>
-                  {r.role} ({r.count})
-                </option>
-              ))}
-            </select>
+          {/* Role Filter Custom Dropdown */}
+          <div className="relative" ref={roleDropdownRef}>
+            <div className="flex items-center gap-2">
+              <Filter size={15} className="text-[#FF5A14] flex-shrink-0" />
+              <span className="text-xs theme-muted font-bold whitespace-nowrap">Role Filter:</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRoleDropdownOpen(!isRoleDropdownOpen);
+                  setIsVendorDropdownOpen(false);
+                }}
+                className={`flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer select-none min-w-[210px] ${
+                  isRoleDropdownOpen 
+                    ? 'border-[#FF5A14] ring-1 ring-[#FF5A14]/30 bg-white dark:bg-[#131A29]' 
+                    : 'border-slate-200 dark:border-white/10 hover:border-[#FF5A14]/50 bg-slate-50 dark:bg-[#131A29]'
+                } text-slate-900 dark:text-slate-100 shadow-sm`}
+              >
+                <span className="truncate">
+                  {selectedRole === 'All' ? `All Roles (${members.length})` : selectedRole}
+                </span>
+                <ChevronDown size={14} className={`text-slate-400 flex-shrink-0 transition-transform duration-200 ${isRoleDropdownOpen ? 'rotate-180 text-[#FF5A14]' : ''}`} />
+              </button>
+            </div>
+
+            {isRoleDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-80 max-h-80 overflow-y-auto no-scrollbar rounded-2xl bg-white dark:bg-[#131A29] p-1.5 border border-slate-200 dark:border-white/15 shadow-2xl dark:shadow-[0_20px_50px_rgba(0,0,0,0.85)] z-50 animate-fadeIn">
+                <div className="px-3 py-2 border-b border-slate-100 dark:border-white/10 flex items-center justify-between">
+                  <span className="text-[10px] uppercase font-extrabold tracking-wider text-slate-500 dark:text-slate-400">
+                    Filter by Contributor Role
+                  </span>
+                  <span className="text-[10px] font-mono text-[#FF7A45] font-semibold">
+                    {members.length} Contributors
+                  </span>
+                </div>
+
+                <div className="py-1 space-y-1">
+                  {/* All Roles Option */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleRoleChange('All');
+                      setIsRoleDropdownOpen(false);
+                    }}
+                    className={`w-full px-3 py-2 rounded-xl text-left text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                      selectedRole === 'All'
+                        ? 'bg-[#FF5A14]/15 text-[#FF7A45] font-bold border border-[#FF5A14]/30'
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <span className="truncate">All Roles</span>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-100 dark:bg-white/[0.08] text-slate-600 dark:text-slate-300">
+                        {members.length}
+                      </span>
+                      {selectedRole === 'All' && <Check size={14} className="text-[#FF5A14]" />}
+                    </div>
+                  </button>
+
+                  {/* Individual Roles */}
+                  {availableRoles.map(r => {
+                    const isSelected = selectedRole.toLowerCase() === r.role.toLowerCase();
+                    return (
+                      <button
+                        key={r.role}
+                        type="button"
+                        onClick={() => {
+                          handleRoleChange(r.role);
+                          setIsRoleDropdownOpen(false);
+                        }}
+                        className={`w-full px-3 py-2 rounded-xl text-left text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#FF5A14]/15 text-[#FF7A45] font-bold border border-[#FF5A14]/30'
+                            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-900 dark:hover:text-white'
+                        }`}
+                      >
+                        <span className="truncate pr-2">{r.role}</span>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-100 dark:bg-white/[0.08] text-slate-600 dark:text-slate-300">
+                            {r.count}
+                          </span>
+                          {isSelected && <Check size={14} className="text-[#FF5A14]" />}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Vendor Organization Filter */}
-          <div className="flex items-center gap-2">
-            <Briefcase size={15} className="text-slate-400 flex-shrink-0" />
-            <span className="text-xs theme-muted font-bold whitespace-nowrap">Vendor:</span>
-            <select
-              value={vendorFilter}
-              onChange={(e) => setVendorFilter(e.target.value)}
-              className="px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 focus:border-[#FF5A14] outline-none text-slate-900 dark:text-slate-200 font-semibold cursor-pointer"
-            >
-              <option value="All">All Organizations</option>
-              {availableVendors.map(v => (
-                <option key={v.name} value={v.name}>
-                  {v.name} ({v.count})
-                </option>
-              ))}
-            </select>
+          {/* Vendor Organization Custom Dropdown */}
+          <div className="relative" ref={vendorDropdownRef}>
+            <div className="flex items-center gap-2">
+              <Briefcase size={15} className="text-slate-400 flex-shrink-0" />
+              <span className="text-xs theme-muted font-bold whitespace-nowrap">Vendor:</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsVendorDropdownOpen(!isVendorDropdownOpen);
+                  setIsRoleDropdownOpen(false);
+                }}
+                className={`flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer select-none min-w-[200px] ${
+                  isVendorDropdownOpen 
+                    ? 'border-[#FF5A14] ring-1 ring-[#FF5A14]/30 bg-white dark:bg-[#131A29]' 
+                    : 'border-slate-200 dark:border-white/10 hover:border-[#FF5A14]/50 bg-slate-50 dark:bg-[#131A29]'
+                } text-slate-900 dark:text-slate-100 shadow-sm`}
+              >
+                <span className="truncate">
+                  {vendorFilter === 'All' ? 'All Organizations' : vendorFilter}
+                </span>
+                <ChevronDown size={14} className={`text-slate-400 flex-shrink-0 transition-transform duration-200 ${isVendorDropdownOpen ? 'rotate-180 text-[#FF5A14]' : ''}`} />
+              </button>
+            </div>
+
+            {isVendorDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-80 max-h-80 overflow-y-auto no-scrollbar rounded-2xl bg-white dark:bg-[#131A29] p-1.5 border border-slate-200 dark:border-white/15 shadow-2xl dark:shadow-[0_20px_50px_rgba(0,0,0,0.85)] z-50 animate-fadeIn">
+                <div className="px-3 py-2 border-b border-slate-100 dark:border-white/10 flex items-center justify-between">
+                  <span className="text-[10px] uppercase font-extrabold tracking-wider text-slate-500 dark:text-slate-400">
+                    Filter by Vendor Organization
+                  </span>
+                  <span className="text-[10px] font-mono text-[#FF7A45] font-semibold">
+                    {availableVendors.length} Organizations
+                  </span>
+                </div>
+
+                <div className="py-1 space-y-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVendorFilter('All');
+                      setIsVendorDropdownOpen(false);
+                    }}
+                    className={`w-full px-3 py-2 rounded-xl text-left text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                      vendorFilter === 'All'
+                        ? 'bg-[#FF5A14]/15 text-[#FF7A45] font-bold border border-[#FF5A14]/30'
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <span className="truncate">All Organizations</span>
+                    {vendorFilter === 'All' && <Check size={14} className="text-[#FF5A14]" />}
+                  </button>
+
+                  {availableVendors.map(v => {
+                    const isSelected = vendorFilter === v.name;
+                    return (
+                      <button
+                        key={v.name}
+                        type="button"
+                        onClick={() => {
+                          setVendorFilter(v.name);
+                          setIsVendorDropdownOpen(false);
+                        }}
+                        className={`w-full px-3 py-2 rounded-xl text-left text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#FF5A14]/15 text-[#FF7A45] font-bold border border-[#FF5A14]/30'
+                            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-900 dark:hover:text-white'
+                        }`}
+                      >
+                        <span className="truncate pr-2">{v.name}</span>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-100 dark:bg-white/[0.08] text-slate-600 dark:text-slate-300">
+                            {v.count}
+                          </span>
+                          {isSelected && <Check size={14} className="text-[#FF5A14]" />}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
         </div>
@@ -353,7 +520,7 @@ const TeamMembersPage = () => {
 
       {/* 4. RESOURCE CARDS GRID (LEVEL 5 -> LEVEL 6 DRILLDOWN) */}
       {filteredMembers.length === 0 ? (
-        <div className="py-16 text-center theme-card rounded-2xl p-8 border border-dashed border-white/10">
+        <div className="py-16 text-center theme-card rounded-2xl p-8 border border-dashed border-slate-300 dark:border-white/15">
           <Users className="w-12 h-12 text-slate-500 mx-auto mb-3 opacity-60" />
           <h3 className="text-base font-bold theme-heading">No Contributors Match Your Filter</h3>
           <p className="text-xs theme-muted mt-1 max-w-sm mx-auto leading-relaxed">
@@ -456,7 +623,7 @@ const TeamMembersPage = () => {
                         {member.skills.slice(0, 3).map((skill, sIdx) => (
                           <span 
                             key={sIdx} 
-                            className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/5 text-[10px] font-medium theme-muted"
+                            className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 text-[10px] font-medium theme-muted"
                           >
                             {skill}
                           </span>

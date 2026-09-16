@@ -117,36 +117,46 @@ const AppLayout = () => {
     <div className={`flex h-screen overflow-hidden ${theme === 'dark' ? 'dark bg-[#0B0F19] text-slate-100' : 'bg-[#F1F5F9] text-slate-800'}`}>
       
       {/* LEFT SIDEBAR NAVIGATION */}
-      <aside className="w-64 bg-[#141A28] border-r border-white/10 flex flex-col flex-shrink-0 shadow-2xl z-20 transition-all duration-300">
+      <aside className={`w-64 border-r flex flex-col flex-shrink-0 shadow-2xl z-20 transition-all duration-300 ${
+        theme === 'dark' ? 'bg-[#141A28] border-white/10 text-slate-300' : 'bg-white border-slate-200 text-slate-700 shadow-md'
+      }`}>
         
         {/* Brand Logo Header */}
         <div 
-          className="h-16 flex items-center px-5 border-b border-white/10 cursor-pointer hover:bg-white/[0.02] transition-colors"
+          className={`h-16 flex items-center px-5 border-b cursor-pointer transition-colors ${
+            theme === 'dark' ? 'border-white/10 hover:bg-white/[0.02]' : 'border-slate-200 hover:bg-slate-50'
+          }`}
           onClick={() => navigate('/dashboard')}
         >
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FF5A14] to-[#E04808] flex items-center justify-center text-white font-black text-lg shadow-[0_0_15px_rgba(255,90,20,0.5)] mr-3">
             V
           </div>
           <div>
-            <span className="font-extrabold text-base tracking-tight text-white flex items-center gap-1">
+            <span className={`font-extrabold text-base tracking-tight flex items-center gap-1 ${
+              theme === 'dark' ? 'text-white' : 'text-slate-900'
+            }`}>
               VPM <span className="text-[#FF7A45] font-normal">Platform</span>
             </span>
-            <span className="block text-[9px] tracking-widest text-slate-400 uppercase font-semibold -mt-0.5">
+            <span className={`block text-[9px] tracking-widest uppercase font-semibold -mt-0.5 ${
+              theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+            }`}>
               Enterprise Governance Suite
             </span>
           </div>
         </div>
 
         {/* AI Agent Core Status Ribbon */}
-        <div className="px-4 py-2.5 bg-black/30 border-b border-white/5 flex items-center justify-between text-[11px]">
-          <div className="flex items-center gap-2 text-slate-300">
+        <div className={`px-4 py-2.5 border-b flex items-center justify-between text-[11px] ${
+          theme === 'dark' ? 'bg-black/30 border-white/5' : 'bg-slate-100 border-slate-200'
+        }`}>
+          <div className={`flex items-center gap-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            <span className="font-mono text-[10px] text-emerald-400 font-semibold">Autonomous Core</span>
+            <span className="font-mono text-[10px] text-emerald-500 font-semibold">Autonomous Core</span>
           </div>
-          <span className="text-[10px] text-slate-400 font-mono">Agent Active</span>
+          <span className={`text-[10px] font-mono ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Agent Active</span>
         </div>
 
         {/* Main Navigation Links */}
@@ -158,13 +168,15 @@ const AppLayout = () => {
               `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all duration-200 group mb-2 ${
                 isActive 
                   ? 'bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white shadow-[0_0_20px_rgba(255,90,20,0.4)]' 
-                  : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+                  : theme === 'dark'
+                    ? 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`
             }
           >
             {({ isActive }) => (
               <>
-                <span className={`${isActive ? 'text-white' : 'text-slate-400 group-hover:text-[#FF7A45]'} transition-colors`}>
+                <span className={`${isActive ? 'text-white' : theme === 'dark' ? 'text-slate-400 group-hover:text-[#FF7A45]' : 'text-slate-500 group-hover:text-[#FF7A45]'} transition-colors`}>
                   <FolderKanban size={19} />
                 </span>
                 <span>Projects Hub</span>
@@ -180,13 +192,15 @@ const AppLayout = () => {
                 `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all duration-200 group mb-2 ${
                   isActive 
                     ? 'bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white shadow-[0_0_20px_rgba(255,90,20,0.4)]' 
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+                    : theme === 'dark'
+                      ? 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`
               }
             >
               {({ isActive }) => (
                 <>
-                  <span className={`${isActive ? 'text-white' : 'text-slate-400 group-hover:text-[#FF7A45]'} transition-colors`}>
+                  <span className={`${isActive ? 'text-white' : theme === 'dark' ? 'text-slate-400 group-hover:text-[#FF7A45]' : 'text-slate-500 group-hover:text-[#FF7A45]'} transition-colors`}>
                     <UserPlus size={19} />
                   </span>
                   <span>Add Stakeholder</span>
@@ -195,7 +209,7 @@ const AppLayout = () => {
             </NavLink>
           )}
 
-          <div className="border-t border-white/5 my-2"></div>
+          <div className={`border-t my-2 ${theme === 'dark' ? 'border-white/5' : 'border-slate-200'}`}></div>
 
           {navItems.map((item) => {
             const isDashboardMatch = item.path === '/dashboard' && (location.pathname.startsWith('/project/') || location.pathname.startsWith('/projects/'));
@@ -207,13 +221,15 @@ const AppLayout = () => {
                 `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all duration-200 group ${
                   (isActive || isDashboardMatch)
                     ? 'bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white shadow-[0_0_20px_rgba(255,90,20,0.4)]' 
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+                    : theme === 'dark'
+                      ? 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`
               }
             >
               {({ isActive }) => (
                 <>
-                  <span className={`${(isActive || isDashboardMatch) ? 'text-white' : 'text-slate-400 group-hover:text-[#FF7A45]'} transition-colors`}>
+                  <span className={`${(isActive || isDashboardMatch) ? 'text-white' : theme === 'dark' ? 'text-slate-400 group-hover:text-[#FF7A45]' : 'text-slate-500 group-hover:text-[#FF7A45]'} transition-colors`}>
                     {item.icon}
                   </span>
                   <span>{item.name}</span>
@@ -224,8 +240,10 @@ const AppLayout = () => {
           
           {/* Upload Data Link for PMO / PM */}
           {['Project Manager', 'PMO'].includes(user?.role) && (
-            <div className="pt-3 mt-3 border-t border-white/5">
-              <span className="px-3 text-[10px] uppercase tracking-wider text-slate-500 font-bold block mb-1">
+            <div className={`pt-3 mt-3 border-t ${theme === 'dark' ? 'border-white/5' : 'border-slate-200'}`}>
+              <span className={`px-3 text-[10px] uppercase tracking-wider font-bold block mb-1 ${
+                theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+              }`}>
                 Data Ops
               </span>
               <NavLink
@@ -234,7 +252,9 @@ const AppLayout = () => {
                   `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all duration-200 ${
                     isActive 
                       ? 'bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white shadow-[0_0_20px_rgba(255,90,20,0.4)]' 
-                      : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+                      : theme === 'dark'
+                        ? 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`
                 }
               >
@@ -246,8 +266,10 @@ const AppLayout = () => {
         </nav>
 
         {/* User Card & Logout Bottom Section */}
-        <div className="p-3.5 border-t border-white/10 bg-[#0E1320]/60">
-          <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/5 flex items-center justify-between mb-3">
+        <div className={`p-3.5 border-t ${theme === 'dark' ? 'border-white/10 bg-[#0E1320]/60' : 'border-slate-200 bg-slate-50'}`}>
+          <div className={`p-2.5 rounded-xl border flex items-center justify-between mb-3 ${
+            theme === 'dark' ? 'bg-white/[0.03] border-white/5' : 'bg-white border-slate-200 shadow-sm'
+          }`}>
             <div className="flex items-center gap-2.5 overflow-hidden">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FF5A14] to-[#E04808] flex items-center justify-center text-white font-bold text-xs shadow-md flex-shrink-0 tracking-wider">
                 {(() => {
@@ -259,7 +281,7 @@ const AppLayout = () => {
                 })()}
               </div>
               <div className="flex flex-col overflow-hidden">
-                <span className="text-xs font-bold text-white truncate" title={user?.name || user?.email}>
+                <span className={`text-xs font-bold truncate ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`} title={user?.name || user?.email}>
                   {user?.name || user?.email || 'User'}
                 </span>
                 <span className="text-[10px] text-[#FF7A45] font-semibold truncate">{user?.role}</span>
@@ -269,7 +291,11 @@ const AppLayout = () => {
 
           <button 
             onClick={handleLogout}
-            className="w-full py-2 px-3 rounded-xl bg-white/[0.04] hover:bg-red-500/20 text-xs font-semibold text-slate-300 hover:text-red-400 flex items-center justify-center gap-2 transition-colors border border-white/5"
+            className={`w-full py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-colors border ${
+              theme === 'dark'
+                ? 'bg-white/[0.04] hover:bg-red-500/20 text-slate-300 hover:text-red-400 border-white/5'
+                : 'bg-slate-100 hover:bg-red-50 text-slate-700 hover:text-red-600 border-slate-200'
+            }`}
           >
             <LogOut size={14} />
             <span>Log out</span>
@@ -391,7 +417,7 @@ const AppLayout = () => {
                       <div className="px-3 pt-2 pb-1 text-[10px] uppercase font-bold text-slate-400 tracking-wider border-t border-slate-100 dark:border-white/5">
                         Individual Projects
                       </div>
-                      <div className="max-h-56 overflow-y-auto py-1 space-y-1">
+                      <div className="max-h-56 overflow-y-auto no-scrollbar py-1 space-y-1">
                         {projects.map(p => {
                           const isSelected = !isAllProjects && (activeProject?.id === p.id || activeProject?.jira_key === p.jira_key);
                           return (

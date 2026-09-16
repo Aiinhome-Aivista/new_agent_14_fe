@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 :root {
+  color-scheme: light;
   --bg-app: #F1F5F9;
   --bg-card: #FFFFFF;
   --bg-card-hover: #F8FAFC;
@@ -18,6 +19,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --bg-app: #0B0F19;
   --bg-card: #131A29;
   --bg-card-hover: #182236;
@@ -36,10 +38,43 @@
   html {
     scroll-behavior: smooth;
   }
+  html.dark {
+    color-scheme: dark;
+  }
   body {
     background-color: var(--bg-app);
     color: var(--text-body);
     font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  }
+
+  /* Form Controls Color Scheme & Option Styling */
+  input, select, textarea {
+    color-scheme: light;
+  }
+
+  .dark input, 
+  .dark select, 
+  .dark textarea,
+  html.dark input,
+  html.dark select,
+  html.dark textarea {
+    color-scheme: dark;
+  }
+
+  select {
+    background-color: var(--bg-card);
+    color: var(--text-heading);
+  }
+
+  select option {
+    background-color: #FFFFFF;
+    color: #0F172A;
+  }
+
+  .dark select option,
+  html.dark select option {
+    background-color: #131A29 !important;
+    color: #F8FAFC !important;
   }
 }
 

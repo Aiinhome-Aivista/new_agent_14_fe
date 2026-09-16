@@ -249,7 +249,7 @@ const ProjectDrilldown = () => {
         {/* Back Button */}
         <button 
           onClick={() => navigate('/dashboard')}
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl theme-subtle border theme-border hover:border-[#FF5A14]/50 text-xs font-bold text-slate-300 hover:text-white transition-all self-start sm:self-auto cursor-pointer"
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl theme-subtle border theme-border hover:border-[#FF5A14]/50 text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all self-start sm:self-auto cursor-pointer"
         >
           <ArrowLeft size={13} className="text-[#FF5A14]" />
           <span>Back to Dashboard</span>
