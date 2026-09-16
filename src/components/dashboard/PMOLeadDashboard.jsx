@@ -68,7 +68,7 @@ const PMOLeadDashboard = ({
   const { projects = [], selectProject } = useProject();
 
   // PMO Scope Toggle: 'active' (selected project) vs 'portfolio' (all projects)
-  const [scopeMode, setScopeMode] = useState(activeProject ? 'active' : 'portfolio');
+  const scopeMode = 'active';
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'resources'
   const [activeDrilldown, setActiveDrilldown] = useState(null); // 'team' | 'budget' | 'deadline' | 'governance' | 'tasks' | 'phase'
   const [taskFilter, setTaskFilter] = useState('ALL');
@@ -175,7 +175,7 @@ const PMOLeadDashboard = ({
     );
   }
   // Ensure escalations stream is strictly scoped to the active project or portfolio
-  const isAllProjects = !activeProject || activeProject.id === 'all' || activeProject.jira_key === 'ALL';
+  const isAllProjects = false;
   const activePid = activeProject?.numeric_id || activeProject?.id;
   const projectEscalations = escalations.filter(esc => {
     if (isAllProjects || scopeMode === 'portfolio') return true;
@@ -195,7 +195,7 @@ const PMOLeadDashboard = ({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-base sm:text-lg font-black theme-heading">
-                {title}
+                {activeProject ? `${activeProject.name} Workspace` : title}
               </h3>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#FF5A14]/15 text-[#FF5A14] border border-[#FF5A14]/30">
                 {scopeMode === 'active' ? (activeProject?.jira_key || 'ACTIVE') : 'PORTFOLIO'}
@@ -207,31 +207,7 @@ const PMOLeadDashboard = ({
           </div>
         </div>
 
-        {/* Scope Selector Switch */}
         <div className="flex items-center gap-2 self-start md:self-auto">
-          <div className="p-1 rounded-xl theme-subtle border theme-border flex items-center gap-1">
-            <button
-              onClick={() => setScopeMode('portfolio')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                scopeMode === 'portfolio'
-                  ? 'bg-[#FF5A14] text-white shadow-md'
-                  : 'theme-muted hover:text-slate-100 hover:bg-white/5'
-              }`}
-            >
-              All Projects ({projects.length})
-            </button>
-            <button
-              onClick={() => setScopeMode('active')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                scopeMode === 'active'
-                  ? 'bg-[#FF5A14] text-white shadow-md'
-                  : 'theme-muted hover:text-slate-100 hover:bg-white/5'
-              }`}
-            >
-              Active: {activeProject?.jira_key || 'Project'}
-            </button>
-          </div>
-
           <Link
             to="/projects"
             className="px-3 py-1.5 rounded-xl border border-[#FF5A14]/30 hover:border-[#FF5A14] bg-[#FF5A14]/10 hover:bg-[#FF5A14]/20 text-[#FF5A14] text-xs font-bold transition-all flex items-center gap-1.5"
@@ -478,13 +454,13 @@ const PMOLeadDashboard = ({
           </div>
 
           <p className="text-xs theme-muted font-medium mb-3">
-            Critical/High: <strong className="text-red-400 font-bold">{projectRisks?.filter(r => r.severity === 'Critical' || r.severity === 'High').length || 0}</strong> • {escalations.length} Escalations
+            Critical/High: <strong className="text-red-400 font-bold">{projectRisks?.filter(r => r.severity === 'Critical' || r.severity === 'High').length ?? 0}</strong> • {escalations.length} Escalations
           </p>
 
           <div className="pt-2 border-t theme-border flex items-center justify-between text-[11px]">
             <span className="theme-muted font-medium">Risk Status:</span>
-            <span className={`px-2 py-0.5 rounded-md font-mono font-bold ${(projectRisks?.length || 0) > 0 ? 'bg-red-500/15 text-red-500' : 'bg-emerald-500/15 text-emerald-500'}`}>
-              {(projectRisks?.length || 0) > 0 ? 'Action Required' : 'All Clear'}
+            <span className="font-bold text-red-500">
+              {(projectRisks?.length ?? 0) > 0 ? 'Action Required' : 'All Clear'}
             </span>
           </div>
         </div>

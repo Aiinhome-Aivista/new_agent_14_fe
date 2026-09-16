@@ -203,8 +203,7 @@ const InvestorDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const isAll = !activeProject || activeProject.id === 'all' || activeProject.jira_key === 'ALL';
-      const targetPid = isAll ? 'all' : (activeProject.id || activeProject.jira_key);
+      const targetPid = activeProject ? (activeProject.id || activeProject.jira_key) : 1;
       const snapshot = await dashboardApi.getSnapshot(targetPid);
       setData(snapshot);
       setLastUpdated(new Date());
@@ -1046,9 +1045,13 @@ const renderProgramDirectorView = () => (
           </div>
 
           <h2 className={`${user?.role === 'Project Manager' ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-3xl'} font-black theme-heading tracking-tight`}>
-            {user?.role === 'Investor' ? 'Portfolio Capital & ROI Overview' : 
-             user?.role === 'Program Director' ? 'Multi-Program Governance Console' : 
-             user?.role === 'PMO' ? 'PMO Lead Command & Portfolio Governance Hub' : 'Project Execution & Velocity Dashboard'}
+            {activeProject ? (
+              `${activeProject.name} — Command Center`
+            ) : (
+              user?.role === 'Investor' ? 'Portfolio Capital & ROI Overview' : 
+              user?.role === 'Program Director' ? 'Multi-Program Governance Console' : 
+              user?.role === 'PMO' ? 'PMO Lead Command & Portfolio Governance Hub' : 'Project Execution & Velocity Dashboard'
+            )}
           </h2>
         </div>
 
