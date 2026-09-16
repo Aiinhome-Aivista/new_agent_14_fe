@@ -709,7 +709,16 @@ const PMOLeadDashboard = ({
               {projectEscalations.map((esc, idx) => {
                 const escId = esc.esc_id || esc.id || `ESC-${String(idx + 1).padStart(3, '0')}`;
                 const isRisk = (escId && escId.startsWith('R-')) || (esc.action && (esc.action.includes('Threat') || esc.action.includes('Risk') || esc.action.includes('Blocker')));
-                const targetUrl = isRisk ? `/risks?search=${escId}` : `/guardrails#${escId}`;
+                
+                let searchId = escId;
+                if (esc.action) {
+                  const rMatch = esc.action.match(/(R-\d+)/);
+                  if (rMatch) {
+                    searchId = rMatch[1];
+                  }
+                }
+                
+                const targetUrl = isRisk ? `/risks?search=${searchId}` : `/guardrails#${escId}`;
                 const timeDisplay = esc.created_at ? new Date(esc.created_at).toLocaleString() : (esc.time || 'Recent');
                 return (
                   <div 
