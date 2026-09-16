@@ -99,6 +99,25 @@ const GuardrailsPage = () => {
   const [aiSuggestions, setAiSuggestions] = useState([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [highlightedId, setHighlightedId] = useState(null);
+
+  useEffect(() => {
+    if (!loading && guardrailsData && window.location.hash) {
+      const targetId = window.location.hash.replace('#', '');
+      setHighlightedId(targetId);
+      const scrollTimer = setTimeout(() => {
+        const el = document.getElementById(targetId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 200);
+      const highlightTimer = setTimeout(() => setHighlightedId(null), 4500);
+      return () => {
+        clearTimeout(scrollTimer);
+        clearTimeout(highlightTimer);
+      };
+    }
+  }, [loading, guardrailsData]);
 
   const fetchAiSuggestions = async (refresh = false) => {
     try {
@@ -588,41 +607,79 @@ const GuardrailsPage = () => {
           </div>
         ) : (
           <div className="divide-y theme-border">
-            {approvalQueue.map((item) => (
-              <div key={item.id} className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold theme-heading text-sm">{item.action_type}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                      item.status === 'Pending' ? 'bg-amber-500/15 text-amber-500 border border-amber-500/30' :
-                      item.status === 'Approved' ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30' : 
-                      'bg-red-500/15 text-red-500 border border-red-500/30'
-                    }`}>
-                      {item.status}
-                    </span>
+            {approvalQueue.map((item) => {
+              const escId = item.esc_id || `ESC-${String(item.id).padStart(3, '0')}`;
+              const isHighlighted = highlightedId === escId;
+              let payloadObj = item.payload;
+              if (typeof payloadObj === 'string') {
+                try { payloadObj = JSON.parse(payloadObj); } catch (e) { payloadObj = {}; }
+              }
+              const escDetail = payloadObj?.escalation;
+              const escText = typeof escDetail === 'string' ? escDetail : (escDetail?.title || escDetail?.description || null);
 
-                    {item.payload?.jira_issue_key && (
-                      <a
-                        href={item.payload.jira_url || `https://dipakkrsaha44.atlassian.net/browse/${item.payload.jira_issue_key}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-500 border border-blue-500/30 hover:bg-blue-500/25 transition-all shadow-sm"
-                        title="View issue on Jira Cloud"
-                      >
-                        <ExternalLink size={10} />
-                        <span>Jira: {item.payload.jira_issue_key}</span>
-                      </a>
-                    )}
-                  </div>
-                  <p className="text-xs theme-muted">{item.reasoning || 'Automated escalation flag'}</p>
-                  <div className="text-[11px] theme-muted flex items-center gap-1 mt-1 font-mono">
-                    <Clock size={12} />
-                    Created: {item.created_at ? new Date(item.created_at).toLocaleString() : 'Recent'}
-                  </div>
-                </div>
+              return (
+                <div 
+                  key={item.id} 
+                  id={escId} 
+                  className={`py-4 px-3 rounded-2xl flex flex-col md:flex-row md:items-start justify-between gap-4 scroll-mt-24 transition-all duration-500 ${
+                    isHighlighted ? 'bg-[#FF5A14]/15 border-2 border-[#FF5A14] shadow-[0_0_25px_rgba(255,90,20,0.35)] scale-[1.01]' : ''
+                  }`}
+                >
+                      <div className="space-y-2 max-w-2xl">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono font-bold text-[#FF5A14] bg-[#FF5A14]/15 border border-[#FF5A14]/30 px-2 py-0.5 rounded text-xs shadow-sm">
+                            {escId}
+                          </span>
+                          <span className="font-bold theme-heading text-xs uppercase px-2 py-0.5 rounded bg-white/5 border theme-border tracking-wider text-slate-300">
+                            {item.action_type?.replace('_', ' ')}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                            item.status === 'Pending' ? 'bg-amber-500/15 text-amber-500 border border-amber-500/30' :
+                            item.status === 'Approved' ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30' : 
+                            'bg-red-500/15 text-red-500 border border-red-500/30'
+                          }`}>
+                            {item.status}
+                          </span>
 
-                {item.status === 'Pending' && ['PMO', 'Program Director', 'Project Manager', 'Admin'].includes(user?.role) && (
-                  <div className="flex items-center gap-2">
+                          {payloadObj?.jira_issue_key && (
+                            <a
+                              href={payloadObj.jira_url || `https://dipakkrsaha44.atlassian.net/browse/${payloadObj.jira_issue_key}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-500 border border-blue-500/30 hover:bg-blue-500/25 transition-all shadow-sm"
+                              title="View issue on Jira Cloud"
+                            >
+                              <ExternalLink size={10} />
+                              <span>Jira: {payloadObj.jira_issue_key}</span>
+                            </a>
+                          )}
+                        </div>
+
+                        {/* Prominent Escalation Issue Description */}
+                        {escText ? (
+                          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs font-semibold text-amber-100 flex items-start gap-2.5">
+                            <AlertTriangle size={16} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                            <div className="leading-relaxed">
+                              <span className="text-amber-400 font-bold block mb-0.5">Escalation Trigger Detected:</span>
+                              {escText}
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-xs font-medium text-slate-300">{item.reasoning || 'Automated escalation flag'}</p>
+                        )}
+
+                        <div className="flex flex-wrap items-center gap-3 text-xs theme-muted">
+                          <span>{item.reasoning || 'Autonomous PMO escalation gate'}</span>
+                          <span>•</span>
+                          <div className="text-[11px] flex items-center gap-1 font-mono">
+                            <Clock size={12} className="text-[#FF5A14]" />
+                            <span>Created: {item.created_at ? new Date(item.created_at).toLocaleString() : 'Recent'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                    {item.status === 'Pending' && ['PMO', 'Program Director', 'Project Manager', 'Admin'].includes(user?.role) && (
+                      <div className="flex items-center gap-2 flex-shrink-0 pt-1">
                     <button
                       type="button"
                       onClick={() => handleResolve(item.id, 'Approved')}
@@ -642,7 +699,8 @@ const GuardrailsPage = () => {
                   </div>
                 )}
               </div>
-            ))}
+            );
+          })}
           </div>
         )}
       </div>

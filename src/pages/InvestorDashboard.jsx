@@ -203,7 +203,9 @@ const InvestorDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const snapshot = await dashboardApi.getSnapshot(activeProject?.id || activeProject?.jira_key);
+      const isAll = !activeProject || activeProject.id === 'all' || activeProject.jira_key === 'ALL';
+      const targetPid = isAll ? 'all' : (activeProject.id || activeProject.jira_key);
+      const snapshot = await dashboardApi.getSnapshot(targetPid);
       setData(snapshot);
       setLastUpdated(new Date());
     } catch (err) {

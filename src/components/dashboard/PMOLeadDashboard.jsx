@@ -174,6 +174,15 @@ const PMOLeadDashboard = ({
       </div>
     );
   }
+  // Ensure escalations stream is strictly scoped to the active project or portfolio
+  const isAllProjects = !activeProject || activeProject.id === 'all' || activeProject.jira_key === 'ALL';
+  const activePid = activeProject?.numeric_id || activeProject?.id;
+  const projectEscalations = escalations.filter(esc => {
+    if (isAllProjects || scopeMode === 'portfolio') return true;
+    if (esc.project_id === undefined || esc.project_id === null) return true;
+    return String(esc.project_id) === String(activePid) || String(esc.project_id) === String(activeProject?.jira_key);
+  });
+
   return (
     <div className="space-y-6">
 
@@ -424,7 +433,7 @@ const PMOLeadDashboard = ({
           </div>
 
           <p className="text-xs theme-muted font-medium mb-3">
-            Audit Score: <strong className="text-emerald-400 font-bold">{governance.compliance_audit_score}%</strong> • {escalations.length} Active Escalations
+            Audit Score: <strong className="text-emerald-400 font-bold">{governance.compliance_audit_score}%</strong> • {projectEscalations.length} Active Escalations
           </p>
 
           {/* Gate status badge */}
@@ -705,14 +714,14 @@ const PMOLeadDashboard = ({
               <span>Active Governance Escalation Stream</span>
             </h4>
             <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-500 border border-amber-500/30">
-              {escalations.length} Flagged
+              {projectEscalations.length} Flagged
             </span>
           </div>
           <p className="text-xs theme-muted mb-4">
             Real-time supplier compliance breaches, SLA thresholds, and gate approval requests.
           </p>
 
-          {escalations.length === 0 ? (
+          {projectEscalations.length === 0 ? (
             <div className="py-8 text-center">
               <CheckCircle2 size={32} className="text-emerald-500 mx-auto mb-2" />
               <p className="text-xs theme-muted font-medium">
@@ -721,23 +730,34 @@ const PMOLeadDashboard = ({
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-64 overflow-y-auto pr-1">
-              {escalations.map((esc, idx) => {
-                const isRisk = (esc.id && esc.id.startsWith('R-')) || (esc.action && (esc.action.includes('Threat') || esc.action.includes('Risk') || esc.action.includes('Blocker')));
-                const targetUrl = isRisk ? `/risks?search=${esc.id}` : `/guardrails`;
+              {projectEscalations.map((esc, idx) => {
+                const escId = esc.esc_id || esc.id || `ESC-${String(idx + 1).padStart(3, '0')}`;
+                const isRisk = (escId && escId.startsWith('R-')) || (esc.action && (esc.action.includes('Threat') || esc.action.includes('Risk') || esc.action.includes('Blocker')));
+                const targetUrl = isRisk ? `/risks?search=${escId}` : `/guardrails#${escId}`;
+                const timeDisplay = esc.created_at ? new Date(esc.created_at).toLocaleString() : (esc.time || 'Recent');
                 return (
                   <div 
                     key={idx} 
                     onClick={() => navigate(targetUrl)}
                     className="p-3 rounded-xl theme-subtle border theme-border hover:border-[#FF5A14]/60 hover:bg-[#FF5A14]/5 transition-all flex justify-between items-center text-xs cursor-pointer group"
-                    title={`Click to drill down into ${esc.id} in ${isRisk ? 'Risk Register' : 'Guardrails'}`}
+                    title={`Click to drill down into ${escId} in ${isRisk ? 'Risk Register' : 'Guardrails'}`}
                   >
-                    <div className="flex items-center gap-2.5 truncate">
-                      <span className="font-bold text-[#FF5A14] font-mono group-hover:underline">{esc.id || `ESC-00${idx + 1}`}</span>
+                    <div className="flex items-center gap-2.5 truncate min-w-0 pr-2">
+                      <span className="font-bold text-[#FF5A14] font-mono group-hover:underline flex-shrink-0">{escId}</span>
+                      {(isAllProjects || scopeMode === 'portfolio') && esc.project_key && (
+                        <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-[#FF5A14]/15 text-[#FF7A45] border border-[#FF5A14]/30 flex-shrink-0 font-bold">
+                          [{esc.project_key}]
+                        </span>
+                      )}
                       <span className="font-medium theme-heading truncate group-hover:text-[#FF7A45]">{esc.action || esc.title || 'SLA Threshold Warning'}</span>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-[10px] theme-muted font-mono px-2 py-0.5 rounded theme-subtle border theme-border">
-                        {esc.time || 'Active'}
+                      <span 
+                        className="text-[10px] theme-muted font-mono px-2 py-0.5 rounded theme-subtle border theme-border flex items-center gap-1 whitespace-nowrap"
+                        title={esc.created_at ? `Created: ${new Date(esc.created_at).toLocaleString()}` : ''}
+                      >
+                        <Clock size={10} className="text-[#FF5A14]" />
+                        {timeDisplay}
                       </span>
                       <span className="text-[10px] font-bold text-[#FF5A14] opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
                         Investigate <ArrowRight size={11} />
