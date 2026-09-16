@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useProject } from '../context/ProjectContext';
 import { useToast } from '../context/ToastContext';
 import UploadPanel from '../components/ingestion/UploadPanel';
+import AccuracyWarningModal from '../components/ingestion/AccuracyWarningModal';
 import { ingestionApi } from '../api/ingestionApi';
 import { 
   FileText, 
@@ -86,6 +87,9 @@ const IngestionPage = () => {
   const [fetchError, setFetchError] = useState(null);
   const [selectedItemIds, setSelectedItemIds] = useState(new Set());
   const [ingesting, setIngesting] = useState(false);
+  const [checkingConnectorAccuracy, setCheckingConnectorAccuracy] = useState(false);
+  const [isConnectorAccuracyModalOpen, setIsConnectorAccuracyModalOpen] = useState(false);
+  const [connectorAccuracyData, setConnectorAccuracyData] = useState(null);
 
   const fetchHistory = async () => {
     try {
@@ -172,17 +176,48 @@ const IngestionPage = () => {
     }
   };
 
-  const handleIngestSelected = async () => {
+  const handleInitiateConnectorIngest = async () => {
     if (selectedItemIds.size === 0) {
       showToast("Please select at least one item to ingest.", "warning");
       return;
     }
     const itemsToIngest = connectorItems.filter(item => selectedItemIds.has(item.id));
+    
+    try {
+      setCheckingConnectorAccuracy(true);
+      const res = await ingestionApi.checkConnectorAccuracy(itemsToIngest, activeProject?.id, selectedProvider);
+      
+      if (res && res.success) {
+        if (res.passed) {
+          showToast(`Scope Accuracy Check Passed: ${res.match_percentage}% match! Ingesting...`, 'success');
+          await executeConnectorIngest(itemsToIngest);
+        } else {
+          setConnectorAccuracyData(res);
+          setIsConnectorAccuracyModalOpen(true);
+        }
+      } else {
+        await executeConnectorIngest(itemsToIngest);
+      }
+    } catch (err) {
+      console.warn("Connector accuracy pre-check failed, proceeding with direct ingest:", err);
+      await executeConnectorIngest(itemsToIngest);
+    } finally {
+      setCheckingConnectorAccuracy(false);
+    }
+  };
+
+  const executeConnectorIngest = async (itemsToIngest, isOverride = false) => {
     try {
       setIngesting(true);
       const res = await ingestionApi.ingestConnectorItems(selectedProvider, itemsToIngest, activeProject?.id);
-      showToast(res.message || `Successfully ingested ${itemsToIngest.length} items into Vector Store!`, "success");
+      if (isOverride) {
+        showToast(`Ingested ${itemsToIngest.length} items with low accuracy override (${connectorAccuracyData?.match_percentage || 0}%).`, "warning");
+      } else {
+        showToast(res.message || `Successfully ingested ${itemsToIngest.length} items into Vector Store!`, "success");
+      }
       setSelectedItemIds(new Set());
+      setIsConnectorAccuracyModalOpen(false);
+      setConnectorAccuracyData(null);
       fetchHistory();
     } catch (err) {
       console.error("Connector ingestion failed:", err);
@@ -503,11 +538,16 @@ const IngestionPage = () => {
                       {/* Action Button: Ingest & Vectorize Selected */}
                       <button
                         type="button"
-                        onClick={handleIngestSelected}
-                        disabled={ingesting || selectedItemIds.size === 0}
+                        onClick={handleInitiateConnectorIngest}
+                        disabled={ingesting || checkingConnectorAccuracy || selectedItemIds.size === 0}
                         className="w-full py-2.5 px-4 bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] hover:brightness-110 text-white rounded-xl text-xs font-bold shadow-md flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
                       >
-                        {ingesting ? (
+                        {checkingConnectorAccuracy ? (
+                          <>
+                            <Loader2 size={15} className="animate-spin" />
+                            <span>Auditing Scope Accuracy...</span>
+                          </>
+                        ) : ingesting ? (
                           <>
                             <Loader2 size={15} className="animate-spin" />
                             <span>Partitioning & Vectorizing into ChromaDB...</span>
@@ -612,6 +652,16 @@ const IngestionPage = () => {
                     </div>
 
                     <div className="flex items-center gap-2 flex-shrink-0 self-end sm:self-center">
+                      {doc.accuracy_score !== undefined && doc.accuracy_score !== null && (
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold border font-mono ${
+                          doc.accuracy_score >= 70 
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25' 
+                            : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25'
+                        }`}>
+                          <span>{doc.accuracy_score}% Match</span>
+                        </span>
+                      )}
+
                       {doc.risks_detected !== undefined && (
                         <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border ${
                           doc.risks_detected > 0 
@@ -635,6 +685,18 @@ const IngestionPage = () => {
         </div>
 
       </div>
+
+      {/* Accuracy Warning / Confirmation Modal for Connectors */}
+      <AccuracyWarningModal
+        isOpen={isConnectorAccuracyModalOpen}
+        onClose={() => setIsConnectorAccuracyModalOpen(false)}
+        onConfirm={() => {
+          const itemsToIngest = connectorItems.filter(item => selectedItemIds.has(item.id));
+          executeConnectorIngest(itemsToIngest, true);
+        }}
+        accuracyData={connectorAccuracyData}
+        isProcessing={ingesting}
+      />
     </div>
   );
 };

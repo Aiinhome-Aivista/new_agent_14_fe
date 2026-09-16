@@ -7,23 +7,26 @@ export const ingestionApi = {
     if (metadata.uploaded_by) formData.append('uploaded_by', metadata.uploaded_by);
     if (metadata.uploaded_by_role) formData.append('uploaded_by_role', metadata.uploaded_by_role);
     if (metadata.project_id) formData.append('project_id', metadata.project_id);
+    if (metadata.accuracy_score !== undefined) formData.append('accuracy_score', metadata.accuracy_score);
     
     // Smooth progress representation reflecting multi-agent LLM analysis
     if (onProgress) {
-        let p = 5;
+        let p = 12;
         onProgress(p);
         const interval = setInterval(() => {
-            if (p < 30) {
-                p += 3;
-            } else if (p < 65) {
-                p += 1.5;
-            } else if (p < 85) {
-                p += 0.8;
-            } else if (p < 96) {
-                p += 0.3;
+            if (p < 40) {
+                p += 3.5;
+            } else if (p < 70) {
+                p += 1.8;
+            } else if (p < 88) {
+                p += 0.9;
+            } else if (p < 98) {
+                p += 0.4;
+            } else if (p < 99.4) {
+                p += 0.1;
             }
-            onProgress(Math.min(Math.round(p), 96));
-        }, 1500);
+            onProgress(Math.min(Math.round(p), 99));
+        }, 1000);
         
         try {
             const response = await api.post('/ingestion/upload', formData, {
@@ -61,6 +64,20 @@ export const ingestionApi = {
   ingestConnectorItems: async (provider, items, projectId = null) => {
     const payload = { provider, items, ...(projectId ? { project_id: projectId } : {}) };
     const response = await api.post('/ingestion/connectors/ingest', payload);
+    return response.data;
+  },
+  checkAccuracy: async (file, projectId = null) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (projectId) formData.append('project_id', projectId);
+    const response = await api.post('/ingestion/check-accuracy', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
+  },
+  checkConnectorAccuracy: async (items, projectId = null, provider = 'connector') => {
+    const payload = { items, project_id: projectId, provider };
+    const response = await api.post('/ingestion/check-connector-accuracy', payload);
     return response.data;
   }
 };
