@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useProject } from '../context/ProjectContext';
@@ -36,7 +36,8 @@ import {
   Bot,
   Zap,
   CheckCircle2,
-  Cpu
+  Cpu,
+  Users
 } from 'lucide-react';
 
 const InvestorDashboard = () => {
@@ -748,154 +749,21 @@ const InvestorDashboard = () => {
   // ==========================================
   // 3. PROGRAM DIRECTOR VIEW
   // ==========================================
-  const renderProgramDirectorView = () => (
-    <div className="space-y-8">
-      {/* 3 Executive Stat Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div 
-          onClick={() => navigate('/projects')}
-          className="p-6 rounded-2xl theme-card cursor-pointer hover:border-[#FF5A14]/60 hover:shadow-lg group transition-all"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="text-xs font-bold theme-muted uppercase tracking-wider">Cross-Project Status</h4>
-            <span className="text-[10px] font-mono text-[#FF5A14] font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
-              Projects Hub →
-            </span>
-          </div>
-          <div className="text-2xl sm:text-3xl font-black theme-heading flex items-center gap-2 group-hover:text-[#FF7A45] transition-colors">
-            <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
-            {crossProjectStatus}
-          </div>
-        </div>
-
-        <div 
-          onClick={() => navigate(activeProject?.id ? `/project/${activeProject.id}` : '/projects')}
-          className="p-6 rounded-2xl theme-card cursor-pointer hover:border-[#FF5A14]/60 hover:shadow-lg group transition-all"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="text-xs font-bold theme-muted uppercase tracking-wider">Schedule Variance</h4>
-            <span className="text-[10px] font-mono text-[#FF5A14] font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
-              Program Details →
-            </span>
-          </div>
-          <div className={`text-2xl sm:text-3xl font-black ${scheduleVariance.includes('-') ? 'text-red-500' : 'text-emerald-500'}`}>
-            {scheduleVariance}
-          </div>
-        </div>
-
-        <div 
-          onClick={() => navigate(activeProject?.id ? `/project/${activeProject.id}` : '/projects')}
-          className="p-6 rounded-2xl theme-card cursor-pointer hover:border-[#FF5A14]/60 hover:shadow-lg group transition-all"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="text-xs font-bold theme-muted uppercase tracking-wider">Total Budget Burn</h4>
-            <span className="text-[10px] font-mono text-[#FF5A14] font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
-              Financials →
-            </span>
-          </div>
-          <div className="text-2xl sm:text-3xl font-black text-[#FF5A14]">
-            {totalBudgetBurn}
-          </div>
-        </div>
-      </div>
-
-      {/* Showstoppers & Blockers Table */}
-      <div className="p-6 rounded-2xl theme-card">
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h3 className="text-base font-bold theme-heading">Active Showstoppers & Delivery Blockers</h3>
-            <p className="text-xs theme-muted">Autonomous blocker detection across Jira epics and vendor rate cards (Click to drill down)</p>
-          </div>
-          <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">
-            {showstoppers.length} Flagged
-          </span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-xs whitespace-nowrap">
-            <thead className="uppercase tracking-wider border-b border-slate-200 dark:border-white/10 theme-muted font-bold">
-              <tr>
-                <th className="px-5 py-3">Risk ID</th>
-                <th className="px-5 py-3">Description</th>
-                <th className="px-5 py-3">Severity</th>
-                <th className="px-5 py-3 text-right">Drilldown</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y theme-border">
-              {showstoppers.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-5 py-4 text-center theme-muted italic">
-                    No critical showstoppers detected across portfolio.
-                  </td>
-                </tr>
-              ) : (
-                showstoppers.map((item, idx) => (
-                  <tr 
-                    key={idx} 
-                    onClick={() => navigate(`/risks?search=${item.id}`)}
-                    className="theme-subtle-hover transition-colors cursor-pointer group"
-                    title={`Drill down into exact risk ${item.id} in Risk Register`}
-                  >
-                    <td className="px-5 py-3.5 font-mono font-bold text-[#FF5A14] group-hover:underline">{item.id}</td>
-                    <td className="px-5 py-3.5 font-medium theme-heading group-hover:text-[#FF7A45]">{item.title}</td>
-                    <td className="px-5 py-3.5">
-                      <span className="px-2.5 py-1 bg-red-500/15 text-red-500 border border-red-500/30 rounded-full text-[10px] font-bold uppercase">
-                        {item.impact || 'CRITICAL'}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-right">
-                      <span className="text-xs font-bold text-[#FF5A14] group-hover:underline inline-flex items-center gap-1">
-                        Investigate Issue <ArrowRight size={12} />
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* RECENT 5 PROJECT RISKS & THREAT REGISTER */}
-      <ProjectThreatRegister
-        risks={projectRisks}
-        activeProject={activeProject}
-        totalCount={totalProjectRisks}
-        maxDisplay={5}
-      />
-
-      {/* Portfolio Projects Drilldown Grid */}
-      <div className="p-6 rounded-2xl theme-card">
-        <h3 className="text-base font-bold theme-heading mb-4">
-          Supervised Program Engagements
-        </h3>
-        {data?.projects && data.projects.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {data.projects.map((proj) => (
-              <Link
-                key={proj.id}
-                to={`/project/${proj.id}`}
-                className="p-4 rounded-xl border theme-border hover:border-[#FF5A14] theme-subtle hover:bg-[#FF5A14]/5 transition-all flex items-center justify-between group"
-              >
-                <div>
-                  <div className="font-bold theme-heading text-sm group-hover:text-[#FF7A45] transition-colors">
-                    {proj.id}: {proj.name}
-                  </div>
-                  <div className="text-xs theme-muted mt-1">
-                    {proj.budget_summary} • Status: <span className="text-emerald-500 font-bold">{proj.status}</span>
-                  </div>
-                </div>
-                <ExternalLink size={16} className="text-[#FF5A14] group-hover:translate-x-0.5 transition-transform" />
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div className="p-4 rounded-xl theme-card text-xs theme-muted italic text-center">
-            No projects loaded
-          </div>
-        )}
-      </div>
-    </div>
+const renderProgramDirectorView = () => (
+    <PMOLeadDashboard
+      title="Multi-Program Governance Console"
+      data={data}
+      risks={risks}
+      escalations={escalations}
+      activeProject={activeProject}
+      selectedUploadProjectId={selectedUploadProjectId}
+      setSelectedUploadProjectId={setSelectedUploadProjectId}
+      handleFileUpload={handleFileUpload}
+      uploadingDoc={uploadingDoc}
+      uploadProgress={uploadProgress}
+      fileInputRef={fileInputRef}
+      onRefresh={fetchDashboardData}
+    />
   );
 
   // ==========================================
@@ -1064,6 +932,87 @@ const InvestorDashboard = () => {
 
       </div>
 
+      {/* 3. LEVEL 4: ROLE-WISE RESOURCE AGGREGATION & TEAM CONTRIBUTORS SECTION */}
+      <div className="p-5 sm:p-6 rounded-2xl theme-card border border-[#FF5A14]/20 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b theme-border">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-[#FF5A14]/15 text-[#FF5A14]">
+              <Users size={18} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm sm:text-base font-extrabold theme-heading">TEAM & CONTRIBUTORS</h3>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#FF5A14]/15 text-[#FF5A14] border border-[#FF5A14]/30 font-bold uppercase">
+                  Level 4 Drilldown
+                </span>
+              </div>
+              <p className="text-xs theme-muted">Project engineering disciplines & contributor allocations (Click role to view team members)</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-mono font-bold text-emerald-400 flex items-center gap-1.5">
+              <CheckCircle2 size={13} />
+              <span>Total Resources: {data?.pmo_metrics?.headcount?.total || 8}</span>
+            </span>
+            <button
+              onClick={() => {
+                const targetPid = activeProject?.numeric_id || activeProject?.id || '1';
+                navigate(`/project/${targetPid}/team-members`);
+              }}
+              className="text-xs font-bold text-[#FF5A14] hover:underline inline-flex items-center gap-1 cursor-pointer"
+            >
+              <span>View All Team</span>
+              <ArrowRight size={12} />
+            </button>
+          </div>
+        </div>
+
+        {/* Role Distribution Tiles */}
+        {(!data?.pmo_metrics?.headcount?.roles || data.pmo_metrics.headcount.roles.length === 0) ? (
+          <div className="py-6 text-center text-xs theme-muted italic w-full">
+            No team members currently allocated to this workspace.
+          </div>
+        ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pt-1">
+          {data.pmo_metrics.headcount.roles.map((roleItem, rIdx) => {
+            const targetPid = activeProject?.numeric_id || activeProject?.id || '1';
+            const targetUrl = `/project/${targetPid}/team-members?role=${encodeURIComponent(roleItem.role)}`;
+            return (
+              <Link
+                key={rIdx}
+                to={targetUrl}
+                className="p-3.5 rounded-xl theme-subtle border theme-border hover:border-[#FF5A14]/60 hover:bg-[#FF5A14]/5 transition-all cursor-pointer group flex flex-col justify-between block text-inherit no-underline"
+                title={`Drill down into ${roleItem.role} team members`}
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span 
+                      className="w-2.5 h-2.5 rounded-full"
+                      style={{ backgroundColor: roleItem.color || '#FF5A14' }}
+                    ></span>
+                    <span className="text-[10px] font-mono font-bold theme-muted">
+                      {roleItem.allocation_pct}%
+                    </span>
+                  </div>
+                  <h4 className="text-xs font-bold theme-heading group-hover:text-[#FF7A45] transition-colors truncate" title={roleItem.role}>
+                    {roleItem.role}
+                  </h4>
+                </div>
+
+                <div className="pt-2.5 mt-2 border-t theme-border flex items-center justify-between">
+                  <span className="text-base font-black theme-heading font-mono">
+                    {roleItem.count} <span className="text-[10px] font-normal theme-muted font-sans">{roleItem.count === 1 ? 'Resource' : 'Resources'}</span>
+                  </span>
+                  <ArrowRight size={12} className="text-[#FF5A14] opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+        )}
+      </div>
+
       {/* RECENT 5 PROJECT RISKS & THREAT REGISTER */}
       <ProjectThreatRegister
         risks={projectRisks}
@@ -1074,6 +1023,10 @@ const InvestorDashboard = () => {
 
     </div>
   );
+
+  if (user?.role === 'Project Manager') {
+    return <Navigate to={`/project/${activeProject?.jira_key || activeProject?.id || 'PRJ-014'}`} replace />;
+  }
 
   return (
     <div className={`py-1 ${user?.role === 'Project Manager' ? 'space-y-3 sm:space-y-3.5' : 'space-y-6'}`}>

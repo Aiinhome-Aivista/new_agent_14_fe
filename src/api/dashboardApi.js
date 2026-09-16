@@ -27,5 +27,29 @@ export const dashboardApi = {
         }
     }
     return payload;
+  },
+  getProjectTeam: async (projectId) => {
+    const response = await api.get(`/dashboard/projects/${projectId}/team`);
+    let payload = response.data;
+    if (typeof payload === 'string') {
+      try {
+        payload = JSON.parse(payload);
+      } catch (e) {
+        console.error("Failed to parse project team string", e);
+      }
+    }
+    return payload;
+  },
+  getResourceDetail: async (projectId, resourceId) => {
+    const response = await api.get(`/dashboard/projects/${projectId}/team/${resourceId}`);
+    let payload = response.data;
+    if (typeof payload === 'string') {
+      try {
+        payload = JSON.parse(payload);
+      } catch (e) {
+        console.error("Failed to parse resource detail string", e);
+      }
+    }
+    return payload;
   }
 };

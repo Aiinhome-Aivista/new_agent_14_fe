@@ -13,6 +13,8 @@ import LoginPage from './pages/LoginPage';
 import ProjectsPage from './pages/ProjectsPage';
 import InvestorDashboard from './pages/InvestorDashboard';
 import ProjectDrilldown from './pages/ProjectDrilldown';
+import TeamMembersPage from './pages/TeamMembersPage';
+import ResourceDetailPage from './pages/ResourceDetailPage';
 import ChatPage from './pages/ChatPage';
 import ReportsPage from './pages/ReportsPage';
 import IngestionPage from './pages/IngestionPage';
@@ -42,6 +44,11 @@ function App() {
                   <Route path="/projects" element={<ProjectsPage />} />
                   <Route path="/dashboard" element={<InvestorDashboard />} />
                   <Route path="/project/:id" element={<ProjectDrilldown />} />
+                  <Route path="/projects/:id" element={<ProjectDrilldown />} />
+                  <Route path="/project/:id/team-members" element={<TeamMembersPage />} />
+                  <Route path="/projects/:id/team-members" element={<TeamMembersPage />} />
+                  <Route path="/project/:id/team-members/:resourceId" element={<ResourceDetailPage />} />
+                  <Route path="/projects/:id/team-members/:resourceId" element={<ResourceDetailPage />} />
                   <Route path="/chat" element={<ChatPage />} />
                 
                 {/* Knowledge & RAG: Investor, Program Director, PMO */}

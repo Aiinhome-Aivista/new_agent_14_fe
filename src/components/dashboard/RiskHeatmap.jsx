@@ -7,7 +7,7 @@ const RiskHeatmap = ({ data }) => {
     if (!inputData || inputData.length === 0) {
       return [
         { label: 'Critical', color: 'bg-red-500/80 hover:bg-red-500 text-white shadow-[0_0_10px_rgba(239,68,68,0.4)]', items: ['RSK-401 Cloud Outage', 'RSK-402 SLA Breach'] },
-        { label: 'High', color: 'bg-amber-500/80 hover:bg-amber-500 text-white shadow-[0_0_10px_rgba(245,158,11,0.3)]', items: ['RSK-301 Rate Limit', 'RSK-302 Key Personnel', 'RSK-303 Scope Drift'] },
+        { label: 'High', color: 'bg-orange-500/80 hover:bg-orange-500 text-white shadow-[0_0_10px_rgba(245,158,11,0.3)]', items: ['RSK-301 Rate Limit', 'RSK-302 Key Personnel', 'RSK-303 Scope Drift'] },
         { label: 'Medium', color: 'bg-yellow-500/80 hover:bg-yellow-500 text-slate-900', items: ['RSK-201 API Latency', 'RSK-202 Token Overrun'] },
         { label: 'Low', color: 'bg-emerald-500/70 hover:bg-emerald-500 text-white', items: ['RSK-101 Documentation', 'RSK-102 Minor Patch', 'RSK-103 Timezone Lag'] }
       ];
@@ -15,7 +15,16 @@ const RiskHeatmap = ({ data }) => {
 
     // If inputData is already in grouped format [{ label, items }]
     if (inputData[0]?.label && Array.isArray(inputData[0]?.items)) {
-      return inputData;
+      const colorMap = {
+        'Critical': 'bg-red-500/80 hover:bg-red-500 text-white shadow-[0_0_10px_rgba(239,68,68,0.4)]',
+        'High': 'bg-orange-500/80 hover:bg-orange-500 text-white shadow-[0_0_10px_rgba(245,158,11,0.3)]',
+        'Medium': 'bg-yellow-500/80 hover:bg-yellow-500 text-slate-900',
+        'Low': 'bg-emerald-500/70 hover:bg-emerald-500 text-white'
+      };
+      return inputData.map(row => ({
+        ...row,
+        color: colorMap[row.label] || row.color
+      }));
     }
 
     // If inputData is an array of individual risk objects: [{ id, severity, title, ... }]
@@ -43,7 +52,7 @@ const RiskHeatmap = ({ data }) => {
 
     return [
       { label: 'Critical', color: 'bg-red-500/80 hover:bg-red-500 text-white shadow-[0_0_10px_rgba(239,68,68,0.4)]', items: critItems },
-      { label: 'High', color: 'bg-amber-500/80 hover:bg-amber-500 text-white shadow-[0_0_10px_rgba(245,158,11,0.3)]', items: highItems },
+      { label: 'High', color: 'bg-orange-500/80 hover:bg-orange-500 text-white shadow-[0_0_10px_rgba(245,158,11,0.3)]', items: highItems },
       { label: 'Medium', color: 'bg-yellow-500/80 hover:bg-yellow-500 text-slate-900', items: medItems },
       { label: 'Low', color: 'bg-emerald-500/70 hover:bg-emerald-500 text-white', items: lowItems }
     ];

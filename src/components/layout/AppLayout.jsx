@@ -173,13 +173,15 @@ const AppLayout = () => {
 
           <div className="border-t border-white/5 my-2"></div>
 
-          {navItems.map((item) => (
+          {navItems.map((item) => {
+            const isDashboardMatch = item.path === '/dashboard' && (location.pathname.startsWith('/project/') || location.pathname.startsWith('/projects/'));
+            return (
             <NavLink
               key={item.name}
               to={item.path}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all duration-200 group ${
-                  isActive 
+                  (isActive || isDashboardMatch)
                     ? 'bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white shadow-[0_0_20px_rgba(255,90,20,0.4)]' 
                     : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
                 }`
@@ -187,14 +189,14 @@ const AppLayout = () => {
             >
               {({ isActive }) => (
                 <>
-                  <span className={`${isActive ? 'text-white' : 'text-slate-400 group-hover:text-[#FF7A45]'} transition-colors`}>
+                  <span className={`${(isActive || isDashboardMatch) ? 'text-white' : 'text-slate-400 group-hover:text-[#FF7A45]'} transition-colors`}>
                     {item.icon}
                   </span>
                   <span>{item.name}</span>
                 </>
               )}
             </NavLink>
-          ))}
+          )})}
           
           {/* Upload Data Link for PMO / PM */}
           {['Project Manager', 'PMO'].includes(user?.role) && (
