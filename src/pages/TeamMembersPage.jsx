@@ -199,7 +199,25 @@ const TeamMembersPage = () => {
           <ChevronRight size={13} className="text-slate-500 dark:text-slate-600 flex-shrink-0" />
 
           <Link 
-            to={`/project/${project.id || targetPid}`}
+            to="/projects" 
+            className="hover:text-[#FF5A14] transition-colors"
+          >
+            Projects Hub
+          </Link>
+
+          <ChevronRight size={13} className="text-slate-500 dark:text-slate-600 flex-shrink-0" />
+
+          <Link 
+            to="/dashboard" 
+            className="hover:text-[#FF5A14] transition-colors"
+          >
+            Dashboard
+          </Link>
+
+          <ChevronRight size={13} className="text-slate-500 dark:text-slate-600 flex-shrink-0" />
+
+          <Link 
+            to={`/project/${project.id || targetPid}?tab=team`}
             className="hover:text-[#FF5A14] transition-colors font-mono"
             title={`Return to Project Dashboard for ${project.jira_key || targetPid}`}
           >
@@ -225,7 +243,7 @@ const TeamMembersPage = () => {
 
         {/* Back Button */}
         <button 
-          onClick={() => navigate(`/project/${project.id || targetPid}`)}
+          onClick={() => navigate(`/project/${project.id || targetPid}?tab=team`)}
           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl theme-subtle border theme-border hover:border-[#FF5A14]/50 text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all self-start sm:self-auto cursor-pointer"
         >
           <ArrowLeft size={13} className="text-[#FF5A14]" />
