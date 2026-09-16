@@ -240,6 +240,15 @@ const ProjectDrilldown = () => {
 
           <ChevronRight size={13} className="text-slate-500 dark:text-slate-600 flex-shrink-0" />
 
+          <Link 
+            to="/dashboard" 
+            className="hover:text-[#FF5A14] transition-colors"
+          >
+            Dashboard
+          </Link>
+
+          <ChevronRight size={13} className="text-slate-500 dark:text-slate-600 flex-shrink-0" />
+
           <span className="text-[#FF5A14] font-bold font-mono flex items-center gap-1.5">
             <span>[{projectKey}]</span>
             <span className="theme-heading font-sans font-bold">{data.name}</span>
