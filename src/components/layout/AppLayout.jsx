@@ -355,7 +355,7 @@ const AppLayout = () => {
                 );
               }
 
-              const isAllProjects = !activeProject || activeProject.id === 'all' || activeProject.jira_key === 'ALL';
+              const isAllProjects = false;
               return (
                 <div className="relative" ref={projectDropdownRef}>
                   <button
@@ -388,29 +388,6 @@ const AppLayout = () => {
                         <span className="text-[10px] font-mono text-[#FF7A45] font-semibold">
                           {projects.length} Projects
                         </span>
-                      </div>
-
-                      {/* Portfolio Level Option */}
-                      <div className="pt-2 pb-1">
-                        <button
-                          onClick={() => {
-                            selectProject('all');
-                            setIsProjectDropdownOpen(false);
-                          }}
-                          className={`w-full px-3 py-2 rounded-xl text-left text-xs flex items-center justify-between transition-colors cursor-pointer ${
-                            isAllProjects 
-                              ? 'bg-[#FF5A14]/15 text-[#FF7A45] font-bold border border-[#FF5A14]/30' 
-                              : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.05]'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 truncate pr-2">
-                            <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-orange-500/20 text-[#FF5A14] font-extrabold">
-                              [ALL]
-                            </span>
-                            <span className="font-bold">All Projects (Portfolio View)</span>
-                          </div>
-                          {isAllProjects && <Check size={14} className="text-[#FF5A14] flex-shrink-0" />}
-                        </button>
                       </div>
 
                       {/* Individual Projects List */}

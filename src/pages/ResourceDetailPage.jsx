@@ -133,7 +133,25 @@ const ResourceDetailPage = () => {
           <ChevronRight size={13} className="text-slate-500 dark:text-slate-600 flex-shrink-0" />
 
           <Link 
-            to={`/project/${project.id || targetPid}`}
+            to="/projects" 
+            className="hover:text-[#FF5A14] transition-colors"
+          >
+            Projects Hub
+          </Link>
+
+          <ChevronRight size={13} className="text-slate-500 dark:text-slate-600 flex-shrink-0" />
+
+          <Link 
+            to="/dashboard" 
+            className="hover:text-[#FF5A14] transition-colors"
+          >
+            Dashboard
+          </Link>
+
+          <ChevronRight size={13} className="text-slate-500 dark:text-slate-600 flex-shrink-0" />
+
+          <Link 
+            to={`/project/${project.id || targetPid}?tab=team`}
             className="hover:text-[#FF5A14] transition-colors font-mono"
             title={`Return to Project Dashboard for ${project.jira_key || targetPid}`}
           >

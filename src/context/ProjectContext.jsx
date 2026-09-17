@@ -2,16 +2,12 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { projectApi } from '../api/projectApi';
 import { useAuth } from './AuthContext';
 
-export const ALL_PROJECTS_CONTEXT = {
-  id: 'all',
-  name: 'All Projects (Portfolio View)',
-  jira_key: 'ALL'
-};
+
 
 const ProjectContext = createContext(null);
 
 export const ProjectProvider = ({ children }) => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [projects, setProjects] = useState([]);
   const [activeProject, setActiveProject] = useState(() => {
     try {
@@ -19,7 +15,7 @@ export const ProjectProvider = ({ children }) => {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed?.id === 'all' || parsed?.jira_key === 'ALL') {
-          return ALL_PROJECTS_CONTEXT;
+          return null; // Don't return 'all' project context anymore
         }
         return parsed;
       }
@@ -45,17 +41,13 @@ export const ProjectProvider = ({ children }) => {
           localStorage.removeItem('vpm_active_project');
           return null;
         }
-        if (prev && (prev.id === 'all' || prev.jira_key === 'ALL')) {
-          localStorage.setItem('vpm_active_project', JSON.stringify(ALL_PROJECTS_CONTEXT));
-          return ALL_PROJECTS_CONTEXT;
-        }
         if (!prev && list.length > 0) {
           const defaultProj = list[0];
           localStorage.setItem('vpm_active_project', JSON.stringify(defaultProj));
           return defaultProj;
         }
         if (prev && list.length > 0) {
-          const matched = list.find(p => p.id === prev.id || p.jira_key === prev.jira_key);
+          const matched = list.find(p => String(p.id) === String(prev.id) || String(p.jira_key) === String(prev.jira_key));
           if (matched) {
             localStorage.setItem('vpm_active_project', JSON.stringify(matched));
             return matched;
@@ -78,6 +70,7 @@ export const ProjectProvider = ({ children }) => {
   }, [user]);
 
   useEffect(() => {
+    if (authLoading) return; // Do not clear state while auth is determining session
     if (user) {
       refreshProjects();
     } else {
@@ -85,12 +78,12 @@ export const ProjectProvider = ({ children }) => {
       setActiveProject(null);
       localStorage.removeItem('vpm_active_project');
     }
-  }, [user, refreshProjects]);
+  }, [user, authLoading, refreshProjects]);
 
   const selectProject = (projectOrId) => {
     let target = null;
-    if (!projectOrId || projectOrId === 'all' || (typeof projectOrId === 'object' && (projectOrId.id === 'all' || projectOrId.jira_key === 'ALL'))) {
-      target = ALL_PROJECTS_CONTEXT;
+    if (!projectOrId || (typeof projectOrId === 'object' && (projectOrId.id === 'all' || projectOrId.jira_key === 'ALL'))) {
+      target = projects.length > 0 ? projects[0] : null;
     } else if (typeof projectOrId === 'object' && projectOrId !== null) {
       target = projectOrId;
     } else {

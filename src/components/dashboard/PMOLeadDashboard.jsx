@@ -12,7 +12,8 @@ import {
   Area,
   XAxis,
   YAxis,
-  CartesianGrid
+  CartesianGrid,
+  ReferenceLine
 } from 'recharts';
 import {
   Users,
@@ -68,7 +69,7 @@ const PMOLeadDashboard = ({
   const { projects = [], selectProject } = useProject();
 
   // PMO Scope Toggle: 'active' (selected project) vs 'portfolio' (all projects)
-  const [scopeMode, setScopeMode] = useState(activeProject ? 'active' : 'portfolio');
+  const scopeMode = 'active';
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'resources'
   const [activeDrilldown, setActiveDrilldown] = useState(null); // 'team' | 'budget' | 'deadline' | 'governance' | 'tasks' | 'phase'
   const [taskFilter, setTaskFilter] = useState('ALL');
@@ -174,6 +175,15 @@ const PMOLeadDashboard = ({
       </div>
     );
   }
+  // Ensure escalations stream is strictly scoped to the active project or portfolio
+  const isAllProjects = false;
+  const activePid = activeProject?.numeric_id || activeProject?.id;
+  const projectEscalations = escalations.filter(esc => {
+    if (isAllProjects || scopeMode === 'portfolio') return true;
+    if (esc.project_id === undefined || esc.project_id === null) return true;
+    return String(esc.project_id) === String(activePid) || String(esc.project_id) === String(activeProject?.jira_key);
+  });
+
   return (
     <div className="space-y-6">
 
@@ -186,7 +196,7 @@ const PMOLeadDashboard = ({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-base sm:text-lg font-black theme-heading">
-                {title}
+                {activeProject ? `${activeProject.name} Workspace` : title}
               </h3>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#FF5A14]/15 text-[#FF5A14] border border-[#FF5A14]/30">
                 {scopeMode === 'active' ? (activeProject?.jira_key || 'ACTIVE') : 'PORTFOLIO'}
@@ -198,31 +208,7 @@ const PMOLeadDashboard = ({
           </div>
         </div>
 
-        {/* Scope Selector Switch */}
         <div className="flex items-center gap-2 self-start md:self-auto">
-          <div className="p-1 rounded-xl theme-subtle border theme-border flex items-center gap-1">
-            <button
-              onClick={() => setScopeMode('portfolio')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                scopeMode === 'portfolio'
-                  ? 'bg-[#FF5A14] text-white shadow-md'
-                  : 'theme-muted hover:text-slate-100 hover:bg-white/5'
-              }`}
-            >
-              All Projects ({projects.length})
-            </button>
-            <button
-              onClick={() => setScopeMode('active')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                scopeMode === 'active'
-                  ? 'bg-[#FF5A14] text-white shadow-md'
-                  : 'theme-muted hover:text-slate-100 hover:bg-white/5'
-              }`}
-            >
-              Active: {activeProject?.jira_key || 'Project'}
-            </button>
-          </div>
-
           <Link
             to="/projects"
             className="px-3 py-1.5 rounded-xl border border-[#FF5A14]/30 hover:border-[#FF5A14] bg-[#FF5A14]/10 hover:bg-[#FF5A14]/20 text-[#FF5A14] text-xs font-bold transition-all flex items-center gap-1.5"
@@ -424,7 +410,7 @@ const PMOLeadDashboard = ({
           </div>
 
           <p className="text-xs theme-muted font-medium mb-3">
-            Audit Score: <strong className="text-emerald-400 font-bold">{governance.compliance_audit_score}%</strong> • {escalations.length} Active Escalations
+            Audit Score: <strong className="text-emerald-400 font-bold">{governance.compliance_audit_score}%</strong> • {projectEscalations.length} Active Escalations
           </p>
 
           {/* Gate status badge */}
@@ -469,13 +455,13 @@ const PMOLeadDashboard = ({
           </div>
 
           <p className="text-xs theme-muted font-medium mb-3">
-            Critical/High: <strong className="text-red-400 font-bold">{projectRisks?.filter(r => r.severity === 'Critical' || r.severity === 'High').length || 0}</strong> • {escalations.length} Escalations
+            Critical/High: <strong className="text-red-400 font-bold">{projectRisks?.filter(r => r.severity === 'Critical' || r.severity === 'High').length ?? 0}</strong> • {escalations.length} Escalations
           </p>
 
           <div className="pt-2 border-t theme-border flex items-center justify-between text-[11px]">
             <span className="theme-muted font-medium">Risk Status:</span>
-            <span className={`px-2 py-0.5 rounded-md font-mono font-bold ${(projectRisks?.length || 0) > 0 ? 'bg-red-500/15 text-red-500' : 'bg-emerald-500/15 text-emerald-500'}`}>
-              {(projectRisks?.length || 0) > 0 ? 'Action Required' : 'All Clear'}
+            <span className="font-bold text-red-500">
+              {(projectRisks?.length ?? 0) > 0 ? 'Action Required' : 'All Clear'}
             </span>
           </div>
         </div>
@@ -614,29 +600,52 @@ const PMOLeadDashboard = ({
 
         {/* CHART 2: BUDGET BURN & MILESTONE EXPENDITURE (AREA CHART) */}
         <div className="lg:col-span-8 p-6 rounded-2xl theme-card border border-white/10 flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
             <div className="flex items-center gap-2.5">
               <div className="p-2 rounded-xl bg-[#FF5A14]/10 text-[#FF5A14] border border-[#FF5A14]/20">
                 <BarChart3 size={16} />
               </div>
               <div>
-                <h4 
-                  onClick={() => {
-                    const activePid = activeProject?.numeric_id || activeProject?.id || '1';
-                    navigate(`/project/${activePid}?tab=budget`);
-                  }}
-                  className="text-sm font-bold theme-heading cursor-pointer hover:text-[#FF7A45] transition-colors flex items-center gap-1.5"
-                  title="Click to open Level 4 Drilldown: Budget & Capital Breakdown"
-                >
-                  <span>Milestone Budget Burndown & Spend Curve</span>
-                  <ArrowUpRight size={13} className="text-[#FF5A14]" />
-                </h4>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 
+                    onClick={() => {
+                      const activePid = activeProject?.numeric_id || activeProject?.id || '1';
+                      navigate(`/project/${activePid}?tab=budget`);
+                    }}
+                    className="text-sm font-bold theme-heading cursor-pointer hover:text-[#FF7A45] transition-colors flex items-center gap-1.5"
+                    title="Click to open Level 4 Drilldown: Budget & Capital Breakdown"
+                  >
+                    <span>Milestone Budget Burndown & Spend Curve(Planned vs. Spend vs. Work Done)</span>
+                    <ArrowUpRight size={13} className="text-[#FF5A14]" />
+                  </h4>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold flex items-center gap-1 border ${
+                      (Number(budget.cpi) >= 1.0 || budget.cpi === undefined) 
+                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' 
+                        : 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        (Number(budget.cpi) >= 1.0 || budget.cpi === undefined) ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400 animate-pulse'
+                      }`}></span>
+                      CPI {budget.cpi || '1.08'} {(Number(budget.cpi) >= 1.0 || budget.cpi === undefined) ? 'Favorable' : 'Deficit'}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold flex items-center gap-1 border ${
+                      (Number(budget.spi || timeline.spi || 1.0) >= 1.0) 
+                        ? 'bg-sky-500/15 text-sky-400 border-sky-500/30' 
+                        : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${(Number(budget.spi || timeline.spi || 1.0) >= 1.0) ? 'bg-sky-400' : 'bg-amber-400'}`}></span>
+                      SPI {budget.spi || timeline.spi || '1.00'} {(Number(budget.spi || timeline.spi || 1.0) >= 1.0) ? 'On Track' : 'Impeded'}
+                    </span>
+                  </div>
+                </div>
                 <p className="text-xs theme-muted">
-                  Planned baseline allocation vs actual cumulative expenditure across sprints
+                  Planned baseline allocation vs actual cumulative expenditure vs completed deliverables
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3 text-xs font-semibold">
+            {/* Interactive 3-Line Legend */}
+            <div className="flex items-center gap-3 text-xs font-semibold flex-wrap">
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
                 <span className="theme-muted text-[11px]">Planned Target</span>
@@ -645,50 +654,113 @@ const PMOLeadDashboard = ({
                 <span className="w-2.5 h-2.5 rounded-full bg-[#FF5A14]"></span>
                 <span className="text-[#FF5A14] font-bold text-[11px]">Actual Spend</span>
               </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#10B981]"></span>
+                <span className="text-emerald-400 font-bold text-[11px]">Work Completed</span>
+              </div>
             </div>
           </div>
 
           {/* Area Chart Container */}
           <div className="h-64 w-full mt-3">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              <AreaChart data={chartData} margin={{ top: 15, right: 10, left: -10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="pmoActualGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#FF5A14" stopOpacity={0.4} />
+                    <stop offset="5%" stopColor="#FF5A14" stopOpacity={0.35} />
                     <stop offset="95%" stopColor="#FF5A14" stopOpacity={0.0} />
                   </linearGradient>
                   <linearGradient id="pmoPlannedGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#64748B" stopOpacity={0.2} />
+                    <stop offset="5%" stopColor="#64748B" stopOpacity={0.15} />
                     <stop offset="95%" stopColor="#64748B" stopOpacity={0.0} />
+                  </linearGradient>
+                  <linearGradient id="pmoEarnedGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? 'rgba(255, 255, 255, 0.07)' : '#E2E8F0'} />
                 <XAxis dataKey="sprint" stroke={isDark ? '#94A3B8' : '#64748B'} fontSize={11} tickLine={false} axisLine={false} />
                 <YAxis stroke={isDark ? '#94A3B8' : '#64748B'} fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}k`} />
                 <RechartsTooltip
-                  contentStyle={{
-                    borderRadius: '12px',
-                    backgroundColor: isDark ? '#141A28' : '#FFFFFF',
-                    borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : '#CBD5E1',
-                    fontSize: '11px',
-                    boxShadow: '0 10px 25px rgba(0,0,0,0.3)'
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload || !payload.length) return null;
+                    const pl = payload.find(p => p.dataKey === 'planned')?.value;
+                    const ac = payload.find(p => p.dataKey === 'actual')?.value;
+                    const ev = payload.find(p => p.dataKey === 'earned')?.value;
+                    const diff = (ev !== undefined && ev !== null && ac !== undefined && ac !== null) ? (ev - ac) : null;
+                    return (
+                      <div className={`p-3 rounded-xl border shadow-xl text-xs space-y-1.5 ${isDark ? 'bg-[#141A28] border-white/15 text-white' : 'bg-white border-slate-200 text-slate-900'}`}>
+                        <div className="font-bold border-b border-white/10 pb-1 flex items-center justify-between gap-4">
+                          <span>{label}</span>
+                          {ac !== null && ac !== undefined ? (
+                            <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-bold ${diff >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
+                              {diff >= 0 ? `+$${diff}k Value Surplus (Ahead)` : `-$${Math.abs(diff)}k Deficit (Behind)`}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 font-mono">Future Milestone</span>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="flex items-center gap-1.5 text-slate-400 text-[11px]">
+                            <span className="w-2 h-2 rounded-full bg-slate-400"></span> Planned Target:
+                          </span>
+                          <span className="font-mono font-bold">${pl}k</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="flex items-center gap-1.5 text-[#FF5A14] text-[11px]">
+                            <span className="w-2 h-2 rounded-full bg-[#FF5A14]"></span> Actual Spend:
+                          </span>
+                          <span className="font-mono font-bold text-[#FF5A14]">{ac !== null && ac !== undefined ? `$${ac}k` : 'Not Reached'}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="flex items-center gap-1.5 text-emerald-400 text-[11px]">
+                            <span className="w-2 h-2 rounded-full bg-[#10B981]"></span> Work Completed:
+                          </span>
+                          <span className="font-mono font-bold text-emerald-400">{ev !== null && ev !== undefined ? `$${ev}k` : 'Not Reached'}</span>
+                        </div>
+                      </div>
+                    );
                   }}
-                  formatter={(val) => [val !== null ? `$${val}k` : 'Not Reached', '']}
+                />
+                {/* Vertical "Today / Current Sprint" Marker */}
+                <ReferenceLine
+                  x={chartData.find(c => c.is_current)?.sprint || data?.active_sprint || budget?.active_sprint || 'Sprint 3'}
+                  stroke="#FF5A14"
+                  strokeDasharray="4 4"
+                  strokeWidth={2}
+                  label={{
+                    value: '● TODAY (CURRENT SPRINT)',
+                    position: 'top',
+                    fill: '#FF7A45',
+                    fontSize: 9,
+                    fontWeight: 800,
+                    offset: 8
+                  }}
                 />
                 <Area type="monotone" dataKey="planned" name="Planned Target" stroke={isDark ? '#94A3B8' : '#64748B'} strokeWidth={2} strokeDasharray="4 4" fillOpacity={1} fill="url(#pmoPlannedGradient)" />
                 <Area type="monotone" dataKey="actual" name="Actual Spend" stroke="#FF5A14" strokeWidth={3} fillOpacity={1} fill="url(#pmoActualGradient)" />
+                <Area type="monotone" dataKey="earned" name="Work Completed" stroke="#10B981" strokeWidth={3} fillOpacity={1} fill="url(#pmoEarnedGradient)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
 
-          <div className="grid grid-cols-3 gap-3 pt-3 mt-2 border-t theme-border text-center">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 mt-2 border-t theme-border text-center">
             <div>
               <span className="text-[10px] theme-muted uppercase font-bold block">Monthly Run-Rate</span>
               <span className="font-mono font-bold text-xs theme-heading">{fmtMoney(budget.monthly_run_rate)}/mo</span>
             </div>
             <div>
-              <span className="text-[10px] theme-muted uppercase font-bold block">Cost Perf. Index (CPI)</span>
-              <span className="font-mono font-bold text-xs text-emerald-500">{budget.cpi} Favorable</span>
+              <span className="text-[10px] theme-muted uppercase font-bold block">Cost Perf. (CPI)</span>
+              <span className={`font-mono font-bold text-xs ${Number(budget.cpi) >= 1.0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                {budget.cpi} {Number(budget.cpi) >= 1.0 ? 'Favorable' : 'Critical'}
+              </span>
+            </div>
+            <div>
+              <span className="text-[10px] theme-muted uppercase font-bold block">Schedule Perf. (SPI)</span>
+              <span className={`font-mono font-bold text-xs ${Number(budget.spi || timeline.spi || 1.0) >= 1.0 ? 'text-sky-400' : 'text-amber-400'}`}>
+                {budget.spi || timeline.spi || '1.00'} {Number(budget.spi || timeline.spi || 1.0) >= 1.0 ? 'On Track' : 'Delayed'}
+              </span>
             </div>
             <div>
               <span className="text-[10px] theme-muted uppercase font-bold block">Remaining Capital</span>
@@ -707,14 +779,14 @@ const PMOLeadDashboard = ({
               <span>Active Governance Escalation Stream</span>
             </h4>
             <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-500 border border-amber-500/30">
-              {escalations.length} Flagged
+              {projectEscalations.length} Flagged
             </span>
           </div>
           <p className="text-xs theme-muted mb-4">
             Real-time supplier compliance breaches, SLA thresholds, and gate approval requests.
           </p>
 
-          {escalations.length === 0 ? (
+          {projectEscalations.length === 0 ? (
             <div className="py-8 text-center">
               <CheckCircle2 size={32} className="text-emerald-500 mx-auto mb-2" />
               <p className="text-xs theme-muted font-medium">
@@ -723,23 +795,43 @@ const PMOLeadDashboard = ({
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-64 overflow-y-auto pr-1">
-              {escalations.map((esc, idx) => {
-                const isRisk = (esc.id && esc.id.startsWith('R-')) || (esc.action && (esc.action.includes('Threat') || esc.action.includes('Risk') || esc.action.includes('Blocker')));
-                const targetUrl = isRisk ? `/risks?search=${esc.id}` : `/guardrails`;
+              {projectEscalations.map((esc, idx) => {
+                const escId = esc.esc_id || esc.id || `ESC-${String(idx + 1).padStart(3, '0')}`;
+                const isRisk = (escId && escId.startsWith('R-')) || (esc.action && (esc.action.includes('Threat') || esc.action.includes('Risk') || esc.action.includes('Blocker')));
+                
+                let searchId = escId;
+                if (esc.action) {
+                  const rMatch = esc.action.match(/(R-\d+)/);
+                  if (rMatch) {
+                    searchId = rMatch[1];
+                  }
+                }
+                
+                const targetUrl = isRisk ? `/risks?search=${searchId}` : `/guardrails#${escId}`;
+                const timeDisplay = esc.created_at ? new Date(esc.created_at).toLocaleString() : (esc.time || 'Recent');
                 return (
                   <div 
                     key={idx} 
                     onClick={() => navigate(targetUrl)}
                     className="p-3 rounded-xl theme-subtle border theme-border hover:border-[#FF5A14]/60 hover:bg-[#FF5A14]/5 transition-all flex justify-between items-center text-xs cursor-pointer group"
-                    title={`Click to drill down into ${esc.id} in ${isRisk ? 'Risk Register' : 'Guardrails'}`}
+                    title={`Click to drill down into ${escId} in ${isRisk ? 'Risk Register' : 'Guardrails'}`}
                   >
-                    <div className="flex items-center gap-2.5 truncate">
-                      <span className="font-bold text-[#FF5A14] font-mono group-hover:underline">{esc.id || `ESC-00${idx + 1}`}</span>
+                    <div className="flex items-center gap-2.5 truncate min-w-0 pr-2">
+                      <span className="font-bold text-[#FF5A14] font-mono group-hover:underline flex-shrink-0">{escId}</span>
+                      {(isAllProjects || scopeMode === 'portfolio') && esc.project_key && (
+                        <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-[#FF5A14]/15 text-[#FF7A45] border border-[#FF5A14]/30 flex-shrink-0 font-bold">
+                          [{esc.project_key}]
+                        </span>
+                      )}
                       <span className="font-medium theme-heading truncate group-hover:text-[#FF7A45]">{esc.action || esc.title || 'SLA Threshold Warning'}</span>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-[10px] theme-muted font-mono px-2 py-0.5 rounded theme-subtle border theme-border">
-                        {esc.time || 'Active'}
+                      <span 
+                        className="text-[10px] theme-muted font-mono px-2 py-0.5 rounded theme-subtle border theme-border flex items-center gap-1 whitespace-nowrap"
+                        title={esc.created_at ? `Created: ${new Date(esc.created_at).toLocaleString()}` : ''}
+                      >
+                        <Clock size={10} className="text-[#FF5A14]" />
+                        {timeDisplay}
                       </span>
                       <span className="text-[10px] font-bold text-[#FF5A14] opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
                         Investigate <ArrowRight size={11} />
