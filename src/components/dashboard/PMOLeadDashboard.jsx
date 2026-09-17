@@ -541,12 +541,13 @@ const PMOLeadDashboard = ({
             </div>
           ) : (
             <div 
-              onClick={() => { 
-                const activePid = activeProject?.numeric_id || activeProject?.id || '1';
-                navigate(`/project/${activePid}?tab=team`);
+              onClick={(e) => { 
+                e.stopPropagation();
+                setTaskFilter('ALL');
+                setActiveDrilldown('tasks');
               }}
               className="relative h-56 w-full flex items-center justify-center cursor-pointer group"
-              title="Click to open Level 4 Drilldown: Team & Contributors"
+              title="Click to open Level 4 Drilldown: Task & Deliverables Status"
             >
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -590,9 +591,10 @@ const PMOLeadDashboard = ({
             {tasks.breakdown.map((item, idx) => (
               <button 
                 key={idx} 
-                onClick={() => {
-                  const activePid = activeProject?.numeric_id || activeProject?.id || '1';
-                  navigate(`/project/${activePid}?tab=team`);
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setTaskFilter(item.name);
+                  setActiveDrilldown('tasks');
                 }}
                 className="flex items-center justify-between p-2 rounded-xl theme-subtle text-xs hover:border-[#FF5A14]/50 hover:bg-[#FF5A14]/10 transition-all cursor-pointer border border-transparent text-left group"
                 title={`Drill down into ${item.name} deliverables`}
