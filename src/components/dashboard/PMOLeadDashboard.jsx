@@ -620,22 +620,22 @@ const PMOLeadDashboard = ({
                   </h4>
                   <div className="flex items-center gap-1.5">
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold flex items-center gap-1 border ${
-                      (Number(budget.cpi) >= 1.0 || budget.cpi === undefined) 
+                      Number(budget.cpi) >= 1.0 
                         ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' 
-                        : 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                        : (Number(budget.cpi) === 0 ? 'bg-slate-500/15 text-slate-400 border-slate-500/30' : 'bg-rose-500/15 text-rose-400 border-rose-500/30')
                     }`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${
-                        (Number(budget.cpi) >= 1.0 || budget.cpi === undefined) ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400 animate-pulse'
+                        Number(budget.cpi) >= 1.0 ? 'bg-emerald-400 animate-pulse' : (Number(budget.cpi) === 0 ? 'bg-slate-400' : 'bg-rose-400 animate-pulse')
                       }`}></span>
-                      CPI {budget.cpi || '1.08'} {(Number(budget.cpi) >= 1.0 || budget.cpi === undefined) ? 'Favorable' : 'Deficit'}
+                      CPI {budget.cpi !== undefined ? Number(budget.cpi).toFixed(2) : '0.00'} {Number(budget.cpi) >= 1.0 ? 'Favorable' : (Number(budget.cpi) === 0 ? 'No Data (0%)' : 'Deficit')}
                     </span>
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold flex items-center gap-1 border ${
-                      (Number(budget.spi || timeline.spi || 1.0) >= 1.0) 
+                      Number(budget.spi ?? timeline?.spi ?? 0) >= 1.0 
                         ? 'bg-sky-500/15 text-sky-400 border-sky-500/30' 
-                        : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                        : (Number(budget.spi ?? timeline?.spi ?? 0) === 0 ? 'bg-slate-500/15 text-slate-400 border-slate-500/30' : 'bg-amber-500/15 text-amber-400 border-amber-500/30')
                     }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${(Number(budget.spi || timeline.spi || 1.0) >= 1.0) ? 'bg-sky-400' : 'bg-amber-400'}`}></span>
-                      SPI {budget.spi || timeline.spi || '1.00'} {(Number(budget.spi || timeline.spi || 1.0) >= 1.0) ? 'On Track' : 'Impeded'}
+                      <span className={`w-1.5 h-1.5 rounded-full ${Number(budget.spi ?? timeline?.spi ?? 0) >= 1.0 ? 'bg-sky-400' : (Number(budget.spi ?? timeline?.spi ?? 0) === 0 ? 'bg-slate-400' : 'bg-amber-400')}`}></span>
+                      SPI {(budget.spi !== undefined ? Number(budget.spi).toFixed(2) : (timeline?.spi !== undefined ? Number(timeline.spi).toFixed(2) : '0.00'))} {Number(budget.spi ?? timeline?.spi ?? 0) >= 1.0 ? 'On Track' : (Number(budget.spi ?? timeline?.spi ?? 0) === 0 ? 'No Data (0%)' : 'Impeded')}
                     </span>
                   </div>
                 </div>
@@ -694,8 +694,14 @@ const PMOLeadDashboard = ({
                         <div className="font-bold border-b border-white/10 pb-1 flex items-center justify-between gap-4">
                           <span>{label}</span>
                           {ac !== null && ac !== undefined ? (
-                            <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-bold ${diff >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
-                              {diff >= 0 ? `+$${diff}k Value Surplus (Ahead)` : `-$${Math.abs(diff)}k Deficit (Behind)`}
+                            <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-bold ${
+                              ac === 0 && ev === 0
+                                ? 'bg-slate-500/20 text-slate-300'
+                                : (diff >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400')
+                            }`}>
+                              {ac === 0 && ev === 0
+                                ? 'Kickoff Baseline'
+                                : (diff >= 0 ? `+$${diff}k Value Surplus (Ahead)` : `-$${Math.abs(diff)}k Deficit (Behind)`)}
                             </span>
                           ) : (
                             <span className="text-[10px] text-slate-400 font-mono">Future Milestone</span>
@@ -725,12 +731,17 @@ const PMOLeadDashboard = ({
                 />
                 {/* Vertical "Today / Current Sprint" Marker */}
                 <ReferenceLine
-                  x={chartData.find(c => c.is_current)?.sprint || data?.active_sprint || budget?.active_sprint || 'Sprint 3'}
+                  x={
+                    chartData.find(c => c.is_current)?.sprint 
+                    || data?.active_sprint 
+                    || budget?.active_sprint 
+                    || (Number(budget.total_actual) > 0 ? 'Sprint 3' : 'Sprint 1')
+                  }
                   stroke="#FF5A14"
                   strokeDasharray="4 4"
                   strokeWidth={2}
                   label={{
-                    value: '● TODAY (CURRENT SPRINT)',
+                    value: Number(budget.total_actual) > 0 ? '● TODAY (CURRENT SPRINT)' : '● TODAY (SPRINT 1 - KICKOFF)',
                     position: 'top',
                     fill: '#FF7A45',
                     fontSize: 9,
@@ -752,14 +763,14 @@ const PMOLeadDashboard = ({
             </div>
             <div>
               <span className="text-[10px] theme-muted uppercase font-bold block">Cost Perf. (CPI)</span>
-              <span className={`font-mono font-bold text-xs ${Number(budget.cpi) >= 1.0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                {budget.cpi} {Number(budget.cpi) >= 1.0 ? 'Favorable' : 'Critical'}
+              <span className={`font-mono font-bold text-xs ${Number(budget.cpi) >= 1.0 ? 'text-emerald-500' : (Number(budget.cpi) === 0 ? 'text-slate-400' : 'text-rose-500')}`}>
+                {budget.cpi !== undefined ? Number(budget.cpi).toFixed(2) : '0.00'} {Number(budget.cpi) >= 1.0 ? 'Favorable' : (Number(budget.cpi) === 0 ? 'No Data (0%)' : 'Critical')}
               </span>
             </div>
             <div>
               <span className="text-[10px] theme-muted uppercase font-bold block">Schedule Perf. (SPI)</span>
-              <span className={`font-mono font-bold text-xs ${Number(budget.spi || timeline.spi || 1.0) >= 1.0 ? 'text-sky-400' : 'text-amber-400'}`}>
-                {budget.spi || timeline.spi || '1.00'} {Number(budget.spi || timeline.spi || 1.0) >= 1.0 ? 'On Track' : 'Delayed'}
+              <span className={`font-mono font-bold text-xs ${Number(budget.spi ?? timeline?.spi ?? 0) >= 1.0 ? 'text-sky-400' : (Number(budget.spi ?? timeline?.spi ?? 0) === 0 ? 'text-slate-400' : 'text-amber-400')}`}>
+                {(budget.spi !== undefined ? Number(budget.spi).toFixed(2) : (timeline?.spi !== undefined ? Number(timeline.spi).toFixed(2) : '0.00'))} {Number(budget.spi ?? timeline?.spi ?? 0) >= 1.0 ? 'On Track' : (Number(budget.spi ?? timeline?.spi ?? 0) === 0 ? 'No Data (0%)' : 'Delayed')}
               </span>
             </div>
             <div>
@@ -1049,7 +1060,9 @@ const PMOLeadDashboard = ({
                     </div>
                     <div>
                       <span className="theme-muted text-[11px]">Cost Performance Index (CPI):</span>
-                      <strong className="block text-emerald-500 font-mono text-sm mt-0.5">{budget.cpi} Favorable</strong>
+                      <strong className={`block font-mono text-sm mt-0.5 ${Number(budget.cpi) >= 1.0 ? 'text-emerald-500' : (Number(budget.cpi) === 0 ? 'text-slate-400' : 'text-rose-500')}`}>
+                        {budget.cpi !== undefined ? Number(budget.cpi).toFixed(2) : '0.00'} {Number(budget.cpi) >= 1.0 ? 'Favorable' : (Number(budget.cpi) === 0 ? 'No Data (0%)' : 'Cost Overrun Risk')}
+                      </strong>
                     </div>
                   </div>
                   <div className="pt-2">
