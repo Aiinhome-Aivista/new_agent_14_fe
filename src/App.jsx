@@ -82,8 +82,8 @@ function App() {
                   <Route path="/ingestion" element={<IngestionPage />} />
                 </Route>
 
-                {/* Add Stakeholder: PMO */}
-                <Route element={<ProtectedRoute allowedRoles={['PMO']} />}>
+                {/* Add Stakeholder: PMO, Program Director, Project Manager */}
+                <Route element={<ProtectedRoute allowedRoles={['PMO', 'Program Director', 'Project Manager']} />}>
                   <Route path="/add-stakeholder" element={<AddStakeholderPage />} />
                 </Route>
               </Route>

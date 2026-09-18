@@ -76,7 +76,7 @@ const ProjectsPage = () => {
     project_manager_id: ''
   });
 
-  const isPMO = ['PMO', 'Program Director'].includes(user?.role);
+  const canManageProjects = user?.role !== 'Investor';
 
   const handleOpenWorkspace = (proj) => {
     selectProject(proj);
@@ -222,7 +222,7 @@ const ProjectsPage = () => {
 
         {/* Right Action: PMO Project Creation Button */}
         <div className="flex items-center gap-3">
-          {isPMO ? (
+          {canManageProjects ? (
             <button
               onClick={() => setIsCreateModalOpen(true)}
               className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white text-xs font-bold shadow-[0_0_25px_rgba(255,90,20,0.45)] hover:shadow-[0_0_35px_rgba(255,90,20,0.65)] hover:brightness-110 transition-all flex items-center gap-2 cursor-pointer group"
@@ -333,7 +333,7 @@ const ProjectsPage = () => {
           <p className="text-xs theme-muted mt-1 max-w-sm mx-auto">
             {searchTerm ? `No project matches search query "${searchTerm}".` : 'No projects are currently registered in the database.'}
           </p>
-          {isPMO && (
+          {canManageProjects && (
             <button
               onClick={() => setIsCreateModalOpen(true)}
               className="mt-4 px-4 py-2 rounded-xl bg-[#FF5A14] text-white text-xs font-bold shadow-md hover:brightness-110 inline-flex items-center gap-1.5"
@@ -365,7 +365,7 @@ const ProjectsPage = () => {
                       <span className="font-mono text-xs font-extrabold px-2.5 py-1 rounded-lg bg-[#FF5A14]/15 text-[#FF7A45] border border-[#FF5A14]/30 tracking-wider">
                         {proj.jira_key}
                       </span>
-                      {isPMO && (
+                      {canManageProjects && (
                         <button
                           type="button"
                           onClick={(e) => handleOpenEditModal(proj, e)}
@@ -457,7 +457,7 @@ const ProjectsPage = () => {
       {/* ==================================================== */}
       {/* PMO ONLY: CREATE NEW PROJECT MODAL DIALOG           */}
       {/* ==================================================== */}
-      {isCreateModalOpen && isPMO && (
+      {isCreateModalOpen && canManageProjects && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fadeIn">
           <div className="max-w-xl w-full bg-white dark:bg-[#131A29] rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-white/15 shadow-[0_25px_80px_rgba(0,0,0,0.25)] dark:shadow-[0_25px_80px_rgba(0,0,0,0.85)] relative overflow-hidden transition-colors">
             
@@ -549,8 +549,11 @@ const ProjectsPage = () => {
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#0E1422] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:border-[#FF5A14] focus:ring-1 focus:ring-[#FF5A14] outline-none transition-all cursor-pointer"
                   >
                     <option value="">Select Project Manager</option>
+                    {user?.role === 'Project Manager' && (
+                      <option value={user.id}>Self ({user.name || 'Me'})</option>
+                    )}
                     {projectManagers.map(pm => (
-                      <option key={pm.id} value={pm.id}>{pm.name}</option>
+                      pm.id !== user?.id && <option key={pm.id} value={pm.id}>{pm.name}</option>
                     ))}
                   </select>
                 </div>
@@ -595,7 +598,7 @@ const ProjectsPage = () => {
       {/* ==================================================== */}
       {/* PMO ONLY: EDIT PROJECT MODAL DIALOG                 */}
       {/* ==================================================== */}
-      {isEditModalOpen && isPMO && editingProject && (
+      {isEditModalOpen && canManageProjects && editingProject && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fadeIn">
           <div className="max-w-xl w-full bg-white dark:bg-[#131A29] rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-white/15 shadow-[0_25px_80px_rgba(0,0,0,0.25)] dark:shadow-[0_25px_80px_rgba(0,0,0,0.85)] relative overflow-hidden transition-colors">
             
@@ -670,8 +673,11 @@ const ProjectsPage = () => {
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#0E1422] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:border-[#FF5A14] focus:ring-1 focus:ring-[#FF5A14] outline-none transition-all cursor-pointer"
                   >
                     <option value="">Select Project Manager</option>
+                    {user?.role === 'Project Manager' && (
+                      <option value={user.id}>Self ({user.name || 'Me'})</option>
+                    )}
                     {projectManagers.map(pm => (
-                      <option key={pm.id} value={pm.id}>{pm.name}</option>
+                      pm.id !== user?.id && <option key={pm.id} value={pm.id}>{pm.name}</option>
                     ))}
                   </select>
                 </div>

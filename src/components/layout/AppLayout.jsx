@@ -80,7 +80,7 @@ const AppLayout = () => {
         return [
           allNavDefinitions.dashboard,
           allNavDefinitions.reports,
-          allNavDefinitions.knowledge,
+          // allNavDefinitions.knowledge,
           allNavDefinitions.chat,
         ];
       case 'Program Director':
@@ -184,8 +184,8 @@ const AppLayout = () => {
             )}
           </NavLink>
 
-          {/* Add Stakeholder for PMO Persona */}
-          {user?.role === 'PMO' && (
+          {/* Add Stakeholder for non-Investor Personas */}
+          {user?.role !== 'Investor' && (
             <NavLink
               to="/add-stakeholder"
               className={({ isActive }) =>
