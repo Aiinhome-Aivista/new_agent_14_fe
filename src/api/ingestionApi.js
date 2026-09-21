@@ -61,8 +61,13 @@ export const ingestionApi = {
     const response = await api.get('/ingestion/connectors/fetch', { params });
     return response.data;
   },
-  ingestConnectorItems: async (provider, items, projectId = null) => {
-    const payload = { provider, items, ...(projectId ? { project_id: projectId } : {}) };
+  ingestConnectorItems: async (provider, items, projectId = null, accuracyScore = null) => {
+    const payload = { 
+      provider, 
+      items, 
+      ...(projectId ? { project_id: projectId } : {}),
+      ...(accuracyScore !== null && accuracyScore !== undefined ? { accuracy_score: accuracyScore } : {})
+    };
     const response = await api.post('/ingestion/connectors/ingest', payload);
     return response.data;
   },
