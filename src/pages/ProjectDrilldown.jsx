@@ -175,24 +175,27 @@ const ProjectDrilldown = () => {
 };
 
   const timeline = data.timeline_summary || {
-    target_completion_date: "November 28, 2026",
-    days_remaining: 74,
-    spi: 1.02,
-    schedule_status: "Governed by Project Charter & SOW",
-    phases: [
-      { id: "PH-01", name: "Architecture & SOW Sign-off", target_date: "Oct 15, 2026", status: "Completed", completion_pct: 100, days_left: 0 },
-      { id: "PH-02", name: "Core Service Dev & Data Pipeline", target_date: "Nov 02, 2026", status: "In Progress", completion_pct: 65, days_left: 18 },
-      { id: "PH-03", name: "Integration & Security Compliance", target_date: "Nov 18, 2026", status: "In Progress", completion_pct: 35, days_left: 34 },
-      { id: "PH-04", name: "UAT & Regulatory Clearance Gate", target_date: "Nov 28, 2026", status: "Scheduled", completion_pct: 0, days_left: 44 },
-      { id: "PH-05", name: "Production Cutover & Handover", target_date: "Dec 15, 2026", status: "Scheduled", completion_pct: 0, days_left: 61 }
-    ]
+    target_completion_date: "Pending SOW",
+    days_remaining: 0,
+    spi: 1.00,
+    schedule_status: "New Workspace (Awaiting SOW)",
+    phases: []
   };
 
   const governance = data.governance_summary || {
-  vendor_sla_adherence: 0,
-  compliance_audit_score: 0,
-  gate_clearance_status: 'Pending'
-};
+    vendor_sla_adherence: 0,
+    compliance_audit_score: 0,
+    gate_clearance_status: 'Pending'
+  };
+
+  const completion = data.completion_summary || {
+    percentage: 0,
+    basis: 'Initial Phase',
+    label: '0% Initial Phase (Awaiting SOW / Task Ingestion)',
+    tasks: { completed: 0, total: 0, percentage: 0 },
+    milestones: { completed: 0, total: 0, percentage: 0 },
+    timeline: { elapsed_months: 0, total_months: 0, percentage: 0 }
+  };
 
   const fmtMoney = (val) => {
     if (val === undefined || val === null) return '$0';
@@ -202,15 +205,19 @@ const ProjectDrilldown = () => {
   };
 
   const getSectionOrder = (sectionId) => {
+    if (user?.role === 'Investor') {
+      const investorOrder = { kpi: 1, completion: 2, budget: 3, schedule: 4, governance: 5, charts: 6, team: 7, threats: 8 };
+      return investorOrder[sectionId] || 99;
+    }
     if (user?.role === 'Project Manager') {
-      const pmOrder = { kpi: 1, team: 2, schedule: 3, threats: 4, charts: 5, budget: 6, governance: 7 };
+      const pmOrder = { kpi: 1, team: 2, completion: 3, schedule: 4, threats: 5, charts: 6, budget: 7, governance: 8 };
       return pmOrder[sectionId] || 99;
     }
     if (user?.role === 'PMO' || user?.role === 'Program Director') {
-      const pmoOrder = { kpi: 1, budget: 2, governance: 3, schedule: 4, charts: 5, threats: 6, team: 7 };
+      const pmoOrder = { kpi: 1, completion: 2, budget: 3, governance: 4, schedule: 5, charts: 6, threats: 7, team: 8 };
       return pmoOrder[sectionId] || 99;
     }
-    const defaultOrder = { kpi: 1, team: 2, budget: 3, schedule: 4, governance: 5, charts: 6, threats: 7 };
+    const defaultOrder = { kpi: 1, completion: 2, team: 3, budget: 4, schedule: 5, governance: 6, charts: 7, threats: 8 };
     return defaultOrder[sectionId] || 99;
   };
 
@@ -370,33 +377,76 @@ const ProjectDrilldown = () => {
           <span>Vendor SLA & Governance</span>
           <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-black/25 font-mono">L4</span>
         </button>
+
+        {/* Level 4 Drilldown Tab: Project Completion & Delivery Velocity */}
         <button
-          onClick={() => handleTabChange('threats')}
+          onClick={() => handleTabChange('completion')}
           className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
-            currentTab === 'threats'
+            currentTab === 'completion'
               ? 'bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white shadow-md'
               : 'theme-subtle hover:bg-white/5 theme-muted'
           }`}
         >
-          <AlertTriangle size={13} />
-          <span>Threat Register</span>
+          <CheckCircle2 size={13} />
+          <span>Completion & Velocity</span>
+          <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-black/25 font-mono">L4</span>
         </button>
+
+        {/* Threat Register Tab - Commented out / Hidden for Investor Persona */}
+        {user?.role !== 'Investor' && (
+          <button
+            onClick={() => handleTabChange('threats')}
+            className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+              currentTab === 'threats'
+                ? 'bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white shadow-md'
+                : 'theme-subtle hover:bg-white/5 theme-muted'
+            }`}
+          >
+            <AlertTriangle size={13} />
+            <span>Threat Register</span>
+          </button>
+        )}
       </div>
 
       <div className="flex flex-col space-y-6">
 
       {/* 3. EXECUTIVE KPIS GRID (Visible in All or Overview) */}
-      {(currentTab === 'all' || currentTab === 'budget') && (
+      {(currentTab === 'all' || currentTab === 'budget' || currentTab === 'completion') && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-2" style={{ order: getSectionOrder('kpi') }}>
-          {data.kpis.map((kpi, idx) => (
-            <KPICard 
-              key={idx}
-              title={kpi.title} 
-              value={kpi.value} 
-              trend={kpi.trend} 
-              trendLabel={kpi.trendLabel}
-            />
-          ))}
+          {(data.kpis || []).map((kpi, idx) => {
+            const titleLower = (kpi.title || '').toLowerCase();
+            const isRisk = titleLower.includes('risk') || idx === 2;
+            const isInvestor = user?.role === 'Investor';
+
+            if (isInvestor && isRisk) {
+              return (
+                <KPICard 
+                  key={idx}
+                  title="PROJECT COMPLETION"
+                  value={`${completion.percentage}%`}
+                  trend={completion.percentage > 0 ? "up" : "neutral"}
+                  trendLabel={completion.label}
+                  icon={<CheckCircle2 size={18} />}
+                />
+              );
+            }
+
+            return (
+              <KPICard 
+                key={idx}
+                title={kpi.title} 
+                value={kpi.value} 
+                trend={kpi.trend} 
+                trendLabel={kpi.trendLabel}
+                icon={
+                  idx === 0 ? <DollarSign size={18} /> :
+                  idx === 1 ? <TrendingUp size={18} /> :
+                  idx === 2 ? <ShieldCheck size={18} /> :
+                  <Sparkles size={18} />
+                }
+              />
+            );
+          })}
         </div>
       )}
 
@@ -584,6 +634,124 @@ const ProjectDrilldown = () => {
       )}
 
       {/* ========================================================================= */}
+      {/* 5B. LEVEL 4: PROJECT COMPLETION & DELIVERY VELOCITY                       */}
+      {/* ========================================================================= */}
+      {(currentTab === 'all' || currentTab === 'completion') && (
+        <div id="completion-breakdown" className="p-6 rounded-3xl theme-card border border-[#FF5A14]/25 shadow-lg space-y-5" style={{ order: getSectionOrder('completion') }}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b theme-border">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-[#FF5A14] to-[#FF7A45] text-white shadow-md">
+                <CheckCircle2 size={20} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-extrabold theme-heading">PROJECT COMPLETION & DELIVERY VELOCITY</h3>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#FF5A14]/15 text-[#FF5A14] border border-[#FF5A14]/30 font-bold uppercase">
+                    Level 4 Drilldown
+                  </span>
+                </div>
+                <p className="text-xs theme-muted">Autonomous multi-vector completion velocity calibrated from timeline, task backlog & milestones</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <span className="text-[11px] theme-muted font-semibold uppercase">Primary Basis:</span>
+              <span className="text-xs font-mono font-extrabold px-2.5 py-1 rounded-lg bg-[#FF5A14]/10 text-[#FF7A45] border border-[#FF5A14]/20">
+                {completion.basis}
+              </span>
+            </div>
+          </div>
+
+          {/* 4 Completion Stat Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+            <div className="p-4 rounded-2xl theme-subtle border theme-border text-center">
+              <span className="theme-muted block text-[10px] uppercase font-bold tracking-wider">Overall Completion</span>
+              <span className="text-xl sm:text-2xl font-black text-[#FF5A14] font-mono mt-1 block">
+                {completion.percentage}%
+              </span>
+              <span className="text-[10px] font-mono text-[#FF7A45] mt-0.5 block truncate" title={completion.label}>
+                {completion.label}
+              </span>
+            </div>
+
+            <div className="p-4 rounded-2xl theme-subtle border theme-border text-center">
+              <span className="theme-muted block text-[10px] uppercase font-bold tracking-wider">Timeline Horizon</span>
+              <span className="text-xl sm:text-2xl font-black text-blue-400 font-mono mt-1 block">
+                {completion.timeline?.total_months > 0
+                  ? `${completion.timeline?.elapsed_months || 0}/${completion.timeline?.total_months} Mos`
+                  : 'Pending SOW'}
+              </span>
+              <span className="text-[10px] font-mono text-blue-300 mt-0.5 block">
+                {completion.timeline?.total_months > 0
+                  ? `${completion.timeline?.percentage || 0}% Elapsed`
+                  : 'Schedule TBD'}
+              </span>
+            </div>
+
+            <div className="p-4 rounded-2xl theme-subtle border theme-border text-center">
+              <span className="theme-muted block text-[10px] uppercase font-bold tracking-wider">Task Execution</span>
+              <span className="text-xl sm:text-2xl font-black text-emerald-400 font-mono mt-1 block">
+                {completion.tasks?.completed || 0}/{completion.tasks?.total || 0}
+              </span>
+              <span className="text-[10px] text-emerald-500 mt-0.5 block">
+                {completion.tasks?.total > 0
+                  ? `${completion.tasks?.percentage || 0}% Completed`
+                  : '0% Completed'}
+              </span>
+            </div>
+
+            <div className="p-4 rounded-2xl theme-subtle border theme-border text-center">
+              <span className="theme-muted block text-[10px] uppercase font-bold tracking-wider">SOW Milestones</span>
+              <span className="text-xl sm:text-2xl font-black text-purple-400 font-mono mt-1 block">
+                {completion.milestones?.total > 0
+                  ? `${completion.milestones?.completed || 0}/${completion.milestones?.total}`
+                  : '0/0'}
+              </span>
+              <span className="text-[10px] text-purple-300 mt-0.5 block">
+                {completion.milestones?.total > 0
+                  ? `${completion.milestones?.percentage || 0}% Verified`
+                  : 'Awaiting SOW'}
+              </span>
+            </div>
+          </div>
+
+          {/* Velocity Progress Bar & Breakdown Metrics */}
+          <div className="p-4 rounded-2xl theme-subtle border theme-border space-y-3">
+            <div>
+              <div className="flex justify-between text-xs mb-1.5 font-mono font-bold">
+                <span className="theme-muted flex items-center gap-1.5">
+                  <Sparkles size={13} className="text-[#FF5A14]" />
+                  <span>Overall Delivery Attainment:</span>
+                </span>
+                <span className="text-[#FF5A14]">{completion.percentage}%</span>
+              </div>
+              <div className="w-full h-3 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden p-0.5">
+                <div 
+                  className="h-full rounded-full bg-gradient-to-r from-[#FF5A14] via-[#FF7A45] to-emerald-400 transition-all duration-700 shadow-sm"
+                  style={{ width: `${completion.percentage > 0 ? Math.max(4, completion.percentage) : 0}%` }}
+                ></div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 text-[11px] border-t theme-border">
+              <div className="flex items-center justify-between p-2 rounded-xl bg-slate-100 dark:bg-white/[0.03]">
+                <span className="theme-muted">Schedule Horizon:</span>
+                <span className="font-mono font-bold text-blue-400">{completion.timeline?.total_months > 0 ? `${completion.timeline?.percentage || 0}%` : 'TBD'}</span>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded-xl bg-slate-100 dark:bg-white/[0.03]">
+                <span className="theme-muted">Task Ratio (e.g. 10/20):</span>
+                <span className="font-mono font-bold text-[#FF7A45]">{completion.tasks?.percentage || 0}%</span>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded-xl bg-slate-100 dark:bg-white/[0.03]">
+                <span className="theme-muted">SOW Milestone Attainment:</span>
+                <span className="font-mono font-bold text-emerald-400">{completion.milestones?.percentage || 0}%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
       {/* 6. LEVEL 4: ESTIMATED DEADLINE & SCHEDULE — MILESTONE STAGE-GATES */}
       {/* ========================================================================= */}
       {(currentTab === 'all' || currentTab === 'schedule') && (
@@ -661,7 +829,16 @@ const ProjectDrilldown = () => {
             </div>
 
             <div className="space-y-2.5">
-              {timeline.phases.map((ph, idx) => (
+              {(!timeline.phases || timeline.phases.length === 0) ? (
+                <div className="p-8 text-center rounded-2xl theme-subtle border theme-border flex flex-col items-center justify-center space-y-2">
+                  <Clock size={32} className="text-[#FF5A14] opacity-50 mb-1" />
+                  <h5 className="text-sm font-bold theme-heading">No Milestones Ingested Yet</h5>
+                  <p className="text-xs theme-muted max-w-md leading-relaxed">
+                    Upload a Project SOW or Project Charter document to dynamically extract contractual milestones, delivery dates, and stage-gate deliverables.
+                  </p>
+                </div>
+              ) : (
+                timeline.phases.map((ph, idx) => (
                 <div 
                   key={ph.id || idx}
                   onClick={() => setExpandedPhase(expandedPhase === idx ? null : idx)}
@@ -755,7 +932,7 @@ const ProjectDrilldown = () => {
                     </div>
                   )}
                 </div>
-              ))}
+              )))}
             </div>
           </div>
         </div>
@@ -855,23 +1032,25 @@ const ProjectDrilldown = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* 8. BURNDOWN CHART & RISK HEATMAP */}
+      {/* 8. BURNDOWN CHART & RISK HEATMAP (Heatmap hidden for Investor)            */}
       {/* ========================================================================= */}
-      {(currentTab === 'all' || currentTab === 'budget' || currentTab === 'threats') && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" style={{ order: getSectionOrder('charts') }}>
+      {(currentTab === 'all' || currentTab === 'budget' || (currentTab === 'threats' && user?.role !== 'Investor')) && (
+        <div className={`grid grid-cols-1 ${user?.role === 'Investor' ? 'lg:grid-cols-1' : 'lg:grid-cols-2'} gap-6`} style={{ order: getSectionOrder('charts') }}>
           <div>
             <BurndownChart data={data.burndown} />
           </div>
-          <div>
-            <RiskHeatmap data={data.risks} />
-          </div>
+          {user?.role !== 'Investor' && (
+            <div>
+              <RiskHeatmap data={data.risks} />
+            </div>
+          )}
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* 9. PROGRAM ISSUES & THREAT REGISTER */}
+      {/* 9. PROGRAM ISSUES & THREAT REGISTER (COMMENTED OUT FOR INVESTOR PERSONA) */}
       {/* ========================================================================= */}
-      {(currentTab === 'all' || currentTab === 'threats') && (
+      {user?.role !== 'Investor' && (currentTab === 'all' || currentTab === 'threats') && (
         <div id="threat-register" style={{ order: getSectionOrder('threats') }}>
           <ProjectThreatRegister
             risks={data.risk_details || data.recent_risks || []}
@@ -881,6 +1060,10 @@ const ProjectDrilldown = () => {
           />
         </div>
       )}
+      {/* 
+        Threat Register commented out for Investor Persona:
+        Investors do not have access to risk details.
+      */}
 
       </div>
     </div>
