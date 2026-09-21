@@ -29,6 +29,7 @@ export const AuthProvider = ({ children }) => {
           const userEmail = decoded.email || decoded.sub || 'user';
           const userName = decoded.name || getPersonaFallbackName(decoded.role, userEmail);
           setUser({ 
+            id: decoded.user_id,
             role: decoded.role, 
             email: userEmail,
             name: userName
@@ -49,6 +50,7 @@ export const AuthProvider = ({ children }) => {
       const userEmail = decoded.email || decoded.sub || email;
       const userName = response.name || decoded.name || getPersonaFallbackName(decoded.role, userEmail);
       setUser({ 
+        id: decoded.user_id,
         role: decoded.role, 
         email: userEmail,
         name: userName

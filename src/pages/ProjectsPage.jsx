@@ -553,7 +553,7 @@ const ProjectsPage = () => {
                       <option value={user.id}>Self ({user.name || 'Me'})</option>
                     )}
                     {projectManagers.map(pm => (
-                      pm.id !== user?.id && <option key={pm.id} value={pm.id}>{pm.name}</option>
+                      String(pm.id) !== String(user?.id) && <option key={pm.id} value={pm.id}>{pm.name}</option>
                     ))}
                   </select>
                 </div>
@@ -677,7 +677,7 @@ const ProjectsPage = () => {
                       <option value={user.id}>Self ({user.name || 'Me'})</option>
                     )}
                     {projectManagers.map(pm => (
-                      pm.id !== user?.id && <option key={pm.id} value={pm.id}>{pm.name}</option>
+                      String(pm.id) !== String(user?.id) && <option key={pm.id} value={pm.id}>{pm.name}</option>
                     ))}
                   </select>
                 </div>
