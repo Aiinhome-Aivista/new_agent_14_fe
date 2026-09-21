@@ -43,10 +43,12 @@ const ProjectDrilldown = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Tab filtering: 'all' | 'team' | 'budget' | 'schedule' | 'governance' | 'threats'
-  const currentTab = searchParams.get('tab') || 'all';
+  // Tab filtering: 'all' | 'team' | 'budget' | 'schedule' | 'governance' | 'threats' | ('completion' for Investor only)
+  const rawTab = searchParams.get('tab') || 'all';
+  const currentTab = (rawTab === 'completion' && user?.role !== 'Investor') ? 'all' : rawTab;
 
   const handleTabChange = (tabKey) => {
+    if (tabKey === 'completion' && user?.role !== 'Investor') return;
     setSearchParams(tabKey === 'all' ? {} : { tab: tabKey });
   };
 
@@ -210,14 +212,14 @@ const ProjectDrilldown = () => {
       return investorOrder[sectionId] || 99;
     }
     if (user?.role === 'Project Manager') {
-      const pmOrder = { kpi: 1, team: 2, completion: 3, schedule: 4, threats: 5, charts: 6, budget: 7, governance: 8 };
+      const pmOrder = { kpi: 1, team: 2, schedule: 3, threats: 4, charts: 5, budget: 6, governance: 7 };
       return pmOrder[sectionId] || 99;
     }
     if (user?.role === 'PMO' || user?.role === 'Program Director') {
-      const pmoOrder = { kpi: 1, completion: 2, budget: 3, governance: 4, schedule: 5, charts: 6, threats: 7, team: 8 };
+      const pmoOrder = { kpi: 1, budget: 2, governance: 3, schedule: 4, charts: 5, threats: 6, team: 7 };
       return pmoOrder[sectionId] || 99;
     }
-    const defaultOrder = { kpi: 1, completion: 2, team: 3, budget: 4, schedule: 5, governance: 6, charts: 7, threats: 8 };
+    const defaultOrder = { kpi: 1, team: 2, budget: 3, schedule: 4, governance: 5, charts: 6, threats: 7 };
     return defaultOrder[sectionId] || 99;
   };
 
@@ -378,19 +380,21 @@ const ProjectDrilldown = () => {
           <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-black/25 font-mono">L4</span>
         </button>
 
-        {/* Level 4 Drilldown Tab: Project Completion & Delivery Velocity */}
-        <button
-          onClick={() => handleTabChange('completion')}
-          className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
-            currentTab === 'completion'
-              ? 'bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white shadow-md'
-              : 'theme-subtle hover:bg-white/5 theme-muted'
-          }`}
-        >
-          <CheckCircle2 size={13} />
-          <span>Completion & Velocity</span>
-          <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-black/25 font-mono">L4</span>
-        </button>
+        {/* Level 4 Drilldown Tab: Project Completion & Delivery Velocity (Investor Persona Exclusive) */}
+        {user?.role === 'Investor' && (
+          <button
+            onClick={() => handleTabChange('completion')}
+            className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+              currentTab === 'completion'
+                ? 'bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white shadow-md'
+                : 'theme-subtle hover:bg-white/5 theme-muted'
+            }`}
+          >
+            <CheckCircle2 size={13} />
+            <span>Completion & Velocity</span>
+            <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-black/25 font-mono">L4</span>
+          </button>
+        )}
 
         {/* Threat Register Tab - Commented out / Hidden for Investor Persona */}
         {user?.role !== 'Investor' && (
@@ -411,7 +415,7 @@ const ProjectDrilldown = () => {
       <div className="flex flex-col space-y-6">
 
       {/* 3. EXECUTIVE KPIS GRID (Visible in All or Overview) */}
-      {(currentTab === 'all' || currentTab === 'budget' || currentTab === 'completion') && (
+      {(currentTab === 'all' || currentTab === 'budget' || (user?.role === 'Investor' && currentTab === 'completion')) && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-2" style={{ order: getSectionOrder('kpi') }}>
           {(data.kpis || []).map((kpi, idx) => {
             const titleLower = (kpi.title || '').toLowerCase();
@@ -634,9 +638,9 @@ const ProjectDrilldown = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* 5B. LEVEL 4: PROJECT COMPLETION & DELIVERY VELOCITY                       */}
+      {/* 5B. LEVEL 4: PROJECT COMPLETION & DELIVERY VELOCITY (INVESTOR EXCLUSIVE)  */}
       {/* ========================================================================= */}
-      {(currentTab === 'all' || currentTab === 'completion') && (
+      {user?.role === 'Investor' && (currentTab === 'all' || currentTab === 'completion') && (
         <div id="completion-breakdown" className="p-6 rounded-3xl theme-card border border-[#FF5A14]/25 shadow-lg space-y-5" style={{ order: getSectionOrder('completion') }}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b theme-border">
             <div className="flex items-center gap-2.5">

@@ -300,8 +300,7 @@ const InvestorDashboard = () => {
   const burndown = data?.burndown || [];
   const risks = data?.risks || [];
   const projectRisks = data?.project_risks || data?.recent_risks || data?.risks || [];
-  const totalProjectRisks = data?.total_project_risks !== undefined ? data.total_project_risks : projectRisks.length;
-  const healthScore = data?.healthScore || 84;
+  const healthScore = data?.healthScore !== undefined && data?.healthScore !== null ? data.healthScore : 100;
   const crossProjectStatus = data?.cross_project_status || "Active & Governed";
   const scheduleVariance = data?.schedule_variance || "+2.4% Ahead";
   const totalBudgetBurn = data?.total_budget_burn || "$2.64M / $3.85M";
@@ -488,7 +487,9 @@ const InvestorDashboard = () => {
               </div>
 
               <div className="w-full text-center text-xs theme-muted pt-2 border-t border-slate-200 dark:border-white/10">
-                Calibrated against active supplier SOWs
+                {data?.total_project_risks > 0 || (data?.financials?.spent > 0)
+                  ? 'Calibrated against supplier SOWs, budget burn & active risks'
+                  : 'Calibrated against active supplier SOWs & baseline budget'}
               </div>
 
             </div>
