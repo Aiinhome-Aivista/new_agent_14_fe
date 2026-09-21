@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useProject } from '../../context/ProjectContext';
+import { useAuth } from '../../context/AuthContext';
 import {
   ResponsiveContainer,
   PieChart,
@@ -67,6 +68,7 @@ const PMOLeadDashboard = ({
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const { projects = [], selectProject } = useProject();
+  const { user } = useAuth();
 
   // PMO Scope Toggle: 'active' (selected project) vs 'portfolio' (all projects)
   const scopeMode = 'active';
@@ -221,7 +223,7 @@ const PMOLeadDashboard = ({
       </div>
 
       {/* 4 CORE PMO EXECUTIVE PILLARS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+      <div className={`grid grid-cols-1 sm:grid-cols-2 ${user?.role === 'Project Manager' ? 'lg:grid-cols-4' : 'lg:grid-cols-5'} gap-5`}>
         
         {/* PILLAR 1: TEAM & CONTRIBUTORS ("koto jon kaj korche") */}
         <div 
@@ -276,6 +278,7 @@ const PMOLeadDashboard = ({
         </div>
 
         {/* PILLAR 2: TOTAL BUDGET & BURN ("total budget") */}
+        {user?.role !== 'Project Manager' && (
         <div 
           onClick={() => {
             const activePid = activeProject?.numeric_id || activeProject?.id || '1';
@@ -328,6 +331,7 @@ const PMOLeadDashboard = ({
             </div>
           </div>
         </div>
+        )}
 
         {/* PILLAR 3: ESTIMATE DEADLINE & SCHEDULE ("estimate dateline") */}
         <div 

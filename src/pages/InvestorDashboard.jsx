@@ -1257,10 +1257,6 @@ const renderProgramDirectorView = () => (
     </div>
   );
 
-  if (user?.role === 'Project Manager') {
-    return <Navigate to={`/project/${activeProject?.jira_key || activeProject?.id || 'PRJ-014'}`} replace />;
-  }
-
   return (
     <div className={`py-1 ${user?.role === 'Project Manager' ? 'space-y-3 sm:space-y-3.5' : 'space-y-6'}`}>
       
@@ -1304,7 +1300,7 @@ const renderProgramDirectorView = () => (
       {user?.role === 'Investor' && renderInvestorView()}
       {user?.role === 'PMO' && renderPMOView()}
       {user?.role === 'Program Director' && renderProgramDirectorView()}
-      {user?.role === 'Project Manager' && renderProjectManagerView()}
+      {user?.role === 'Project Manager' && renderPMOView()}
 
     </div>
   );
