@@ -300,8 +300,7 @@ const InvestorDashboard = () => {
   const burndown = data?.burndown || [];
   const risks = data?.risks || [];
   const projectRisks = data?.project_risks || data?.recent_risks || data?.risks || [];
-  const totalProjectRisks = data?.total_project_risks !== undefined ? data.total_project_risks : projectRisks.length;
-  const healthScore = data?.healthScore || 84;
+  const healthScore = data?.healthScore !== undefined && data?.healthScore !== null ? data.healthScore : 100;
   const crossProjectStatus = data?.cross_project_status || "Active & Governed";
   const scheduleVariance = data?.schedule_variance || "+2.4% Ahead";
   const totalBudgetBurn = data?.total_budget_burn || "$2.64M / $3.85M";
@@ -328,19 +327,74 @@ const InvestorDashboard = () => {
     const totalReleased = hasMilestones ? trancheMilestones.filter(m => m.status === 'Released' || m.status === 'Authorized').reduce((acc, m) => acc + (Number(m.trancheAmount) || 0), 0) : 0;
     const totalOnHold = hasMilestones ? trancheMilestones.filter(m => m.status === 'On Hold').reduce((acc, m) => acc + (Number(m.trancheAmount) || 0), 0) : 0;
 
+    // Dynamic Completion Percentage Telemetry for Investor
+    const completionInfo = data?.completion || {};
+    const tasksTotal = completionInfo.tasks?.total || 0;
+    const tasksCompleted = completionInfo.tasks?.completed || 0;
+    const tasksPct = tasksTotal > 0 ? Math.round((tasksCompleted / tasksTotal) * 100) : 0;
+
+    const msTotal = trancheMilestones?.length || completionInfo.milestones?.total || 0;
+    const msCompleted = trancheMilestones ? trancheMilestones.filter(m => m.status === 'Released' || m.status === 'Authorized' || m.deliverablesPercent === 100).length : (completionInfo.milestones?.completed || 0);
+    const msAvgPct = trancheMilestones && trancheMilestones.length > 0 
+      ? Math.round(trancheMilestones.reduce((acc, m) => acc + (Number(m.deliverablesPercent) || 0), 0) / trancheMilestones.length)
+      : (completionInfo.milestones?.percentage || 0);
+
+    const elapsedMonths = completionInfo.timeline?.elapsed_months || 0;
+    const totalMonths = completionInfo.timeline?.total_months || 0;
+    const timelinePct = totalMonths > 0 ? (completionInfo.timeline?.percentage || Math.min(100, Math.round((elapsedMonths / totalMonths) * 100))) : 0;
+
+    // Dynamic Primary Completion Percentage
+    let completionPct = 0;
+    let completionSubtitle = "0% Initial Phase (Awaiting SOW / Task Ingestion)";
+    let calculationBasis = "Initial Phase";
+
+    if (completionInfo.percentage !== undefined && completionInfo.percentage !== null && completionInfo.percentage > 0) {
+      completionPct = completionInfo.percentage;
+      completionSubtitle = completionInfo.label || `${completionPct}% Complete`;
+      calculationBasis = completionInfo.basis || "Telemetry";
+    } else if (tasksTotal > 0) {
+      completionPct = tasksPct;
+      completionSubtitle = `${tasksCompleted} of ${tasksTotal} Tasks (${tasksPct}%)`;
+      calculationBasis = "Task Backlog";
+    } else if (msTotal > 0) {
+      completionPct = msAvgPct;
+      completionSubtitle = `${msCompleted} of ${msTotal} Milestones (${msAvgPct}%)`;
+      calculationBasis = "Contract Milestones";
+    } else if (totalMonths > 0 && timelinePct > 0) {
+      completionPct = timelinePct;
+      completionSubtitle = `${elapsedMonths} of ${totalMonths} Months (${timelinePct}%)`;
+      calculationBasis = "Timeline Horizon";
+    }
+
+    // Filter KPIs for Investor Persona: REPLACE "Active Risks" with "Project Completion"
+    const investorKpis = kpis.map((kpi, idx) => {
+      const titleLower = (kpi.title || '').toLowerCase();
+      if (titleLower.includes('risk') || idx === 2) {
+        return {
+          title: "Project Completion",
+          value: `${completionPct}%`,
+          trend: completionPct > 0 ? "up" : "neutral",
+          trendLabel: completionSubtitle,
+          isCompletion: true
+        };
+      }
+      return kpi;
+    });
+
     return (
       <div className="space-y-8">
-        {/* KPI Cards Grid - Strictly Live Backend Data, No Fallbacks */}
-        {kpis && kpis.length > 0 ? (
+        {/* KPI Cards Grid - Tailored for Investor (Risk card replaced with Project Completion) */}
+        {investorKpis && investorKpis.length > 0 ? (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {kpis.map((kpi, idx) => {
+            {investorKpis.map((kpi, idx) => {
+              const isCompletion = kpi.isCompletion || (kpi.title || '').toLowerCase().includes('completion');
               const getKpiAction = () => {
+                if (isCompletion) return () => navigate(activeProject?.id ? `/project/${activeProject.id}` : '/projects');
                 const titleLower = (kpi.title || '').toLowerCase();
-                if (titleLower.includes('risk')) return () => navigate('/risks');
                 if (titleLower.includes('budget') || titleLower.includes('variance') || titleLower.includes('capital')) {
                   return () => navigate(activeProject?.id ? `/project/${activeProject.id}` : '/projects');
                 }
-                if (titleLower.includes('health')) return () => navigate('/guardrails');
+                if (titleLower.includes('health')) return () => navigate(activeProject?.id ? `/project/${activeProject.id}` : '/projects');
                 return () => navigate(activeProject?.id ? `/project/${activeProject.id}` : '/projects');
               };
 
@@ -356,7 +410,7 @@ const InvestorDashboard = () => {
                   icon={
                     idx === 0 ? <DollarSign size={18} /> :
                     idx === 1 ? <TrendingUp size={18} /> :
-                    idx === 2 ? <ShieldCheck size={18} /> :
+                    isCompletion || idx === 2 ? <CheckCircle2 size={18} /> :
                     <Sparkles size={18} />
                   }
                 />
@@ -433,7 +487,9 @@ const InvestorDashboard = () => {
               </div>
 
               <div className="w-full text-center text-xs theme-muted pt-2 border-t border-slate-200 dark:border-white/10">
-                Calibrated against active supplier SOWs
+                {data?.total_project_risks > 0 || (data?.financials?.spent > 0)
+                  ? 'Calibrated against supplier SOWs, budget burn & active risks'
+                  : 'Calibrated against active supplier SOWs & baseline budget'}
               </div>
 
             </div>
@@ -690,7 +746,7 @@ const InvestorDashboard = () => {
                                     <div className="space-y-1.5 text-[11px] theme-muted">
                                       <div>Tranche Allocation: <span className="font-bold theme-heading">${(milestone.trancheAmount || 0).toLocaleString()} USD</span></div>
                                       <div>Disbursement Status: <span className="font-bold theme-heading">{milestone.payoutDate}</span></div>
-                                      <div>Linked Blocker Ticket: <span className="font-mono text-[#FF5A14] font-bold">{milestone.id === 'M-03' ? <Link to="/risks?search=R-802" className="hover:underline inline-flex items-center gap-1">Risk R-802 (PRJ-1-103) <ExternalLink size={11} /></Link> : 'None (Cleared)'}</span></div>
+                                      <div>Linked Blocker Ticket: <span className="font-mono text-[#FF5A14] font-bold">{milestone.id === 'M-03' ? 'Ticket #PRJ-1-103 (Verification Pending)' : 'None (Cleared)'}</span></div>
                                     </div>
                                   </div>
 
@@ -716,13 +772,190 @@ const InvestorDashboard = () => {
 
         </div>
 
-        {/* RECENT 5 PROJECT RISKS & THREAT REGISTER */}
+        {/* ========================================================================= */}
+        {/* PROJECT COMPLETION & DELIVERY PROGRESS TRACKER (INVESTOR EXCLUSIVE)       */}
+        {/* ========================================================================= */}
+        <div className="theme-card rounded-2xl overflow-hidden shadow-sm border theme-border">
+          
+          {/* Header */}
+          <div className="p-6 border-b theme-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 theme-subtle">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF5A14] to-[#FF7A45] text-white flex items-center justify-center shadow-[0_0_18px_rgba(255,90,20,0.4)]">
+                <CheckCircle2 size={20} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-bold theme-heading tracking-tight">
+                    Project Completion & Delivery Progress
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-[#FF5A14]/15 text-[#FF5A14] border border-[#FF5A14]/30">
+                    Live Velocity Telemetry
+                  </span>
+                </div>
+                <p className="text-xs theme-muted">
+                  Overall delivery progress dynamically calibrated across scheduled timeline, sprint task backlog, and contractual SOW milestone tranches.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="px-3.5 py-1.5 rounded-xl theme-card border theme-border text-right">
+                <span className="text-[10px] theme-muted block uppercase tracking-wider font-semibold">Primary Basis</span>
+                <span className="text-xs font-extrabold text-[#FF5A14] font-mono">{calculationBasis}</span>
+              </div>
+              <div className="px-3.5 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-right">
+                <span className="text-[10px] text-emerald-500 block uppercase tracking-wider font-semibold">Delivery State</span>
+                <span className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
+                  {completionPct >= 80 ? 'Near Completion' : completionPct >= 50 ? 'In Full Flight' : completionPct > 0 ? 'Active Delivery' : 'Initial Kickoff'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Progress Bar Strip */}
+          <div className="p-6 border-b theme-border bg-slate-50/50 dark:bg-white/[0.01]">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl font-black theme-heading font-mono">{completionPct}%</span>
+                <span className="text-xs theme-muted font-medium">Overall Progress Attained</span>
+              </div>
+              <span className="text-xs font-mono font-bold text-[#FF7A45]">{completionSubtitle}</span>
+            </div>
+            
+            {/* Animated Gradient Bar */}
+            <div className="w-full h-3.5 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden p-0.5 border border-slate-300 dark:border-white/5">
+              <div 
+                className="h-full rounded-full bg-gradient-to-r from-[#FF5A14] via-[#FF7A45] to-emerald-400 transition-all duration-1000 shadow-[0_0_12px_rgba(255,90,20,0.5)]"
+                style={{ width: `${Math.max(4, completionPct)}%` }}
+              ></div>
+            </div>
+          </div>
+
+          {/* 3 Breakdown Cards: Timeline, Tasks, Milestones */}
+          <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x theme-border p-2 sm:p-4">
+            
+            {/* 1. Timeline Duration Progress */}
+            <div className="p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold theme-heading">
+                  <span className="p-1.5 bg-blue-500/10 text-blue-400 rounded-lg">
+                    <Clock size={15} />
+                  </span>
+                  <span>1. Timeline Horizon</span>
+                </div>
+                <span className="text-xs font-mono font-bold theme-heading">
+                  {totalMonths > 0 ? `${timelinePct}%` : 'Pending SOW'}
+                </span>
+              </div>
+              
+              <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden">
+                <div 
+                  className="h-full rounded-full bg-blue-500 transition-all duration-500"
+                  style={{ width: `${timelinePct > 0 ? Math.max(3, timelinePct) : 0}%` }}
+                ></div>
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] theme-muted">
+                <span>Elapsed Horizon:</span>
+                <span className="font-mono font-bold text-slate-700 dark:text-slate-200">
+                  {totalMonths > 0 ? `${elapsedMonths} of ${totalMonths} Months` : 'Schedule Pending SOW'}
+                </span>
+              </div>
+              <p className="text-[10px] theme-muted leading-relaxed">
+                Evaluates calendar time elapsed against planned project lifecycle window (e.g. 8 of 10 months = 80%).
+              </p>
+            </div>
+
+            {/* 2. Task Backlog Execution */}
+            <div className="p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold theme-heading">
+                  <span className="p-1.5 bg-[#FF5A14]/10 text-[#FF5A14] rounded-lg">
+                    <CheckCircle2 size={15} />
+                  </span>
+                  <span>2. Task Execution</span>
+                </div>
+                <span className="text-xs font-mono font-bold theme-heading">
+                  {tasksTotal > 0 ? `${tasksPct}%` : '0% (Pending)'}
+                </span>
+              </div>
+              
+              <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden">
+                <div 
+                  className="h-full rounded-full bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] transition-all duration-500"
+                  style={{ width: `${tasksTotal > 0 ? Math.max(3, tasksPct) : 0}%` }}
+                ></div>
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] theme-muted">
+                <span>Backlog Delivery:</span>
+                <span className="font-mono font-bold text-slate-700 dark:text-slate-200">
+                  {tasksTotal > 0 ? `${tasksCompleted} of ${tasksTotal} Done` : '0 Tasks Registered'}
+                </span>
+              </div>
+              <p className="text-[10px] theme-muted leading-relaxed">
+                Direct Jira and sprint task completion ratio (e.g. 10 of 20 tasks completed = 50%).
+              </p>
+            </div>
+
+            {/* 3. Contractual Milestones */}
+            <div className="p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold theme-heading">
+                  <span className="p-1.5 bg-emerald-500/10 text-emerald-500 rounded-lg">
+                    <Layers size={15} />
+                  </span>
+                  <span>3. SOW Milestones</span>
+                </div>
+                <span className="text-xs font-mono font-bold theme-heading">
+                  {msTotal > 0 ? `${msAvgPct}%` : 'TBD'}
+                </span>
+              </div>
+              
+              <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden">
+                <div 
+                  className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                  style={{ width: `${msTotal > 0 ? Math.max(3, msAvgPct) : 0}%` }}
+                ></div>
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] theme-muted">
+                <span>Tranches Verified:</span>
+                <span className="font-mono font-bold text-slate-700 dark:text-slate-200">
+                  {msTotal > 0 ? `${msCompleted} of ${msTotal} Milestones` : '0 Milestones Logged'}
+                </span>
+              </div>
+              <p className="text-[10px] theme-muted leading-relaxed">
+                Contractual deliverables verified and signed off for capital tranche disbursement.
+              </p>
+            </div>
+
+          </div>
+
+          {/* Bottom Methodology Footnote */}
+          <div className="px-6 py-3 border-t theme-border bg-slate-50 dark:bg-white/[0.02] flex items-center justify-between text-[11px] theme-muted">
+            <span className="flex items-center gap-1.5">
+              <Sparkles size={13} className="text-[#FF5A14]" />
+              <span>Multi-vector Completion Model: dynamically shifts between task ratio (e.g. 10/20 = 50%), schedule elapsed (e.g. 8/10 mos = 80%), and SOW deliverables.</span>
+            </span>
+            <span className="font-mono text-[10px] text-slate-400 hidden sm:inline">VPM Autonomous Calculation</span>
+          </div>
+
+        </div>
+
+        {/* 
+          RECENT 5 PROJECT RISKS & THREAT REGISTER
+          COMMENTED OUT FOR INVESTOR PERSONA:
+          Investors should not see the risk register section.
+        */}
+        {/*
         <ProjectThreatRegister
           risks={projectRisks}
           activeProject={activeProject}
           totalCount={totalProjectRisks}
           maxDisplay={5}
         />
+        */}
 
       </div>
     );
@@ -1025,10 +1258,6 @@ const renderProgramDirectorView = () => (
     </div>
   );
 
-  if (user?.role === 'Project Manager') {
-    return <Navigate to={`/project/${activeProject?.jira_key || activeProject?.id || 'PRJ-014'}`} replace />;
-  }
-
   return (
     <div className={`py-1 ${user?.role === 'Project Manager' ? 'space-y-3 sm:space-y-3.5' : 'space-y-6'}`}>
       
@@ -1072,7 +1301,7 @@ const renderProgramDirectorView = () => (
       {user?.role === 'Investor' && renderInvestorView()}
       {user?.role === 'PMO' && renderPMOView()}
       {user?.role === 'Program Director' && renderProgramDirectorView()}
-      {user?.role === 'Project Manager' && renderProjectManagerView()}
+      {user?.role === 'Project Manager' && renderPMOView()}
 
     </div>
   );

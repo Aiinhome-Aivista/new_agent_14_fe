@@ -428,10 +428,12 @@ const ProjectsPage = () => {
 
                   {/* Badges: Risks, Ingestion Docs */}
                   <div className="flex items-center gap-2 text-[11px] font-medium theme-muted mb-4">
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/5">
-                      <ShieldAlert size={12} className={proj.critical_risks_count > 0 ? "text-red-400" : "text-slate-400"} />
-                      <span>{proj.total_risks_count || 0} Risks</span>
-                    </span>
+                    {user?.role !== 'Investor' && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/5">
+                        <ShieldAlert size={12} className={proj.critical_risks_count > 0 ? "text-red-400" : "text-slate-400"} />
+                        <span>{proj.total_risks_count || 0} Risks</span>
+                      </span>
+                    )}
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/5">
                       <FileText size={12} className="text-blue-400" />
                       <span>{proj.documents_count || 0} Docs</span>
@@ -553,7 +555,7 @@ const ProjectsPage = () => {
                       <option value={user.id}>Self ({user.name || 'Me'})</option>
                     )}
                     {projectManagers.map(pm => (
-                      pm.id !== user?.id && <option key={pm.id} value={pm.id}>{pm.name}</option>
+                      String(pm.id) !== String(user?.id) && <option key={pm.id} value={pm.id}>{pm.name}</option>
                     ))}
                   </select>
                 </div>
@@ -677,7 +679,7 @@ const ProjectsPage = () => {
                       <option value={user.id}>Self ({user.name || 'Me'})</option>
                     )}
                     {projectManagers.map(pm => (
-                      pm.id !== user?.id && <option key={pm.id} value={pm.id}>{pm.name}</option>
+                      String(pm.id) !== String(user?.id) && <option key={pm.id} value={pm.id}>{pm.name}</option>
                     ))}
                   </select>
                 </div>
