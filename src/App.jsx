@@ -52,8 +52,8 @@ function App() {
                   <Route path="/projects/:id/team-members/:resourceId" element={<ResourceDetailPage />} />
                   <Route path="/chat" element={<ChatPage />} />
                 
-                {/* Knowledge & RAG: Investor, Program Director, PMO */}
-                <Route element={<ProtectedRoute allowedRoles={['Investor', 'Program Director', 'PMO']} />}>
+                {/* Knowledge & RAG: Investor, PMO */}
+                <Route element={<ProtectedRoute allowedRoles={['Investor', 'PMO']} />}>
                   <Route path="/knowledge" element={<KnowledgePage />} />
                 </Route>
 
@@ -77,8 +77,8 @@ function App() {
                   <Route path="/settings" element={<SettingsPage />} />
                 </Route>
 
-                {/* Ingestion: PMO, Project Manager */}
-                <Route element={<ProtectedRoute allowedRoles={['PMO', 'Project Manager']} />}>
+                {/* Ingestion: PMO, Project Manager, Program Director */}
+                <Route element={<ProtectedRoute allowedRoles={['PMO', 'Project Manager', 'Program Director']} />}>
                   <Route path="/ingestion" element={<IngestionPage />} />
                 </Route>
 

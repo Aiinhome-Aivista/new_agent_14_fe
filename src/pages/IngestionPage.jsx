@@ -231,7 +231,7 @@ const IngestionPage = () => {
     return (
       <div className="py-12 text-center theme-card p-8 rounded-2xl max-w-md mx-auto">
         <h2 className="text-xl font-bold theme-heading mb-2">Access Denied</h2>
-        <p className="text-xs theme-muted">Only PMO and Project Managers have permission to upload and ingest program documents.</p>
+        <p className="text-xs theme-muted">Only PMO, Program Directors, and Project Managers have permission to upload and ingest program documents.</p>
       </div>
     );
   }

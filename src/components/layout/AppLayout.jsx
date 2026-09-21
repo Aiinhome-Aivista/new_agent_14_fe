@@ -89,7 +89,6 @@ const AppLayout = () => {
           allNavDefinitions.risks,
           allNavDefinitions.reports,
           allNavDefinitions.guardrails,
-          allNavDefinitions.knowledge,
           allNavDefinitions.chat,
         ];
       case 'PMO':
@@ -238,8 +237,8 @@ const AppLayout = () => {
             </NavLink>
           )})}
           
-          {/* Upload Data Link for PMO / PM */}
-          {['Project Manager', 'PMO'].includes(user?.role) && (
+          {/* Upload Data Link for PMO / PM / Program Director */}
+          {['Project Manager', 'PMO', 'Program Director'].includes(user?.role) && (
             <div className={`pt-3 mt-3 border-t ${theme === 'dark' ? 'border-white/5' : 'border-slate-200'}`}>
               <span className={`px-3 text-[10px] uppercase tracking-wider font-bold block mb-1 ${
                 theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
