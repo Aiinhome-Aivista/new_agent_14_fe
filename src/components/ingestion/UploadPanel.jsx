@@ -10,7 +10,7 @@ const UploadPanel = ({ onUploadSuccess }) => {
   const { user } = useAuth();
   const { activeProject, projects, setActiveProject } = useProject();
   const [dragActive, setDragActive] = useState(false);
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
 
   // Status states
@@ -48,22 +48,22 @@ const UploadPanel = ({ onUploadSuccess }) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      setFiles(prev => [...prev, ...Array.from(e.dataTransfer.files)]);
     }
   };
 
   const handleChange = (e) => {
     e.preventDefault();
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+    if (e.target.files && e.target.files.length > 0) {
+      setFiles(prev => [...prev, ...Array.from(e.target.files)]);
     }
   };
 
   // Step 1: Pre-Upload Accuracy Evaluation
   const handleInitiateUpload = async () => {
-    if (!file) {
-      showToast('Please select a project document to upload.', 'warning');
+    if (files.length === 0) {
+      showToast('Please select project documents to upload.', 'warning');
       return;
     }
 
@@ -73,44 +73,65 @@ const UploadPanel = ({ onUploadSuccess }) => {
       return;
     }
 
-    setCheckingAccuracy(true);
-    let checkRes = null;
+    if (files.length === 1) {
+      const fileToUpload = files[0];
+      setCheckingAccuracy(true);
+      let checkRes = null;
 
-    try {
-      checkRes = await ingestionApi.checkAccuracy(file, targetProjectId);
-    } catch (err) {
-      console.warn('Accuracy pre-check failed, proceeding with direct upload:', err);
-    } finally {
-      setCheckingAccuracy(false);
-    }
+      try {
+        checkRes = await ingestionApi.checkAccuracy(fileToUpload, targetProjectId);
+      } catch (err) {
+        console.warn('Accuracy pre-check failed, proceeding with direct upload:', err);
+      } finally {
+        setCheckingAccuracy(false);
+      }
 
-    if (checkRes && checkRes.success) {
-      if (checkRes.passed) {
-        // Score meets or exceeds threshold: proceed directly
-        showToast(`Accuracy Check Passed: ${checkRes.match_percentage}% match! Ingesting into memory...`, 'success');
-        await executeUpload(targetProjectId, false, checkRes.match_percentage);
+      if (checkRes && checkRes.success) {
+        if (checkRes.passed) {
+          showToast(`Accuracy Check Passed: ${checkRes.match_percentage}% match! Ingesting into memory...`, 'success');
+          await executeUpload(fileToUpload, targetProjectId, false, checkRes.match_percentage);
+        } else {
+          setAccuracyData(checkRes);
+          setIsAccuracyModalOpen(true);
+        }
       } else {
-        // Score is below threshold: trigger low accuracy confirmation popup
-        setAccuracyData(checkRes);
-        setIsAccuracyModalOpen(true);
+        showToast('Proceeding with standard ingestion.', 'info');
+        await executeUpload(fileToUpload, targetProjectId);
       }
     } else {
-      // Fallback: if check failed unexpectedly, notify and allow proceeding
-      showToast('Proceeding with standard ingestion.', 'info');
-      await executeUpload(targetProjectId);
+      // Batch upload for multiple files
+      setUploading(true);
+      let successCount = 0;
+      for (const f of files) {
+        setProgress(0);
+        try {
+          await executeUpload(f, targetProjectId, false, 90, true);
+          successCount++;
+        } catch (err) {
+          console.error('Error uploading file:', f.name, err);
+        }
+      }
+      setUploading(false);
+      setProgress(0);
+      setFiles([]);
+      if (inputRef.current) inputRef.current.value = '';
+      showToast(`Successfully processed ${successCount} out of ${files.length} files.`, 'success');
+      if (onUploadSuccess) onUploadSuccess();
     }
   };
 
   // Step 2: Actual File Upload and Vectorization
-  const executeUpload = async (targetProjectId, isOverride = false, score = null) => {
-    setUploading(true);
-    setProgress(0);
+  const executeUpload = async (fileToUpload, targetProjectId, isOverride = false, score = null, isBatch = false) => {
+    if (!isBatch) {
+      setUploading(true);
+      setProgress(0);
+    }
 
     const calculatedScore = score !== null ? score : (accuracyData?.match_percentage || 90);
 
     try {
       const res = await ingestionApi.uploadDocument(
-        file, 
+        fileToUpload, 
         (p) => setProgress(p),
         { 
           uploaded_by: user?.name || user?.email, 
@@ -120,40 +141,51 @@ const UploadPanel = ({ onUploadSuccess }) => {
         }
       );
 
-      if (isOverride) {
-        showToast(`Document saved with low accuracy override (${accuracyData?.match_percentage || 0}%).`, 'warning');
-      } else if (res?.ai_processing_status === 'degraded_fallback') {
-        showToast('AI processing degraded — some figures are heuristic estimates', 'warning');
-      } else {
-        showToast(`Successfully processed and vectorized ${file.name}!`, 'success');
-      }
+      if (!isBatch) {
+        if (isOverride) {
+          showToast(`Document saved with low accuracy override (${accuracyData?.match_percentage || 0}%).`, 'warning');
+        } else if (res?.ai_processing_status === 'degraded_fallback') {
+          showToast('AI processing degraded — some figures are heuristic estimates', 'warning');
+        } else {
+          showToast(`Successfully processed and vectorized ${fileToUpload.name}!`, 'success');
+        }
 
-      setFile(null);
-      setIsAccuracyModalOpen(false);
-      setAccuracyData(null);
+        setFiles([]);
+        if (inputRef.current) inputRef.current.value = '';
+        setIsAccuracyModalOpen(false);
+        setAccuracyData(null);
 
-      if (onUploadSuccess) {
-        onUploadSuccess(res);
+        if (onUploadSuccess) {
+          onUploadSuccess(res);
+        }
       }
+      return res;
     } catch (err) {
       console.error('Error uploading document:', err);
-      showToast(err.response?.data?.error || 'Error uploading and processing document', 'error');
+      if (!isBatch) {
+        showToast(err.response?.data?.error || 'Error uploading and processing document', 'error');
+      }
+      throw err;
     } finally {
-      setUploading(false);
-      setProgress(0);
+      if (!isBatch) {
+        setUploading(false);
+        setProgress(0);
+      }
     }
   };
 
   // Modal actions
   const handleConfirmOverride = async () => {
     const targetProjectId = selectedProjectId || (projects && projects.length > 0 ? projects[0].id : null);
-    await executeUpload(targetProjectId, true);
+    if (files.length > 0) {
+      await executeUpload(files[0], targetProjectId, true);
+    }
   };
 
   const handleCancelModal = () => {
     setIsAccuracyModalOpen(false);
     setAccuracyData(null);
-    setFile(null);
+    setFiles([]);
     if (inputRef.current) {
       inputRef.current.value = '';
     }
@@ -207,7 +239,7 @@ const UploadPanel = ({ onUploadSuccess }) => {
 
       {/* Drag & Drop Form */}
       <form onDragEnter={handleDrag} onSubmit={(e) => e.preventDefault()}>
-        <input ref={inputRef} type="file" className="hidden" accept=".pdf,.docx,.xlsx,.txt" onChange={handleChange} />
+        <input ref={inputRef} type="file" multiple className="hidden" accept=".pdf,.docx,.xlsx,.txt" onChange={handleChange} />
         
         <div 
           className={`border-2 border-dashed rounded-2xl p-9 flex flex-col items-center justify-center transition-all cursor-pointer relative overflow-hidden
@@ -223,25 +255,31 @@ const UploadPanel = ({ onUploadSuccess }) => {
             <FileUp size={24} />
           </div>
           <p className="theme-heading font-bold text-sm text-center">
-            {file ? file.name : "Drag and drop your document here"}
+            {files.length > 0 
+              ? (files.length === 1 ? files[0].name : `${files.length} files selected`) 
+              : "Drag and drop your document here"}
           </p>
           <p className="theme-muted text-xs mt-1">
-            {file ? `${(file.size / 1024).toFixed(1)} KB — Click to change file` : "or click to browse from your computer"}
+            {files.length > 0 
+              ? (files.length === 1 
+                  ? `${(files[0].size / 1024).toFixed(1)} KB — Click to change file` 
+                  : `Total size: ${(files.reduce((a, b) => a + b.size, 0) / 1024).toFixed(1)} KB — Click to add more`) 
+              : "or click to browse from your computer"}
           </p>
-          {file && (
+          {files.length > 0 && (
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                setFile(null);
+                setFiles([]);
                 setAccuracyData(null);
                 if (inputRef.current) inputRef.current.value = '';
               }}
               className="mt-3 px-3 py-1 rounded-lg text-xs font-semibold bg-slate-200/80 dark:bg-white/10 hover:bg-red-500/20 text-slate-600 dark:text-slate-300 hover:text-red-500 transition-colors flex items-center gap-1.5 cursor-pointer z-10"
-              title="Remove selected file"
+              title="Remove selected files"
             >
               <X size={13} />
-              <span>Remove File</span>
+              <span>Remove {files.length === 1 ? 'File' : 'Files'}</span>
             </button>
           )}
         </div>
@@ -284,7 +322,7 @@ const UploadPanel = ({ onUploadSuccess }) => {
           <button
             type="button"
             onClick={handleInitiateUpload}
-            disabled={!file || uploading || checkingAccuracy}
+            disabled={files.length === 0 || uploading || checkingAccuracy}
             className="px-5 py-2.5 bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white rounded-xl text-xs font-bold shadow-md hover:brightness-110 disabled:opacity-40 transition-all flex items-center gap-2 cursor-pointer"
           >
             {checkingAccuracy ? (
