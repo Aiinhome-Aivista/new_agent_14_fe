@@ -98,6 +98,7 @@ const AddStakeholderPage = () => {
 
   // Drag & drop state for excel
   const [isDragging, setIsDragging] = useState(false);
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
 
   // Fetch current stakeholders
   const loadStakeholders = async () => {
@@ -302,20 +303,100 @@ const AddStakeholderPage = () => {
     }
   };
 
-  // Download Sample Excel Template
-  const downloadSampleTemplate = () => {
-    const sampleData = [
-      { 'Full Name': 'Alice Cooper', 'Email': 'alice.cooper@example.com', 'Role': 'Investor' },
-      { 'Full Name': 'David Warner', 'Email': 'david.warner@example.com', 'Role': 'Program Director' },
-      { 'Full Name': 'Samantha Miller', 'Email': 'samantha.miller@example.com', 'Role': 'PMO' },
-      { 'Full Name': 'Rajesh Sharma', 'Email': 'rajesh.sharma@example.com', 'Role': 'Project Manager' }
-    ];
+  // Download Sample Excel Template with Role dropdown data validation
+  const downloadExcelTemplate = async () => {
+    try {
+      setDownloadingTemplate(true);
+      const ExcelJSModule = await import('exceljs');
+      const ExcelJS = ExcelJSModule.default || ExcelJSModule;
+      const wb = new ExcelJS.Workbook();
+      wb.creator = 'VPM Platform';
+      wb.created = new Date();
 
-    const ws = XLSX.utils.json_to_sheet(sampleData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Stakeholders_Template');
-    XLSX.writeFile(wb, 'vpm_stakeholders_template.xlsx');
-    showToast('Downloaded sample Excel template.', 'info');
+      // 1. Primary Stakeholders Sheet (Only headers, blank data rows ready for entry)
+      const ws = wb.addWorksheet('Stakeholders');
+
+      // Define columns
+      ws.columns = [
+        { header: 'Full Name', key: 'name', width: 28 },
+        { header: 'Email', key: 'email', width: 34 },
+        { header: 'Role', key: 'role', width: 26 }
+      ];
+
+      // Style Header Row (Row 1)
+      const headerRow = ws.getRow(1);
+      headerRow.height = 28;
+      headerRow.eachCell((cell) => {
+        cell.font = {
+          name: 'Calibri',
+          size: 11,
+          bold: true,
+          color: { argb: 'FFFFFFFF' }
+        };
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFFF5A14' } // VPM Brand Orange
+        };
+        cell.alignment = {
+          vertical: 'middle',
+          horizontal: 'center'
+        };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFFF8C5A' } },
+          left: { style: 'thin', color: { argb: 'FFFF8C5A' } },
+          bottom: { style: 'medium', color: { argb: 'FFE04400' } },
+          right: { style: 'thin', color: { argb: 'FFFF8C5A' } }
+        };
+      });
+
+      // 2. Hidden Reference Sheet for Role dropdown list options
+      // This guarantees universal dropdown compatibility in Microsoft Excel, Google Sheets, LibreOffice, and Apple Numbers
+      const rolesSheet = wb.addWorksheet('RolesRef');
+      rolesSheet.state = 'hidden';
+      VALID_ROLES.forEach((roleName, idx) => {
+        rolesSheet.getCell(`A${idx + 1}`).value = roleName;
+      });
+
+      // 3. Apply Excel Data Validation (dropdown list) to Role column (C) for rows 2 to 500
+      for (let r = 2; r <= 500; r++) {
+        const roleCell = ws.getCell(`C${r}`);
+        roleCell.dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [`RolesRef!$A$1:$A$${VALID_ROLES.length}`],
+          showErrorMessage: true,
+          errorTitle: 'Invalid Stakeholder Role',
+          error: `Please select a valid role from the dropdown: ${VALID_ROLES.join(', ')}`
+        };
+
+        // Align data rows for readability
+        ws.getCell(`A${r}`).alignment = { vertical: 'middle', horizontal: 'left' };
+        ws.getCell(`B${r}`).alignment = { vertical: 'middle', horizontal: 'left' };
+        roleCell.alignment = { vertical: 'middle', horizontal: 'left' };
+      }
+
+      // Generate binary buffer and trigger browser download
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'vpm_stakeholders_template.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      showToast('Excel template with role dropdowns downloaded!', 'success');
+    } catch (err) {
+      console.error('Failed to download Excel template:', err);
+      showToast('Failed to generate Excel template. Please try again.', 'error');
+    } finally {
+      setDownloadingTemplate(false);
+    }
   };
 
   // --- JIRA & GOOGLE DRIVE CONNECTOR HANDLERS ---
@@ -676,6 +757,45 @@ const AddStakeholderPage = () => {
               {/* METHOD 2: EXCEL UPLOAD */}
               {inputMode === 'excel' && (
                 <div className="space-y-4">
+                  {/* Template Download Banner / Action Box */}
+                  <div className="p-4 rounded-2xl theme-subtle border theme-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-gradient-to-r from-[#FF5A14]/10 via-[#FF5A14]/5 to-transparent">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#FF5A14]/15 text-[#FF5A14] border border-[#FF5A14]/30 flex items-center justify-center flex-shrink-0">
+                        <FileSpreadsheet size={20} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-xs sm:text-sm font-bold theme-heading">Download Excel Template</h4>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FF5A14]/15 text-[#FF5A14] border border-[#FF5A14]/30">
+                            Role Dropdown Included
+                          </span>
+                        </div>
+                        <p className="text-[11px] theme-muted mt-0.5">
+                          Clean template with headers (<code className="text-[#FF7A45] font-mono">Full Name</code>, <code className="text-[#FF7A45] font-mono">Email</code>, <code className="text-[#FF7A45] font-mono">Role</code>) and built-in role selection dropdowns for every row.
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={downloadingTemplate}
+                      onClick={downloadExcelTemplate}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] hover:brightness-110 text-white text-xs font-bold shadow-[0_0_15px_rgba(255,90,20,0.25)] transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 flex-shrink-0 self-stretch sm:self-auto justify-center"
+                    >
+                      {downloadingTemplate ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin" />
+                          <span>Generating...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Download size={14} />
+                          <span>Download Template (.xlsx)</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
                   <div
                     onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                     onDragLeave={() => setIsDragging(false)}
@@ -713,19 +833,50 @@ const AddStakeholderPage = () => {
                       </div>
                     </div>
 
-                    <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold theme-heading flex-shrink-0 hover:bg-white/10 transition-all">
-                      <FileSpreadsheet size={15} className="text-[#FF5A14]" />
-                      <span>Browse Files</span>
+                    <div className="flex items-center gap-2.5 flex-shrink-0">
+                      <button
+                        type="button"
+                        disabled={downloadingTemplate}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          downloadExcelTemplate();
+                        }}
+                        className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#FF5A14]/50 text-xs font-semibold theme-heading transition-all cursor-pointer"
+                        title="Download template with role dropdowns"
+                      >
+                        {downloadingTemplate ? (
+                          <Loader2 size={14} className="animate-spin text-[#FF5A14]" />
+                        ) : (
+                          <Download size={14} className="text-[#FF5A14]" />
+                        )}
+                        <span>Download Template</span>
+                      </button>
+
+                      <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FF5A14]/10 border border-[#FF5A14]/30 text-xs font-bold text-[#FF5A14] hover:bg-[#FF5A14]/20 transition-all">
+                        <FileSpreadsheet size={15} />
+                        <span>Browse Files</span>
+                      </div>
                     </div>
                   </div>
 
                   {/* Excel Format Guidelines Card */}
-                  <div className="p-3.5 rounded-2xl theme-subtle border theme-border flex items-center gap-3">
-                    <AlertCircle size={16} className="text-[#FF5A14] flex-shrink-0" />
-                    <div className="text-[11px] theme-muted">
-                      <strong className="theme-heading mr-1">Required Headers:</strong>
-                      <code className="text-[#FF7A45] font-mono">Full Name</code>, <code className="text-[#FF7A45] font-mono">Email</code>, and <code className="text-[#FF7A45] font-mono">Role</code> (Investor, Program Director, PMO, or Project Manager).
+                  <div className="p-3.5 rounded-2xl theme-subtle border theme-border flex items-center justify-between flex-wrap gap-2.5">
+                    <div className="flex items-center gap-3">
+                      <AlertCircle size={16} className="text-[#FF5A14] flex-shrink-0" />
+                      <div className="text-[11px] theme-muted">
+                        <strong className="theme-heading mr-1">Required Headers:</strong>
+                        <code className="text-[#FF7A45] font-mono">Full Name</code>, <code className="text-[#FF7A45] font-mono">Email</code>, and <code className="text-[#FF7A45] font-mono">Role</code> ({VALID_ROLES.join(', ')}).
+                      </div>
                     </div>
+                    <button
+                      type="button"
+                      disabled={downloadingTemplate}
+                      onClick={downloadExcelTemplate}
+                      className="text-[11px] font-semibold text-[#FF5A14] hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                    >
+                      <Download size={12} />
+                      <span>Download Excel Template</span>
+                    </button>
                   </div>
                 </div>
               )}
