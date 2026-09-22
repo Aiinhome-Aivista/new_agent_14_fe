@@ -203,9 +203,11 @@ const InvestorDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      setError(null);
       const targetPid = activeProject ? (activeProject.id || activeProject.jira_key) : 1;
       const snapshot = await dashboardApi.getSnapshot(targetPid);
       setData(snapshot);
+      setError(null);
       setLastUpdated(new Date());
     } catch (err) {
       console.error("Failed to load dashboard data", err);

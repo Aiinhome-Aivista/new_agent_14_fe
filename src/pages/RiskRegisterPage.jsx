@@ -121,7 +121,7 @@ const RiskRegisterPage = () => {
 
   const handleRiskUpdated = (updatedRisk) => {
     if (!updatedRisk) return;
-    setRisks(prev => prev.map(r => r.id === updatedRisk.id ? updatedRisk : r));
+    setRisks(prev => prev.map(r => r.id === updatedRisk.id ? { ...r, ...updatedRisk } : r));
   };
 
   const handleCreateRisk = async (e) => {
