@@ -190,7 +190,7 @@ const IngestionPage = () => {
       if (res && res.success) {
         if (res.passed) {
           showToast(`Scope Accuracy Check Passed: ${res.match_percentage}% match! Ingesting...`, 'success');
-          await executeConnectorIngest(itemsToIngest);
+          await executeConnectorIngest(itemsToIngest, false, res.match_percentage);
         } else {
           setConnectorAccuracyData(res);
           setIsConnectorAccuracyModalOpen(true);
@@ -206,12 +206,27 @@ const IngestionPage = () => {
     }
   };
 
-  const executeConnectorIngest = async (itemsToIngest, isOverride = false) => {
+  const executeConnectorIngest = async (itemsToIngest, isOverride = false, score = null) => {
     try {
       setIngesting(true);
-      const res = await ingestionApi.ingestConnectorItems(selectedProvider, itemsToIngest, activeProject?.id);
+      const calculatedScore = score !== null && score !== undefined 
+        ? score 
+        : (connectorAccuracyData?.match_percentage ?? null);
+
+      const itemsWithScore = itemsToIngest.map(item => ({
+        ...item,
+        ...(calculatedScore !== null ? { accuracy_score: calculatedScore } : {})
+      }));
+
+      const res = await ingestionApi.ingestConnectorItems(
+        selectedProvider, 
+        itemsWithScore, 
+        activeProject?.id, 
+        calculatedScore
+      );
+
       if (isOverride) {
-        showToast(`Ingested ${itemsToIngest.length} items with low accuracy override (${connectorAccuracyData?.match_percentage || 0}%).`, "warning");
+        showToast(`Ingested ${itemsToIngest.length} items with low accuracy override (${calculatedScore ?? 0}%).`, "warning");
       } else {
         showToast(res.message || `Successfully ingested ${itemsToIngest.length} items into Vector Store!`, "success");
       }
@@ -692,7 +707,8 @@ const IngestionPage = () => {
         onClose={() => setIsConnectorAccuracyModalOpen(false)}
         onConfirm={() => {
           const itemsToIngest = connectorItems.filter(item => selectedItemIds.has(item.id));
-          executeConnectorIngest(itemsToIngest, true);
+          const score = connectorAccuracyData?.match_percentage ?? null;
+          executeConnectorIngest(itemsToIngest, true, score);
         }}
         accuracyData={connectorAccuracyData}
         isProcessing={ingesting}
