@@ -115,33 +115,27 @@ const InvestorDashboard = () => {
 
     let trancheAmount = m.trancheAmount ?? m.amount;
     if (trancheAmount === undefined || trancheAmount === null || isNaN(Number(trancheAmount))) {
-      const defaultAmounts = [350000, 450000, 300000, 400000];
-      trancheAmount = defaultAmounts[idx % defaultAmounts.length] || 350000;
+      trancheAmount = 0;
     } else {
       trancheAmount = Number(trancheAmount);
     }
 
-    let deliverables = Array.isArray(m.deliverables) && m.deliverables.length > 0 ? m.deliverables : [
-      { title: `${name} - Architecture & SOW Sign-off`, status: deliverablesPercent >= 25 ? 'Verified' : 'Pending' },
-      { title: `${name} - Core Technical Implementation`, status: deliverablesPercent >= 50 ? 'Verified' : 'Pending' },
-      { title: `${name} - Vendor SLA & Security Compliance`, status: deliverablesPercent >= 75 ? (status === 'On Hold' ? 'Blocked (SLA Hold)' : 'Verified') : 'Pending' },
-      { title: `${name} - Acceptance Sign-off & Disbursement Audit`, status: deliverablesPercent === 100 ? 'Verified' : 'Pending' }
-    ];
+    let deliverables = Array.isArray(m.deliverables) ? m.deliverables : [];
 
     let aiAudit = m.aiAudit || (
       status === 'On Hold'
-        ? 'Autonomous Capital Gatekeeper Alert: Vendor SLA dropped below 90% contractual threshold (74% recorded). Capital release automatically placed on hold pending blocker resolution.'
+        ? 'Capital release on hold pending blocker resolution.'
         : status === 'Released'
-        ? 'Autonomous Capital Gatekeeper Verdict: All milestone deliverables verified via SharePoint and SLA compliance confirmed at 98%. Capital release executed.'
+        ? 'Milestone deliverables verified. Capital release executed.'
         : status === 'Authorized'
-        ? 'Autonomous Capital Gatekeeper Verdict: Milestone deliverables verified. Capital tranche authorized for release upon final stage sign-off.'
-        : 'Scheduled Phase: Technical deliverables queued for execution in subsequent milestone window.'
+        ? 'Milestone deliverables verified. Capital tranche authorized.'
+        : 'Scheduled Phase.'
     );
 
     let payoutDate = m.payoutDate || (
-      status === 'Released' ? 'Paid & Reconciled (SAP ERP)' :
+      status === 'Released' ? 'Paid & Reconciled' :
       status === 'Authorized' ? 'Pending Disbursal' :
-      status === 'On Hold' ? 'Withheld (SLA Hold)' : timeline
+      status === 'On Hold' ? 'Withheld (Hold)' : timeline
     );
 
     return {
@@ -301,21 +295,17 @@ const InvestorDashboard = () => {
   const risks = data?.risks || [];
   const projectRisks = data?.project_risks || data?.recent_risks || data?.risks || [];
   const healthScore = data?.healthScore !== undefined && data?.healthScore !== null ? data.healthScore : 100;
-  const crossProjectStatus = data?.cross_project_status || "Active & Governed";
-  const scheduleVariance = data?.schedule_variance || "+2.4% Ahead";
-  const totalBudgetBurn = data?.total_budget_burn || "$2.64M / $3.85M";
+  const crossProjectStatus = data?.cross_project_status || "Active Projects";
+  const scheduleVariance = data?.schedule_variance || "N/A";
+  const totalBudgetBurn = data?.total_budget_burn || "$0 / $0";
   const showstoppers = data?.showstoppers || [];
-  const velocity = (data?.velocity && data.velocity.points !== undefined && data.velocity.points !== null) ? data.velocity : {
-    points: 88,
-    unit: "Story Points / Sprint Avg",
-    trend: "+12% Points from last sprint"
-  };
+  const velocity = (data?.velocity && data.velocity.points !== undefined && data.velocity.points !== null) ? data.velocity : null;
   const openBlockers = data?.open_blockers || [];
   const escalations = data?.escalations || [];
   const predictive = data?.predictive || {
     confidence_score: healthScore,
-    forecasted_variance: scheduleVariance || "+$220K Projected Surplus",
-    forecast_narrative: "Reflexion predictive loop indicates stable sprint trajectory with controlled variance and 84% delivery confidence."
+    forecasted_variance: scheduleVariance,
+    forecast_narrative: "No predictive telemetry recorded for this project."
   };
 
   // ==========================================
