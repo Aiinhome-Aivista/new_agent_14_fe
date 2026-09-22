@@ -51,8 +51,10 @@ export const dashboardApi = {
     }
     return payload;
   },
-  getForecast: async (projectId = null) => {
-    const params = projectId ? { project_id: projectId } : {};
+  getForecast: async (projectId = null, refresh = false) => {
+    const params = {};
+    if (projectId) params.project_id = projectId;
+    if (refresh) params.refresh = 'true';
     const response = await api.get('/dashboard/forecast', { params });
     return response.data;
   }

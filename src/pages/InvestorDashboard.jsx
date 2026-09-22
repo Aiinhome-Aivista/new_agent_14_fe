@@ -19,6 +19,7 @@ import {
   AlertCircle, 
   ExternalLink, 
   ArrowRight,
+  ArrowUpRight,
   ShieldCheck,
   TrendingUp,
   AlertTriangle,
@@ -252,7 +253,12 @@ const InvestorDashboard = () => {
         uploaded_by: user?.name || user?.email,
         uploaded_by_role: user?.role
       });
-      if (res?.ai_processing_status === 'degraded_fallback') {
+      if (res?.auto_forecast) {
+        const fc = res.auto_forecast;
+        const sign = fc.forecasted_variance < 0 ? '-' : '+';
+        const formattedVar = `${sign}₹${Math.abs(Math.round(fc.forecasted_variance)).toLocaleString('en-IN')}`;
+        showToast(`Document ingested! Reflexion Forecast updated: ${formattedVar} (${fc.confidence_score}% confidence)`, 'success');
+      } else if (res?.ai_processing_status === 'degraded_fallback') {
         showToast('AI processing degraded — some figures are heuristic estimates', 'warning');
       } else {
         showToast(`Successfully ingested ${file.name}. State updated.`, 'success');
@@ -1288,12 +1294,14 @@ const renderProgramDirectorView = () => (
 
         <div className="flex items-center gap-3">
           <button 
-            onClick={handleGenerateReport}
-            disabled={generatingReport}
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white text-xs font-bold shadow-[0_0_20px_rgba(255,90,20,0.35)] hover:shadow-[0_0_30px_rgba(255,90,20,0.55)] hover:brightness-110 disabled:opacity-50 transition-all flex items-center gap-2 cursor-pointer"
+            onClick={() => {
+              const pid = activeProject?.numeric_id || activeProject?.id || '1';
+              navigate(`/project/${pid}/forecast`);
+            }}
+            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] hover:from-[#e04f10] hover:to-[#ff6830] text-white text-xs font-bold shadow-[0_0_20px_rgba(255,90,20,0.35)] hover:shadow-[0_0_30px_rgba(255,90,20,0.55)] hover:brightness-110 transition-all flex items-center gap-2 cursor-pointer group"
           >
-            {generatingReport ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />}
-            <span>{generatingReport ? 'Synthesizing Brief...' : '1-Click Executive PDF'}</span>
+            <span>Predictive Forecast</span>
+            <ArrowUpRight size={15} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </button>
         </div>
       </div>
