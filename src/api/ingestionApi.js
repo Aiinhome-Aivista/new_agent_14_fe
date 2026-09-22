@@ -61,15 +61,45 @@ export const ingestionApi = {
     const response = await api.get('/ingestion/connectors/fetch', { params });
     return response.data;
   },
-  ingestConnectorItems: async (provider, items, projectId = null, accuracyScore = null) => {
+  ingestConnectorItems: async (provider, items, projectId = null, accuracyScore = null, onProgress = null) => {
     const payload = { 
       provider, 
       items, 
       ...(projectId ? { project_id: projectId } : {}),
       ...(accuracyScore !== null && accuracyScore !== undefined ? { accuracy_score: accuracyScore } : {})
     };
-    const response = await api.post('/ingestion/connectors/ingest', payload);
-    return response.data;
+
+    if (onProgress) {
+      let p = 15;
+      onProgress(p);
+      const interval = setInterval(() => {
+        if (p < 38) {
+          p += 3.8;
+        } else if (p < 68) {
+          p += 2.2;
+        } else if (p < 88) {
+          p += 1.2;
+        } else if (p < 97) {
+          p += 0.5;
+        } else if (p < 99.4) {
+          p += 0.1;
+        }
+        onProgress(Math.min(Math.round(p), 99));
+      }, 900);
+
+      try {
+        const response = await api.post('/ingestion/connectors/ingest', payload);
+        clearInterval(interval);
+        onProgress(100);
+        return response.data;
+      } catch (e) {
+        clearInterval(interval);
+        throw e;
+      }
+    } else {
+      const response = await api.post('/ingestion/connectors/ingest', payload);
+      return response.data;
+    }
   },
   checkAccuracy: async (file, projectId = null) => {
     const formData = new FormData();
