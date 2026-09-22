@@ -5,8 +5,7 @@ export const dashboardApi = {
     const params = projectId ? { project_id: projectId } : {};
     const response = await api.get('/dashboard/snapshot', { params });
     // The backend returns a snapshot object containing 'data' JSON
-    // If the data was stored as a JSON string by mistake, parse it:
-    let payload = response.data.data;
+    let payload = (response.data && response.data.data !== undefined) ? response.data.data : response.data;
     if (typeof payload === 'string') {
         try {
             payload = JSON.parse(payload);

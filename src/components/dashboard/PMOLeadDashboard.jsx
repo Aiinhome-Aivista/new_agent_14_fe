@@ -786,6 +786,7 @@ const PMOLeadDashboard = ({
 
       </div>
       {/* ACTIVE GOVERNANCE ESCALATIONS STREAM */}
+      {user?.role !== 'Project Manager' && (
       <div className="p-6 rounded-2xl theme-card border border-white/10 flex flex-col justify-between">
         <div>
           <div className="flex justify-between items-center mb-3">
@@ -870,6 +871,7 @@ const PMOLeadDashboard = ({
           </Link>
         </div>
       </div>
+      )}
 
       {/* ========================================================================= */}
       {/* INTERACTIVE EXECUTIVE DRILLDOWN MODALS */}
@@ -1419,13 +1421,7 @@ const PMOLeadDashboard = ({
                 </div>
 
                 <div className="pt-3 border-t theme-border flex items-center justify-between">
-                  <Link
-                    to="/knowledge"
-                    onClick={() => setActiveDrilldown(null)}
-                    className="px-4 py-2 rounded-xl bg-[#FF5A14]/10 text-[#FF5A14] hover:bg-[#FF5A14]/20 font-bold transition-colors cursor-pointer"
-                  >
-                    Inspect SOW in Knowledge & RAG
-                  </Link>
+                  {/* Removed Knowledge link for PMO */}
                   <button
                     onClick={() => setActiveDrilldown(null)}
                     className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white font-bold transition-all shadow-sm hover:brightness-110 cursor-pointer"

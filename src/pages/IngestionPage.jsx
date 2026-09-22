@@ -91,6 +91,7 @@ const IngestionPage = () => {
   const [isConnectorAccuracyModalOpen, setIsConnectorAccuracyModalOpen] = useState(false);
   const [connectorAccuracyData, setConnectorAccuracyData] = useState(null);
   const [connectorProgress, setConnectorProgress] = useState(0);
+  const [connectorBatchProgress, setConnectorBatchProgress] = useState({ current: 0, total: 0 });
 
   const fetchHistory = async () => {
     try {
@@ -210,23 +211,38 @@ const IngestionPage = () => {
   const executeConnectorIngest = async (itemsToIngest, isOverride = false, score = null) => {
     try {
       setIngesting(true);
-      setConnectorProgress(12);
+      setConnectorBatchProgress({ current: 0, total: itemsToIngest.length });
       const calculatedScore = score !== null && score !== undefined 
         ? score 
         : (connectorAccuracyData?.match_percentage ?? null);
 
-      const itemsWithScore = itemsToIngest.map(item => ({
-        ...item,
-        ...(calculatedScore !== null ? { accuracy_score: calculatedScore } : {})
-      }));
+      let successCount = 0;
+      for (let i = 0; i < itemsToIngest.length; i++) {
+        const item = itemsToIngest[i];
+        setConnectorProgress(0);
 
-      const res = await ingestionApi.ingestConnectorItems(
-        selectedProvider, 
-        itemsWithScore, 
-        activeProject?.id, 
-        calculatedScore,
-        (p) => setConnectorProgress(p)
-      );
+        const itemWithScore = {
+          ...item,
+          ...(calculatedScore !== null ? { accuracy_score: calculatedScore } : {})
+        };
+
+        try {
+          await ingestionApi.ingestConnectorItems(
+            selectedProvider, 
+            [itemWithScore], 
+            activeProject?.id, 
+            calculatedScore,
+            (p) => setConnectorProgress(p)
+          );
+          
+          successCount++;
+          fetchHistory(); // Update list immediately
+        } catch (err) {
+          console.error(`Connector ingestion failed for item ${item.title}:`, err);
+        }
+        
+        setConnectorBatchProgress(prev => ({ ...prev, current: i + 1 }));
+      }
 
       if (res?.auto_forecast) {
         const fc = res.auto_forecast;
@@ -236,18 +252,19 @@ const IngestionPage = () => {
       } else if (isOverride) {
         showToast(`Ingested ${itemsToIngest.length} items with low accuracy override (${calculatedScore ?? 0}%).`, "warning");
       } else {
-        showToast(res.message || `Successfully ingested ${itemsToIngest.length} items into Vector Store!`, "success");
+        showToast(`Successfully ingested ${successCount} items into Vector Store!`, "success");
       }
+      
       setSelectedItemIds(new Set());
       setIsConnectorAccuracyModalOpen(false);
       setConnectorAccuracyData(null);
-      fetchHistory();
     } catch (err) {
       console.error("Connector ingestion failed:", err);
       showToast(err.response?.data?.error || "Failed to ingest selected items.", "error");
     } finally {
       setIngesting(false);
       setConnectorProgress(0);
+      setConnectorBatchProgress({ current: 0, total: 0 });
     }
   };
 
@@ -574,7 +591,7 @@ const IngestionPage = () => {
                         ) : ingesting ? (
                           <>
                             <Loader2 size={15} className="animate-spin" />
-                            <span>Partitioning & Vectorizing into ChromaDB...</span>
+                            <span>Processing Items...</span>
                           </>
                         ) : (
                           <>
@@ -586,26 +603,40 @@ const IngestionPage = () => {
                         )}
                       </button>
 
-                      {/* Connector Ingestion Multi-Stage Progress Bar */}
-                      {ingesting && (
-                        <div className="pt-2 animate-fadeIn">
-                          <div className="flex justify-between text-xs theme-muted mb-1.5 font-mono">
-                            <span className="flex items-center gap-1.5 truncate">
-                              <Loader2 size={13} className="animate-spin text-[#FF5A14] shrink-0" />
-                              <span className="truncate">
-                                {connectorProgress < 30 && `Downloading ${selectedItemIds.size} asset(s) from ${CONNECTOR_METADATA[selectedProvider]?.name || 'Connector'}...`}
-                                {connectorProgress >= 30 && connectorProgress < 60 && "Partitioning document text into semantic vector chunks for ChromaDB..."}
-                                {connectorProgress >= 60 && connectorProgress < 88 && "Synthesizing multi-agent project telemetry, milestones & risks..."}
-                                {connectorProgress >= 88 && "Finalizing executive dashboard snapshot & index..."}
+                      {/* Progress Bar UI */}
+                      {ingesting && connectorBatchProgress.total > 0 && (
+                        <div className="mt-4 space-y-4">
+                          {connectorBatchProgress.total > 1 && (
+                            <div>
+                              <div className="flex justify-between text-xs theme-muted mb-1 font-mono">
+                                <span className="flex items-center gap-1.5">
+                                  <Loader2 size={13} className="animate-spin text-emerald-500" />
+                                  <span>Processing item {connectorBatchProgress.current + 1} of {connectorBatchProgress.total}...</span>
+                                </span>
+                                <span className="font-bold theme-heading">Overall: {Math.round(((connectorBatchProgress.current * 100) + connectorProgress) / (connectorBatchProgress.total * 100) * 100)}%</span>
+                              </div>
+                              <div className="w-full theme-badge rounded-full h-2 overflow-hidden bg-slate-200 dark:bg-slate-800">
+                                <div className="bg-gradient-to-r from-emerald-500 to-emerald-400 h-2 rounded-full transition-all duration-300" style={{ width: `${((connectorBatchProgress.current * 100) + connectorProgress) / (connectorBatchProgress.total * 100) * 100}%` }}></div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          <div>
+                            <div className="flex justify-between text-xs theme-muted mb-1 font-mono">
+                              <span className="flex items-center gap-1.5">
+                                <Loader2 size={13} className="animate-spin text-[#FF5A14]" />
+                                <span>
+                                  {connectorProgress < 30 && "Fetching and parsing asset..."}
+                                  {connectorProgress >= 30 && connectorProgress < 60 && "Partitioning into semantic vectors..."}
+                                  {connectorProgress >= 60 && connectorProgress < 88 && "Synthesizing project telemetry..."}
+                                  {connectorProgress >= 88 && "Finalizing knowledge index..."}
+                                </span>
                               </span>
-                            </span>
-                            <span className="font-bold theme-heading ml-2 shrink-0">{connectorProgress}%</span>
-                          </div>
-                          <div className="w-full theme-badge rounded-full h-2 overflow-hidden bg-slate-200 dark:bg-slate-800">
-                            <div 
-                              className="bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] h-2 rounded-full transition-all duration-300" 
-                              style={{ width: `${connectorProgress}%` }}
-                            />
+                              <span className="font-bold theme-heading ml-2 shrink-0">{connectorProgress}%</span>
+                            </div>
+                            <div className="w-full theme-badge rounded-full h-2 overflow-hidden bg-slate-200 dark:bg-slate-800">
+                              <div className="bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] h-2 rounded-full transition-all duration-300" style={{ width: `${connectorProgress}%` }}></div>
+                            </div>
                           </div>
                         </div>
                       )}
