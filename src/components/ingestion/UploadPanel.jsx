@@ -17,6 +17,7 @@ const UploadPanel = ({ onUploadSuccess }) => {
   const [checkingAccuracy, setCheckingAccuracy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
 
   // Accuracy Modal State
   const [isAccuracyModalOpen, setIsAccuracyModalOpen] = useState(false);
@@ -101,22 +102,26 @@ const UploadPanel = ({ onUploadSuccess }) => {
     } else {
       // Batch upload for multiple files
       setUploading(true);
+      setBatchProgress({ current: 0, total: files.length });
       let successCount = 0;
-      for (const f of files) {
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
         setProgress(0);
         try {
           await executeUpload(f, targetProjectId, false, 90, true);
           successCount++;
+          if (onUploadSuccess) onUploadSuccess();
         } catch (err) {
           console.error('Error uploading file:', f.name, err);
         }
+        setBatchProgress(prev => ({ ...prev, current: i + 1 }));
       }
       setUploading(false);
       setProgress(0);
+      setBatchProgress({ current: 0, total: 0 });
       setFiles([]);
       if (inputRef.current) inputRef.current.value = '';
       showToast(`Successfully processed ${successCount} out of ${files.length} files.`, 'success');
-      if (onUploadSuccess) onUploadSuccess();
     }
   };
 
@@ -293,21 +298,38 @@ const UploadPanel = ({ onUploadSuccess }) => {
         )}
 
         {uploading && (
-          <div className="mt-5">
-            <div className="flex justify-between text-xs theme-muted mb-1 font-mono">
-              <span className="flex items-center gap-1.5">
-                <Loader2 size={13} className="animate-spin text-[#FF5A14]" />
-                <span>
-                  {progress < 30 && "Parsing document structure & formatting..."}
-                  {progress >= 30 && progress < 60 && "Partitioning into semantic vectors for ChromaDB..."}
-                  {progress >= 60 && progress < 88 && "Synthesizing multi-agent project telemetry & risks..."}
-                  {progress >= 88 && "Finalizing project knowledge index..."}
+          <div className="mt-5 space-y-4">
+            {batchProgress.total > 1 && (
+              <div>
+                <div className="flex justify-between text-xs theme-muted mb-1 font-mono">
+                  <span className="flex items-center gap-1.5">
+                    <Loader2 size={13} className="animate-spin text-emerald-500" />
+                    <span>Processing file {batchProgress.current + 1} of {batchProgress.total}...</span>
+                  </span>
+                  <span className="font-bold theme-heading">Overall: {Math.round(((batchProgress.current * 100) + progress) / (batchProgress.total * 100) * 100)}%</span>
+                </div>
+                <div className="w-full theme-badge rounded-full h-2 overflow-hidden">
+                  <div className="bg-gradient-to-r from-emerald-500 to-emerald-400 h-2 rounded-full transition-all duration-300" style={{ width: `${((batchProgress.current * 100) + progress) / (batchProgress.total * 100) * 100}%` }}></div>
+                </div>
+              </div>
+            )}
+            
+            <div>
+              <div className="flex justify-between text-xs theme-muted mb-1 font-mono">
+                <span className="flex items-center gap-1.5">
+                  <Loader2 size={13} className="animate-spin text-[#FF5A14]" />
+                  <span>
+                    {progress < 30 && "Parsing document structure & formatting..."}
+                    {progress >= 30 && progress < 60 && "Partitioning into semantic vectors for ChromaDB..."}
+                    {progress >= 60 && progress < 88 && "Synthesizing multi-agent project telemetry & risks..."}
+                    {progress >= 88 && "Finalizing project knowledge index..."}
+                  </span>
                 </span>
-              </span>
-              <span className="font-bold theme-heading">{progress}%</span>
-            </div>
-            <div className="w-full theme-badge rounded-full h-2 overflow-hidden">
-              <div className="bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] h-2 rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
+                <span className="font-bold theme-heading">{progress}%</span>
+              </div>
+              <div className="w-full theme-badge rounded-full h-2 overflow-hidden">
+                <div className="bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] h-2 rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
+              </div>
             </div>
           </div>
         )}
