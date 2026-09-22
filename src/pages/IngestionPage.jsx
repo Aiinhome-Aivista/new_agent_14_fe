@@ -90,6 +90,7 @@ const IngestionPage = () => {
   const [checkingConnectorAccuracy, setCheckingConnectorAccuracy] = useState(false);
   const [isConnectorAccuracyModalOpen, setIsConnectorAccuracyModalOpen] = useState(false);
   const [connectorAccuracyData, setConnectorAccuracyData] = useState(null);
+  const [connectorProgress, setConnectorProgress] = useState(0);
 
   const fetchHistory = async () => {
     try {
@@ -209,6 +210,7 @@ const IngestionPage = () => {
   const executeConnectorIngest = async (itemsToIngest, isOverride = false, score = null) => {
     try {
       setIngesting(true);
+      setConnectorProgress(12);
       const calculatedScore = score !== null && score !== undefined 
         ? score 
         : (connectorAccuracyData?.match_percentage ?? null);
@@ -222,7 +224,8 @@ const IngestionPage = () => {
         selectedProvider, 
         itemsWithScore, 
         activeProject?.id, 
-        calculatedScore
+        calculatedScore,
+        (p) => setConnectorProgress(p)
       );
 
       if (isOverride) {
@@ -239,6 +242,7 @@ const IngestionPage = () => {
       showToast(err.response?.data?.error || "Failed to ingest selected items.", "error");
     } finally {
       setIngesting(false);
+      setConnectorProgress(0);
     }
   };
 
@@ -576,6 +580,30 @@ const IngestionPage = () => {
                           </>
                         )}
                       </button>
+
+                      {/* Connector Ingestion Multi-Stage Progress Bar */}
+                      {ingesting && (
+                        <div className="pt-2 animate-fadeIn">
+                          <div className="flex justify-between text-xs theme-muted mb-1.5 font-mono">
+                            <span className="flex items-center gap-1.5 truncate">
+                              <Loader2 size={13} className="animate-spin text-[#FF5A14] shrink-0" />
+                              <span className="truncate">
+                                {connectorProgress < 30 && `Downloading ${selectedItemIds.size} asset(s) from ${CONNECTOR_METADATA[selectedProvider]?.name || 'Connector'}...`}
+                                {connectorProgress >= 30 && connectorProgress < 60 && "Partitioning document text into semantic vector chunks for ChromaDB..."}
+                                {connectorProgress >= 60 && connectorProgress < 88 && "Synthesizing multi-agent project telemetry, milestones & risks..."}
+                                {connectorProgress >= 88 && "Finalizing executive dashboard snapshot & index..."}
+                              </span>
+                            </span>
+                            <span className="font-bold theme-heading ml-2 shrink-0">{connectorProgress}%</span>
+                          </div>
+                          <div className="w-full theme-badge rounded-full h-2 overflow-hidden bg-slate-200 dark:bg-slate-800">
+                            <div 
+                              className="bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] h-2 rounded-full transition-all duration-300" 
+                              style={{ width: `${connectorProgress}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
