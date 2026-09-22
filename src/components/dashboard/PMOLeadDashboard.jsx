@@ -792,6 +792,7 @@ const PMOLeadDashboard = ({
 
       </div>
       {/* ACTIVE GOVERNANCE ESCALATIONS STREAM */}
+      {user?.role !== 'Project Manager' && (
       <div className="p-6 rounded-2xl theme-card border border-white/10 flex flex-col justify-between">
         <div>
           <div className="flex justify-between items-center mb-3">
@@ -876,6 +877,7 @@ const PMOLeadDashboard = ({
           </Link>
         </div>
       </div>
+      )}
 
       {/* ========================================================================= */}
       {/* INTERACTIVE EXECUTIVE DRILLDOWN MODALS */}
