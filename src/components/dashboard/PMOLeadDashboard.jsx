@@ -49,7 +49,6 @@ import {
 } from 'lucide-react';
 import RiskHeatmap from './RiskHeatmap';
 import ProjectThreatRegister from './ProjectThreatRegister';
-import ForecastWidget from './ForecastWidget';
 
 const PMOLeadDashboard = ({
   data,
@@ -472,11 +471,6 @@ const PMOLeadDashboard = ({
         </div>
 
       </div>
-
-      {/* FORECAST WIDGET — PROGRAM DIRECTOR ONLY */}
-      {user?.role === 'Program Director' && (
-        <ForecastWidget activeProject={activeProject} />
-      )}
 
       {/* GRAPHICAL FORMAT STATUS SECTION ("graphical format status") */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

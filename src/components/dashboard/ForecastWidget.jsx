@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { dashboardApi } from '../../api/dashboardApi';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -14,10 +15,12 @@ import {
   AlertTriangle,
   CheckCircle2,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  ExternalLink
 } from 'lucide-react';
 
 const ForecastWidget = ({ activeProject }) => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [forecastData, setForecastData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -104,11 +107,13 @@ const ForecastWidget = ({ activeProject }) => {
           </p>
 
           <button
-            onClick={fetchForecast}
-            className="w-full px-5 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 text-white font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-violet-500/20 hover:shadow-violet-500/40 hover:scale-[1.02] active:scale-[0.98]"
+            onClick={() => {
+              const pid = activeProject?.numeric_id || activeProject?.id || '1';
+              navigate(`/project/${pid}/forecast`);
+            }}
+            className="w-full px-5 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 text-white font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-violet-500/20 hover:shadow-violet-500/40 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
           >
-            <Sparkles size={16} className="animate-pulse" />
-            Generate Forecast
+            <span>Predictive Forecast</span>
             <ArrowRight size={14} />
           </button>
         </div>

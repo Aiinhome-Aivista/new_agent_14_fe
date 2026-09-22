@@ -228,7 +228,12 @@ const IngestionPage = () => {
         (p) => setConnectorProgress(p)
       );
 
-      if (isOverride) {
+      if (res?.auto_forecast) {
+        const fc = res.auto_forecast;
+        const sign = fc.forecasted_variance < 0 ? '-' : '+';
+        const formattedVar = `${sign}₹${Math.abs(Math.round(fc.forecasted_variance)).toLocaleString('en-IN')}`;
+        showToast(`Ingested ${itemsToIngest.length} items! Reflexion Forecast updated: ${formattedVar} (${fc.confidence_score}% confidence)`, "success");
+      } else if (isOverride) {
         showToast(`Ingested ${itemsToIngest.length} items with low accuracy override (${calculatedScore ?? 0}%).`, "warning");
       } else {
         showToast(res.message || `Successfully ingested ${itemsToIngest.length} items into Vector Store!`, "success");
