@@ -1912,121 +1912,201 @@ const ProjectDrilldown = () => {
 
       {/* ========================================================================= */}
       {/* 5B. LEVEL 4: PROJECT COMPLETION & DELIVERY VELOCITY (INVESTOR EXCLUSIVE)  */}
-      {/* ========================================================================= */}
-      {user?.role === 'Investor' && (currentTab === 'all' || currentTab === 'completion') && (
-        <div id="completion-breakdown" className="p-6 rounded-3xl theme-card border border-[#FF5A14]/25 shadow-lg space-y-5" style={{ order: getSectionOrder('completion') }}>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b theme-border">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-[#FF5A14] to-[#FF7A45] text-white shadow-md">
-                <CheckCircle2 size={20} />
+      {user?.role === 'Investor' && (currentTab === 'all' || currentTab === 'completion') && (() => {
+        const calculationBasis = completion.basis || 'Task Backlog';
+        const completionPct = completion.percentage || 0;
+        const completionSubtitle = completion.label || 'Project Initialization Phase';
+        const totalMonths = completion.timeline?.total_months || 0;
+        const elapsedMonths = completion.timeline?.elapsed_months || 0;
+        const timelinePct = completion.timeline?.percentage || 0;
+        const tasksTotal = completion.tasks?.total || 0;
+        const tasksCompleted = completion.tasks?.completed || 0;
+        const tasksPct = completion.tasks?.percentage || 0;
+        const msTotal = completion.milestones?.total || 0;
+        const msCompleted = completion.milestones?.completed || 0;
+        const msAvgPct = completion.milestones?.percentage || 0;
+
+        return (
+          <div id="completion-breakdown" className="rounded-3xl theme-card border border-[#FF5A14]/25 shadow-lg overflow-hidden" style={{ order: getSectionOrder('completion') }}>
+            {/* Header */}
+            <div className="p-6 border-b theme-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#FF5A14]/5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF5A14] to-[#FF7A45] text-white flex items-center justify-center shadow-[0_0_18px_rgba(255,90,20,0.4)]">
+                  <CheckCircle2 size={20} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold theme-heading tracking-tight">
+                      PROJECT COMPLETION & DELIVERY VELOCITY
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-[#FF5A14]/15 text-[#FF5A14] border border-[#FF5A14]/30">
+                      Level 4 Drilldown
+                    </span>
+                  </div>
+                  <p className="text-xs theme-muted">
+                    Overall delivery progress dynamically calibrated across scheduled timeline, sprint task backlog, and contractual SOW milestone tranches.
+                  </p>
+                </div>
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-base font-extrabold theme-heading">PROJECT COMPLETION & DELIVERY VELOCITY</h3>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#FF5A14]/15 text-[#FF5A14] border border-[#FF5A14]/30 font-bold uppercase">
-                    Level 4 Drilldown
+
+              <div className="flex items-center gap-3">
+                <div className="px-3.5 py-1.5 rounded-xl theme-card border theme-border text-right bg-white dark:bg-black/30">
+                  <span className="text-[10px] theme-muted block uppercase tracking-wider font-semibold">Primary Basis</span>
+                  <span className="text-xs font-extrabold text-[#FF5A14] font-mono">{calculationBasis}</span>
+                </div>
+                <div className="px-3.5 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-right">
+                  <span className="text-[10px] text-emerald-500 block uppercase tracking-wider font-semibold">Delivery State</span>
+                  <span className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
+                    {completionPct >= 80 ? 'Near Completion' : completionPct >= 50 ? 'In Full Flight' : completionPct > 0 ? 'Active Delivery' : 'Initial Kickoff'}
                   </span>
                 </div>
-                <p className="text-xs theme-muted">Autonomous multi-vector completion velocity calibrated from timeline, task backlog & milestones</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2.5">
-              <span className="text-[11px] theme-muted font-semibold uppercase">Primary Basis:</span>
-              <span className="text-xs font-mono font-extrabold px-2.5 py-1 rounded-lg bg-[#FF5A14]/10 text-[#FF7A45] border border-[#FF5A14]/20">
-                {completion.basis}
-              </span>
-            </div>
-          </div>
-
-          {/* 4 Completion Stat Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-            <div className="p-4 rounded-2xl theme-subtle border theme-border text-center">
-              <span className="theme-muted block text-[10px] uppercase font-bold tracking-wider">Overall Completion</span>
-              <span className="text-xl sm:text-2xl font-black text-[#FF5A14] font-mono mt-1 block">
-                {completion.percentage}%
-              </span>
-              <span className="text-[10px] font-mono text-[#FF7A45] mt-0.5 block truncate" title={completion.label}>
-                {completion.label}
-              </span>
-            </div>
-
-            <div className="p-4 rounded-2xl theme-subtle border theme-border text-center">
-              <span className="theme-muted block text-[10px] uppercase font-bold tracking-wider">Timeline Horizon</span>
-              <span className="text-xl sm:text-2xl font-black text-blue-400 font-mono mt-1 block">
-                {completion.timeline?.total_months > 0
-                  ? `${completion.timeline?.elapsed_months || 0}/${completion.timeline?.total_months} Mos`
-                  : 'Pending SOW'}
-              </span>
-              <span className="text-[10px] font-mono text-blue-300 mt-0.5 block">
-                {completion.timeline?.total_months > 0
-                  ? `${completion.timeline?.percentage || 0}% Elapsed`
-                  : 'Schedule TBD'}
-              </span>
-            </div>
-
-            <div className="p-4 rounded-2xl theme-subtle border theme-border text-center">
-              <span className="theme-muted block text-[10px] uppercase font-bold tracking-wider">Task Execution</span>
-              <span className="text-xl sm:text-2xl font-black text-emerald-400 font-mono mt-1 block">
-                {completion.tasks?.completed || 0}/{completion.tasks?.total || 0}
-              </span>
-              <span className="text-[10px] text-emerald-500 mt-0.5 block">
-                {completion.tasks?.total > 0
-                  ? `${completion.tasks?.percentage || 0}% Completed`
-                  : '0% Completed'}
-              </span>
-            </div>
-
-            <div className="p-4 rounded-2xl theme-subtle border theme-border text-center">
-              <span className="theme-muted block text-[10px] uppercase font-bold tracking-wider">SOW Milestones</span>
-              <span className="text-xl sm:text-2xl font-black text-purple-400 font-mono mt-1 block">
-                {completion.milestones?.total > 0
-                  ? `${completion.milestones?.completed || 0}/${completion.milestones?.total}`
-                  : '0/0'}
-              </span>
-              <span className="text-[10px] text-purple-300 mt-0.5 block">
-                {completion.milestones?.total > 0
-                  ? `${completion.milestones?.percentage || 0}% Verified`
-                  : 'Awaiting SOW'}
-              </span>
-            </div>
-          </div>
-
-          {/* Velocity Progress Bar & Breakdown Metrics */}
-          <div className="p-4 rounded-2xl theme-subtle border theme-border space-y-3">
-            <div>
-              <div className="flex justify-between text-xs mb-1.5 font-mono font-bold">
-                <span className="theme-muted flex items-center gap-1.5">
-                  <Sparkles size={13} className="text-[#FF5A14]" />
-                  <span>Overall Delivery Attainment:</span>
-                </span>
-                <span className="text-[#FF5A14]">{completion.percentage}%</span>
+            {/* Main Progress Bar Strip */}
+            <div className="p-6 border-b theme-border bg-slate-50/50 dark:bg-white/[0.01]">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-black theme-heading font-mono">{completionPct}%</span>
+                  <span className="text-xs theme-muted font-medium">Overall Progress Attained</span>
+                </div>
+                <span className="text-xs font-mono font-bold text-[#FF7A45]">{completionSubtitle}</span>
               </div>
-              <div className="w-full h-3 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden p-0.5">
+              
+              {/* Animated Gradient Bar */}
+              <div className="w-full h-3.5 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden p-0.5 border border-slate-300 dark:border-white/5">
                 <div 
-                  className="h-full rounded-full bg-gradient-to-r from-[#FF5A14] via-[#FF7A45] to-emerald-400 transition-all duration-700 shadow-sm"
-                  style={{ width: `${completion.percentage > 0 ? Math.max(4, completion.percentage) : 0}%` }}
+                  className="h-full rounded-full bg-gradient-to-r from-[#FF5A14] via-[#FF7A45] to-emerald-400 transition-all duration-1000 shadow-[0_0_12px_rgba(255,90,20,0.5)]"
+                  style={{ width: `${Math.max(4, completionPct)}%` }}
                 ></div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 text-[11px] border-t theme-border">
-              <div className="flex items-center justify-between p-2 rounded-xl bg-slate-100 dark:bg-white/[0.03]">
-                <span className="theme-muted">Schedule Horizon:</span>
-                <span className="font-mono font-bold text-blue-400">{completion.timeline?.total_months > 0 ? `${completion.timeline?.percentage || 0}%` : 'TBD'}</span>
+            {/* 3 Breakdown Cards: Timeline, Tasks, Milestones */}
+            <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x theme-border p-2 sm:p-4">
+              
+              {/* 1. Timeline Duration Progress */}
+              <div 
+                onClick={() => setSearchParams({ tab: 'schedule' })}
+                className="p-4 space-y-3 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-white/[0.03] transition-colors group"
+                title="Click to drill down into Schedule details"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold theme-heading group-hover:text-blue-500 transition-colors">
+                    <span className="p-1.5 bg-blue-500/10 text-blue-400 rounded-lg group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                      <Clock size={15} />
+                    </span>
+                    <span>1. Timeline Horizon</span>
+                  </div>
+                  <span className="text-xs font-mono font-bold theme-heading">
+                    {totalMonths > 0 ? `${timelinePct}%` : 'Pending SOW'}
+                  </span>
+                </div>
+                
+                <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden">
+                  <div 
+                    className="h-full rounded-full bg-blue-500 transition-all duration-500"
+                    style={{ width: `${timelinePct > 0 ? Math.max(3, timelinePct) : 0}%` }}
+                  ></div>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] theme-muted">
+                  <span>Elapsed Horizon:</span>
+                  <span className="font-mono font-bold text-slate-700 dark:text-slate-200">
+                    {totalMonths > 0 ? `${elapsedMonths} of ${totalMonths} Months` : 'Schedule Pending SOW'}
+                  </span>
+                </div>
+                <p className="text-[10px] theme-muted leading-relaxed">
+                  Evaluates calendar time elapsed against planned project lifecycle window (e.g. 8 of 10 months = 80%).
+                </p>
               </div>
-              <div className="flex items-center justify-between p-2 rounded-xl bg-slate-100 dark:bg-white/[0.03]">
-                <span className="theme-muted">Task Ratio (e.g. 10/20):</span>
-                <span className="font-mono font-bold text-[#FF7A45]">{completion.tasks?.percentage || 0}%</span>
+
+              {/* 2. Task Backlog Execution */}
+              <div 
+                onClick={() => setSearchParams({ tab: 'all' })}
+                className="p-4 space-y-3 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-white/[0.03] transition-colors group"
+                title="Click to drill down into Overview & Teams"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold theme-heading group-hover:text-[#FF5A14] transition-colors">
+                    <span className="p-1.5 bg-[#FF5A14]/10 text-[#FF5A14] rounded-lg group-hover:bg-[#FF5A14] group-hover:text-white transition-colors">
+                      <CheckCircle2 size={15} />
+                    </span>
+                    <span>2. Task Execution</span>
+                  </div>
+                  <span className="text-xs font-mono font-bold theme-heading">
+                    {tasksTotal > 0 ? `${tasksPct}%` : '0% (Pending)'}
+                  </span>
+                </div>
+                
+                <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden">
+                  <div 
+                    className="h-full rounded-full bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] transition-all duration-500"
+                    style={{ width: `${tasksTotal > 0 ? Math.max(3, tasksPct) : 0}%` }}
+                  ></div>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] theme-muted">
+                  <span>Backlog Delivery:</span>
+                  <span className="font-mono font-bold text-slate-700 dark:text-slate-200">
+                    {tasksTotal > 0 ? `${tasksCompleted} of ${tasksTotal} Done` : '0 Tasks Registered'}
+                  </span>
+                </div>
+                <p className="text-[10px] theme-muted leading-relaxed">
+                  Direct Jira and sprint task completion ratio (e.g. 10 of 20 tasks completed = 50%).
+                </p>
               </div>
-              <div className="flex items-center justify-between p-2 rounded-xl bg-slate-100 dark:bg-white/[0.03]">
-                <span className="theme-muted">SOW Milestone Attainment:</span>
-                <span className="font-mono font-bold text-emerald-400">{completion.milestones?.percentage || 0}%</span>
+
+              {/* 3. Contractual Milestones */}
+              <div 
+                onClick={() => setSearchParams({ tab: 'schedule' })}
+                className="p-4 space-y-3 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-white/[0.03] transition-colors group"
+                title="Click to drill down into Milestone Schedule"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold theme-heading group-hover:text-emerald-500 transition-colors">
+                    <span className="p-1.5 bg-emerald-500/10 text-emerald-500 rounded-lg group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                      <Layers size={15} />
+                    </span>
+                    <span>3. SOW Milestones</span>
+                  </div>
+                  <span className="text-xs font-mono font-bold theme-heading">
+                    {msTotal > 0 ? `${msAvgPct}%` : 'TBD'}
+                  </span>
+                </div>
+                
+                <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden">
+                  <div 
+                    className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                    style={{ width: `${msTotal > 0 ? Math.max(3, msAvgPct) : 0}%` }}
+                  ></div>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] theme-muted">
+                  <span>Tranches Verified:</span>
+                  <span className="font-mono font-bold text-slate-700 dark:text-slate-200">
+                    {msTotal > 0 ? `${msCompleted} of ${msTotal} Milestones` : '0 Milestones Logged'}
+                  </span>
+                </div>
+                <p className="text-[10px] theme-muted leading-relaxed">
+                  Contractual deliverables verified and signed off for capital tranche disbursement.
+                </p>
               </div>
+
             </div>
+
+            {/* Bottom Methodology Footnote */}
+            <div className="px-6 py-3 border-t theme-border bg-slate-50 dark:bg-white/[0.02] flex items-center justify-between text-[11px] theme-muted">
+              <span className="flex items-center gap-1.5">
+                <Sparkles size={13} className="text-[#FF5A14]" />
+                <span>Multi-vector Completion Model: dynamically shifts between task ratio (e.g. 10/20 = 50%), schedule elapsed (e.g. 8/10 mos = 80%), and SOW deliverables.</span>
+              </span>
+              <span className="font-mono text-[10px] text-slate-400 hidden sm:inline">VPM Autonomous Calculation</span>
+            </div>
+
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ========================================================================= */}
       {/* 6. LEVEL 4: ESTIMATED DEADLINE & SCHEDULE — MILESTONE STAGE-GATES */}
