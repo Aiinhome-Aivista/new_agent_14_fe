@@ -23,6 +23,7 @@ import KnowledgePage from './pages/KnowledgePage';
 import GuardrailsPage from './pages/GuardrailsPage';
 import SettingsPage from './pages/SettingsPage';
 import AddStakeholderPage from './pages/AddStakeholderPage';
+import ForecastDrilldownPage from './pages/ForecastDrilldownPage';
 
 const Unauthorized = () => <div className="p-10 text-2xl font-bold text-hover text-center mt-20">Unauthorized Access</div>;
 
@@ -44,8 +45,11 @@ function App() {
                   {/* All 4 personas - Projects Hub & Active Project Workspace */}
                   <Route path="/projects" element={<ProjectsPage />} />
                   <Route path="/dashboard" element={<InvestorDashboard />} />
+                  <Route path="/forecast" element={<ForecastDrilldownPage />} />
                   <Route path="/project/:id" element={<ProjectDrilldown />} />
                   <Route path="/projects/:id" element={<ProjectDrilldown />} />
+                  <Route path="/project/:id/forecast" element={<ForecastDrilldownPage />} />
+                  <Route path="/projects/:id/forecast" element={<ForecastDrilldownPage />} />
                   <Route path="/project/:id/team-members" element={<TeamMembersPage />} />
                   <Route path="/projects/:id/team-members" element={<TeamMembersPage />} />
                   <Route path="/project/:id/team-members/:resourceId" element={<ResourceDetailPage />} />

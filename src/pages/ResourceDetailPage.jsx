@@ -396,22 +396,28 @@ const ResourceDetailPage = () => {
             </div>
 
             <div className="space-y-2.5">
-              {(resource.linked_milestones || ['PH-01: Architecture Sign-off', 'PH-02: Core Service Dev']).map((ms, idx) => (
-                <div 
-                  key={idx}
-                  className="p-3.5 rounded-xl theme-subtle border theme-border flex items-center justify-between text-xs"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-6 h-6 rounded-lg bg-[#FF5A14]/15 text-[#FF5A14] flex items-center justify-center font-mono font-bold text-xs">
-                      {idx + 1}
+              {(resource.linked_milestones && resource.linked_milestones.length > 0) ? (
+                resource.linked_milestones.map((ms, idx) => (
+                  <div 
+                    key={idx}
+                    className="p-3.5 rounded-xl theme-subtle border theme-border flex items-center justify-between text-xs"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-6 h-6 rounded-lg bg-[#FF5A14]/15 text-[#FF5A14] flex items-center justify-center font-mono font-bold text-xs">
+                        {idx + 1}
+                      </span>
+                      <span className="font-bold theme-heading">{ms}</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono text-[10px] font-bold">
+                      Governed Gate
                     </span>
-                    <span className="font-bold theme-heading">{ms}</span>
                   </div>
-                  <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono text-[10px] font-bold">
-                    Governed Gate
-                  </span>
+                ))
+              ) : (
+                <div className="p-4 rounded-xl theme-subtle border theme-border text-center text-xs theme-muted">
+                  No explicit milestone stage-gates assigned to this contributor.
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>

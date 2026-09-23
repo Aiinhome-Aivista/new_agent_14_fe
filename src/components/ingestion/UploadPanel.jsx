@@ -147,7 +147,12 @@ const UploadPanel = ({ onUploadSuccess }) => {
       );
 
       if (!isBatch) {
-        if (isOverride) {
+        if (res?.auto_forecast) {
+          const fc = res.auto_forecast;
+          const sign = fc.forecasted_variance < 0 ? '-' : '+';
+          const formattedVar = `${sign}₹${Math.abs(Math.round(fc.forecasted_variance)).toLocaleString('en-IN')}`;
+          showToast(`Ingested ${fileToUpload.name}! Auto-Forecast updated: ${formattedVar} (${fc.confidence_score}% confidence)`, 'success');
+        } else if (isOverride) {
           showToast(`Document saved with low accuracy override (${accuracyData?.match_percentage || 0}%).`, 'warning');
         } else if (res?.ai_processing_status === 'degraded_fallback') {
           showToast('AI processing degraded — some figures are heuristic estimates', 'warning');

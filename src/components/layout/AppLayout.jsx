@@ -97,7 +97,6 @@ const AppLayout = () => {
           allNavDefinitions.risks,
           allNavDefinitions.reports,
           allNavDefinitions.guardrails,
-          allNavDefinitions.knowledge,
           allNavDefinitions.settings,
         ];
       case 'Project Manager':

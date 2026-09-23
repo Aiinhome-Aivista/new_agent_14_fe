@@ -37,6 +37,7 @@ const RiskRegisterTable = ({ risks, activeProject, onUpdateRisk, onRiskUpdated, 
   const [selectedSeverity, setSelectedSeverity] = useState(initialSeverity || 'ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
+  const [selectedJiraSync, setSelectedJiraSync] = useState('ALL'); // 'ALL' | 'SYNCED' | 'PENDING'
   const [collapsedProjects, setCollapsedProjects] = useState({});
   const [expandedRiskId, setExpandedRiskId] = useState(null);
   const [editingMitigationId, setEditingMitigationId] = useState(null);
@@ -125,33 +126,45 @@ const RiskRegisterTable = ({ risks, activeProject, onUpdateRisk, onRiskUpdated, 
 
   const severityOrder = { 'Critical': 4, 'High': 3, 'Medium': 2, 'Low': 1 };
 
-  // Distinct projects list
-  const availableProjects = Array.from(
-    new Set((risks || []).map(r => r.project_key || `PRJ-${r.project_id || 'Global'}`))
-  ).filter(Boolean);
+  // Group by project_id so a project is strictly contained within ONE unified card
+  const availableProjectIds = Array.from(
+    new Set((risks || []).map(r => r.project_id || activeProject?.id || 1))
+  );
 
   const filteredRisks = (risks || []).filter(r => {
     const pKey = r.project_key || `PRJ-${r.project_id || 'Global'}`;
-    const matchProject = isAllProjects || pKey === activeProject?.jira_key || String(r.project_id) === String(activeProject?.id);
+    const matchProject = isAllProjects || 
+      !activeProject ||
+      pKey === activeProject?.jira_key || 
+      String(r.project_id) === String(activeProject?.id) ||
+      pKey.replace(/-\d+$/, '').toUpperCase() === String(activeProject?.jira_key || '').replace(/-\d+$/, '').toUpperCase();
 
     const matchQuery = 
       (r.owner || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (r.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (r.risk_id || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (r.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (r.project_key || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (r.project_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (r.category || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (r.jira_issue_key || '').toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchSev = selectedSeverity === 'ALL' || r.severity === selectedSeverity;
-    const matchStat = selectedStatus === 'ALL' || (r.status || 'Open') === selectedStatus;
+    const matchStat = selectedStatus === 'ALL' || r.status === selectedStatus;
     const matchCat = selectedCategory === 'ALL' || (r.category || 'Architecture & Tech') === selectedCategory;
+    const matchJira = 
+      selectedJiraSync === 'ALL' ||
+      (selectedJiraSync === 'SYNCED' && Boolean(r.jira_issue_key)) ||
+      (selectedJiraSync === 'PENDING' && !r.jira_issue_key);
 
-    return matchProject && matchQuery && matchSev && matchStat && matchCat;
+    return matchProject && matchQuery && matchSev && matchStat && matchCat && matchJira;
   });
 
   const sortedRisks = [...filteredRisks].sort((a, b) => {
+    // 1. Pushed Jira tickets always come first at the front
+    const aPushed = a.jira_issue_key ? 1 : 0;
+    const bPushed = b.jira_issue_key ? 1 : 0;
+    if (aPushed !== bPushed) {
+      return bPushed - aPushed;
+    }
+
     if (!sortField) return 0;
     let valA = a[sortField];
     let valB = b[sortField];
@@ -166,25 +179,29 @@ const RiskRegisterTable = ({ risks, activeProject, onUpdateRisk, onRiskUpdated, 
     return 0;
   });
 
-  // Group risks by project
-  const projectGroups = availableProjects.reduce((acc, pKey) => {
-    if (!isAllProjects && activeProject?.jira_key && pKey !== activeProject.jira_key) {
+  // Group risks strictly by project_id so that each project always has ONE unified card
+  const projectGroups = availableProjectIds.reduce((acc, pId) => {
+    if (!isAllProjects && activeProject?.id && String(pId) !== String(activeProject.id)) {
       return acc;
     }
     const pRisks = sortedRisks.filter(
-      r => (r.project_key || `PRJ-${r.project_id || 'Global'}`) === pKey
+      r => String(r.project_id || activeProject?.id || 1) === String(pId)
     );
     if (pRisks.length > 0) {
-      const pName = pRisks[0].project_name || `Enterprise Project ${pKey}`;
+      const canonicalKey = activeProject?.jira_key || pRisks.find(r => r.project_key)?.project_key || `PRJ-${pId}`;
+      const canonicalName = activeProject?.name || pRisks.find(r => r.project_name)?.project_name || `Enterprise Project ${canonicalKey}`;
+      const syncedCount = pRisks.filter(r => Boolean(r.jira_issue_key)).length;
+
       acc.push({
-        project_key: pKey,
-        project_name: pName,
-        project_id: pRisks[0].project_id,
+        project_key: canonicalKey,
+        project_name: canonicalName,
+        project_id: pId,
         risks: pRisks,
         criticalCount: pRisks.filter(r => r.severity === 'Critical' && (r.status === 'Open' || !r.status)).length,
         highCount: pRisks.filter(r => r.severity === 'High' && (r.status === 'Open' || !r.status)).length,
         mitigatedCount: pRisks.filter(r => r.status === 'Mitigated').length,
         closedCount: pRisks.filter(r => r.status === 'Closed').length,
+        syncedCount: syncedCount,
         total: pRisks.length
       });
     }
@@ -210,7 +227,7 @@ const RiskRegisterTable = ({ risks, activeProject, onUpdateRisk, onRiskUpdated, 
   };
 
   // Render a Single Risk Row
-  const renderRiskRow = (risk) => {
+  const renderRiskRow = (risk, groupProjectKey) => {
     const isExpanded = expandedRiskId === risk.id;
     const isEditingMitigation = editingMitigationId === risk.id;
     const status = risk.status || 'Open';
@@ -218,10 +235,11 @@ const RiskRegisterTable = ({ risks, activeProject, onUpdateRisk, onRiskUpdated, 
     const riskScore = risk.risk_score || (risk.severity === 'Critical' ? 9.2 : risk.severity === 'High' ? 7.5 : risk.severity === 'Medium' ? 5.0 : 3.0);
     const exposure = risk.financial_exposure || (risk.severity === 'Critical' ? '$350K+' : risk.severity === 'High' ? '$150K+' : '$50K+');
     const impactLabel = risk.impact_label || (risk.severity === 'Critical' ? 'Halts Release Gate' : risk.severity === 'High' ? 'Elevated PMO Attention' : 'Monitored Baseline');
+    const pKey = groupProjectKey || risk.project_key || activeProject?.jira_key || 'VPM';
 
     return (
       <React.Fragment key={risk.id}>
-        <tr className={`theme-subtle-hover transition-colors ${isExpanded ? 'bg-[#FF5A14]/5' : ''}`}>
+        <tr className={`theme-subtle-hover transition-colors ${isExpanded ? 'bg-[#FF5A14]/5' : ''} ${risk.jira_issue_key ? 'border-l-2 border-l-blue-500 bg-blue-500/[0.02]' : ''}`}>
           
           {/* Risk ID & Category */}
           <td className="p-4 whitespace-nowrap">
@@ -229,11 +247,9 @@ const RiskRegisterTable = ({ risks, activeProject, onUpdateRisk, onRiskUpdated, 
               <span className="font-mono font-black text-[#FF5A14] text-xs">
                 {risk.risk_id || `R-${risk.id}`}
               </span>
-              {risk.project_key && (
-                <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400 border border-purple-500/30">
-                  [{risk.project_key}]
-                </span>
-              )}
+              <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400 border border-purple-500/30">
+                [{pKey}]
+              </span>
             </div>
             <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 dark:bg-white/5 border theme-border theme-muted">
               {getCategoryIcon(category)}
@@ -587,10 +603,48 @@ const RiskRegisterTable = ({ risks, activeProject, onUpdateRisk, onRiskUpdated, 
                 </button>
               ))}
             </div>
+
+            {/* Jira Sync Quick Filter */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 p-1 rounded-xl border theme-border">
+              <button
+                type="button"
+                onClick={() => setSelectedJiraSync('ALL')}
+                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
+                  selectedJiraSync === 'ALL'
+                    ? 'bg-white dark:bg-slate-800 theme-heading shadow-sm'
+                    : 'theme-muted hover:theme-heading'
+                }`}
+              >
+                All Jira
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedJiraSync('SYNCED')}
+                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                  selectedJiraSync === 'SYNCED'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-blue-500 dark:text-blue-400 hover:brightness-125'
+                }`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                <span>Pushed ({risks.filter(r => Boolean(r.jira_issue_key)).length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedJiraSync('PENDING')}
+                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
+                  selectedJiraSync === 'PENDING'
+                    ? 'bg-white dark:bg-slate-800 theme-heading shadow-sm'
+                    : 'theme-muted hover:theme-heading'
+                }`}
+              >
+                Pending Push ({risks.filter(r => !r.jira_issue_key).length})
+              </button>
+            </div>
           </div>
           
           {/* Search Input */}
-          <div className="relative w-full lg:w-80">
+          <div className="relative w-full lg:w-72">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input 
               type="text" 
@@ -698,6 +752,12 @@ const RiskRegisterTable = ({ risks, activeProject, onUpdateRisk, onRiskUpdated, 
                         {group.mitigatedCount} Mitigated
                       </span>
                     )}
+                    {group.syncedCount > 0 && (
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-500/15 text-blue-500 border border-blue-500/30 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                        <span>{group.syncedCount} Jira Synced</span>
+                      </span>
+                    )}
                     
                     <div className="p-1.5 rounded-lg theme-card border theme-border text-slate-400 hover:text-white transition-colors ml-1">
                       {isCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
@@ -731,7 +791,7 @@ const RiskRegisterTable = ({ risks, activeProject, onUpdateRisk, onRiskUpdated, 
                         </tr>
                       </thead>
                       <tbody className="divide-y theme-border">
-                        {group.risks.map((risk) => renderRiskRow(risk))}
+                        {group.risks.map((risk) => renderRiskRow(risk, group.project_key))}
                       </tbody>
                     </table>
                   </div>
