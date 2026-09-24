@@ -5,6 +5,8 @@ import { risksApi } from '../api/risksApi';
 import { ingestionApi } from '../api/ingestionApi';
 import { useToast } from '../context/ToastContext';
 import { useProject } from '../context/ProjectContext';
+import { getStakeholders } from '../api/stakeholderApi';
+import { dashboardApi } from '../api/dashboardApi';
 import FuturisticLoader from '../components/common/FuturisticLoader';
 import { 
   PlusCircle, ShieldAlert, CheckCircle, RefreshCw, FolderKanban, 
@@ -34,6 +36,7 @@ const RiskRegisterPage = () => {
   const [creating, setCreating] = useState(false);
   const [isJiraConnected, setIsJiraConnected] = useState(false);
   const [jiraBaseUrl, setJiraBaseUrl] = useState('');
+  const [stakeholders, setStakeholders] = useState([]);
   const { showToast } = useToast();
 
   const isAllProjects = !urlProjectId && (!activeProject || activeProject.id === 'all' || activeProject.jira_key === 'ALL');
@@ -77,6 +80,29 @@ const RiskRegisterPage = () => {
   useEffect(() => {
     fetchRisks();
   }, [activeProject?.id, activeProject?.jira_key, urlProjectId]);
+
+  useEffect(() => {
+    const fetchTeam = async () => {
+      try {
+        if (!isAllProjects && activeProject?.id) {
+          const res = await dashboardApi.getProjectTeam(activeProject.id);
+          if (res && res.members) {
+            setStakeholders(res.members);
+          } else {
+            setStakeholders([]);
+          }
+        } else {
+          const res = await getStakeholders();
+          if (res && res.stakeholders) {
+            setStakeholders(res.stakeholders);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch stakeholders/team", err);
+      }
+    };
+    fetchTeam();
+  }, [activeProject?.id, isAllProjects]);
 
   useEffect(() => {
     const checkJiraConnector = async () => {
@@ -362,6 +388,7 @@ const RiskRegisterPage = () => {
         initialSeverity={urlSeverity}
         isJiraConnected={isJiraConnected}
         jiraBaseUrl={jiraBaseUrl}
+        stakeholders={stakeholders}
       />
 
       {/* Log New Risk Modal */}
@@ -445,11 +472,9 @@ const RiskRegisterPage = () => {
                     className="w-full px-3 py-2 text-xs theme-input rounded-xl focus:outline-none focus:border-[#FF5A14]"
                   >
                     <option value="Unassigned">Unassigned</option>
-                    <option value="Lead Cloud Architect">Lead Cloud Architect</option>
-                    <option value="Chief InfoSec Officer">Chief InfoSec Officer</option>
-                    <option value="PMO Program Director">PMO Program Director</option>
-                    <option value="Vendor Delivery Head">Vendor Delivery Head</option>
-                    <option value="Financial Controller">Financial Controller</option>
+                    {stakeholders.map(s => (
+                      <option key={s.id} value={s.name}>{s.name}</option>
+                    ))}
                   </select>
                 </div>
 
