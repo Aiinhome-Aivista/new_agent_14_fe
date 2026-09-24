@@ -1141,7 +1141,7 @@ const ProjectDrilldown = () => {
       </div>
 
       {/* TAB NAVIGATION: QUICK LEVEL 4 DRILLDOWN FILTERS */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b theme-border text-xs font-bold whitespace-nowrap">
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b theme-border text-xs font-bold whitespace-nowrap no-scrollbar">
         <span className="theme-muted text-[11px] uppercase tracking-wider flex items-center gap-1 mr-1">
           <Filter size={12} className="text-[#FF5A14]" />
           <span>Drilldown Focus:</span>
@@ -1194,6 +1194,18 @@ const ProjectDrilldown = () => {
         >
           <Calendar size={13} />
           <span>Estimated Deadline</span>
+          <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-black/25 font-mono">L4</span>
+        </button>
+        <button
+          onClick={() => handleTabChange('tasks')}
+          className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+            currentTab === 'tasks'
+              ? 'bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white shadow-md'
+              : 'theme-subtle hover:bg-white/5 theme-muted'
+          }`}
+        >
+          <CheckCircle2 size={13} />
+          <span>Task Backlog</span>
           <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-black/25 font-mono">L4</span>
         </button>
         <button
@@ -1800,7 +1812,7 @@ const ProjectDrilldown = () => {
 
             {/* Itemized Table */}
             <div className="rounded-2xl border theme-border overflow-hidden bg-slate-50/50 dark:bg-black/20">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto no-scrollbar">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-100 dark:bg-white/[0.04] text-[10px] font-extrabold uppercase tracking-wider theme-muted border-b theme-border">
                     <tr>
@@ -2023,9 +2035,9 @@ const ProjectDrilldown = () => {
 
               {/* 2. Task Backlog Execution */}
               <div 
-                onClick={() => setSearchParams({ tab: 'all' })}
+                onClick={() => setSearchParams({ tab: 'tasks' })}
                 className="p-4 space-y-3 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-white/[0.03] transition-colors group"
-                title="Click to drill down into Overview & Teams"
+                title="Click to drill down into Task Backlog"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-xs font-bold theme-heading group-hover:text-[#FF5A14] transition-colors">
@@ -2292,6 +2304,127 @@ const ProjectDrilldown = () => {
               )))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 6. TASK EXECUTION DRILLDOWN */}
+      {/* ========================================================================= */}
+      {(currentTab === 'all' || currentTab === 'tasks') && (
+        <div id="tasks-breakdown" className="p-6 rounded-3xl theme-card border border-[#FF5A14]/25 shadow-lg space-y-5" style={{ order: getSectionOrder('tasks') || 5.5 }}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b theme-border">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-[#FF5A14] to-[#FF7A45] text-white shadow-md">
+                <CheckCircle2 size={20} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-extrabold theme-heading">TASK EXECUTION BACKLOG</h3>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#FF5A14]/15 text-[#FF5A14] border border-[#FF5A14]/30 font-bold uppercase">
+                    Level 4 Drilldown
+                  </span>
+                </div>
+                <p className="text-xs theme-muted">Detailed view of all tasks, deliverables, and Jira issues tracked against this project.</p>
+              </div>
+            </div>
+          </div>
+
+          {(() => {
+            const tasks = data.tasks || [];
+            const completedTasks = tasks.filter(t => t.status === 'Completed' || t.status === 'Done' || t.status === 'Resolved');
+            const pendingTasks = tasks.filter(t => t.status !== 'Completed' && t.status !== 'Done' && t.status !== 'Resolved');
+            
+            return (
+              <div className="space-y-6">
+                {/* Stats */}
+                <div className="grid grid-cols-2 gap-4 shrink-0">
+                  <div className="p-4 rounded-2xl theme-subtle border theme-border">
+                    <span className="theme-muted text-[10px] uppercase font-bold tracking-wider">Active / Pending Tasks</span>
+                    <div className="text-2xl font-black theme-heading font-mono mt-1">{pendingTasks.length}</div>
+                  </div>
+                  <div className="p-4 rounded-2xl theme-subtle border theme-border">
+                    <span className="theme-muted text-[10px] uppercase font-bold tracking-wider">Completed</span>
+                    <div className="text-2xl font-black text-emerald-500 font-mono mt-1">{completedTasks.length}</div>
+                  </div>
+                </div>
+
+                {/* Split View */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Left Column: Pending / Active */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-amber-500 flex items-center gap-2 border-b theme-border pb-2">
+                      <Clock size={14} />
+                      <span>Active & Pending Work</span>
+                    </h4>
+                    <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 no-scrollbar">
+                      {pendingTasks.length === 0 ? (
+                        <div className="p-4 text-center text-xs theme-muted rounded-xl border border-dashed theme-border">
+                          No pending tasks.
+                        </div>
+                      ) : (
+                        pendingTasks.map((task, idx) => (
+                          <div key={idx} className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border theme-border flex items-start gap-3 group hover:border-amber-500/30 transition-colors">
+                            <div className="p-1.5 rounded-lg mt-0.5 bg-amber-500/10 text-amber-500 shrink-0">
+                              <div className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin opacity-50" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2">
+                                <h5 className="text-sm font-bold theme-heading group-hover:text-amber-500 transition-colors truncate" title={task.summary || task.title}>{task.summary || task.title}</h5>
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-500 whitespace-nowrap shrink-0 mt-0.5">
+                                  {task.status}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-3 mt-1.5 text-[10px] theme-muted">
+                                {task.jira_key && <span className="font-mono text-blue-500">{task.jira_key}</span>}
+                                <span className="flex items-center gap-1"><Users size={10} /> {task.assignee || 'Unassigned'}</span>
+                                <span className="flex items-center gap-1"><Tag size={10} /> {task.priority || 'Medium'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right Column: Completed */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-500 flex items-center gap-2 border-b theme-border pb-2">
+                      <CheckCircle2 size={14} />
+                      <span>Completed Deliverables</span>
+                    </h4>
+                    <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 no-scrollbar">
+                      {completedTasks.length === 0 ? (
+                        <div className="p-4 text-center text-xs theme-muted rounded-xl border border-dashed theme-border">
+                          No completed tasks yet.
+                        </div>
+                      ) : (
+                        completedTasks.map((task, idx) => (
+                          <div key={idx} className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-500/[0.02] border border-emerald-100 dark:border-emerald-500/10 flex items-start gap-3 group hover:border-emerald-500/30 transition-colors opacity-75 hover:opacity-100">
+                            <div className="p-1.5 rounded-lg mt-0.5 bg-emerald-500/10 text-emerald-500 shrink-0">
+                              <Check size={14} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2">
+                                <h5 className="text-sm font-bold theme-heading group-hover:text-emerald-500 transition-colors truncate line-through" title={task.summary || task.title}>{task.summary || task.title}</h5>
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 whitespace-nowrap shrink-0 mt-0.5">
+                                  {task.status}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-3 mt-1.5 text-[10px] theme-muted">
+                                {task.jira_key && <span className="font-mono text-emerald-500/70">{task.jira_key}</span>}
+                                <span className="flex items-center gap-1"><Users size={10} /> {task.assignee || 'Unassigned'}</span>
+                                <span className="flex items-center gap-1"><Tag size={10} /> {task.priority || 'Medium'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 
