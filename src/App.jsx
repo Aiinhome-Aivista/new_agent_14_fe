@@ -42,19 +42,22 @@ function App() {
               
               <Route element={<ProtectedRoute allowedRoles={['Investor', 'Program Director', 'PMO', 'Project Manager']} />}>
                 <Route element={<AppLayout />}>
-                  {/* All 4 personas - Projects Hub & Active Project Workspace */}
                   <Route path="/projects" element={<ProjectsPage />} />
                   <Route path="/dashboard" element={<InvestorDashboard />} />
-                  <Route path="/forecast" element={<ForecastDrilldownPage />} />
                   <Route path="/project/:id" element={<ProjectDrilldown />} />
                   <Route path="/projects/:id" element={<ProjectDrilldown />} />
-                  <Route path="/project/:id/forecast" element={<ForecastDrilldownPage />} />
-                  <Route path="/projects/:id/forecast" element={<ForecastDrilldownPage />} />
                   <Route path="/project/:id/team-members" element={<TeamMembersPage />} />
                   <Route path="/projects/:id/team-members" element={<TeamMembersPage />} />
                   <Route path="/project/:id/team-members/:resourceId" element={<ResourceDetailPage />} />
                   <Route path="/projects/:id/team-members/:resourceId" element={<ResourceDetailPage />} />
                   <Route path="/chat" element={<ChatPage />} />
+
+                {/* Predictive Forecast: Program Director only */}
+                <Route element={<ProtectedRoute allowedRoles={['Program Director']} />}>
+                  <Route path="/forecast" element={<ForecastDrilldownPage />} />
+                  <Route path="/project/:id/forecast" element={<ForecastDrilldownPage />} />
+                  <Route path="/projects/:id/forecast" element={<ForecastDrilldownPage />} />
+                </Route>
                 
                 {/* Knowledge & RAG: Investor, PMO */}
                 <Route element={<ProtectedRoute allowedRoles={['Investor', 'PMO']} />}>

@@ -1320,18 +1320,20 @@ const renderProgramDirectorView = () => (
           </h2>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => {
-              const pid = activeProject?.numeric_id || activeProject?.id || '1';
-              navigate(`/project/${pid}/forecast`);
-            }}
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] hover:from-[#e04f10] hover:to-[#ff6830] text-white text-xs font-bold shadow-[0_0_20px_rgba(255,90,20,0.35)] hover:shadow-[0_0_30px_rgba(255,90,20,0.55)] hover:brightness-110 transition-all flex items-center gap-2 cursor-pointer group"
-          >
-            <span>Predictive Forecast</span>
-            <ArrowUpRight size={15} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-          </button>
-        </div>
+        {user?.role === 'Program Director' && (
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => {
+                const pid = activeProject?.numeric_id || activeProject?.id || '1';
+                navigate(`/project/${pid}/forecast`);
+              }}
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] hover:from-[#e04f10] hover:to-[#ff6830] text-white text-xs font-bold shadow-[0_0_20px_rgba(255,90,20,0.35)] hover:shadow-[0_0_30px_rgba(255,90,20,0.55)] hover:brightness-110 transition-all flex items-center gap-2 cursor-pointer group"
+            >
+              <span>Predictive Forecast</span>
+              <ArrowUpRight size={15} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            </button>
+          </div>
+        )}
       </div>
 
 
