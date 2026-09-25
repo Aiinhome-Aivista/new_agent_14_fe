@@ -39,15 +39,7 @@ const MessageBubble = ({ message, text, isUser }) => {
   return (
     <div className={`flex w-full items-center gap-3 mb-5 ${isUser ? 'justify-end' : 'justify-start'}`}>
       
-      {!isUser && (
-        <div className="w-14 h-14 shrink-0 z-10 flex items-center justify-center">
-          <img 
-            src="/avatars/robot_transparent.png" 
-            alt="AI Avatar" 
-            className="w-[140%] h-[140%] object-cover drop-shadow-[0_0_8px_rgba(255,90,20,0.5)]" 
-          />
-        </div>
-      )}
+
 
       <div 
         className={`max-w-[80%] rounded-2xl px-5 py-3.5 text-[13px] leading-relaxed shadow-sm relative
@@ -71,15 +63,7 @@ const MessageBubble = ({ message, text, isUser }) => {
         )}
       </div>
 
-      {isUser && (
-        <div className="w-14 h-14 shrink-0 z-10 flex items-center justify-center">
-          <img 
-            src="/avatars/human_transparent.png" 
-            alt="User Avatar" 
-            className="w-[140%] h-[140%] object-cover drop-shadow-[0_0_8px_rgba(255,90,20,0.5)]" 
-          />
-        </div>
-      )}
+
 
     </div>
   );

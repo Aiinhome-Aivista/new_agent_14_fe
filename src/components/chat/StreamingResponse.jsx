@@ -38,13 +38,7 @@ const StreamingResponse = ({ text }) => {
   return (
     <div className="flex w-full items-center gap-3 justify-start mb-5">
       
-      <div className="w-14 h-14 shrink-0 z-10 flex items-center justify-center">
-        <img 
-          src="/avatars/robot.jpg" 
-          alt="AI Avatar Talking" 
-          className="w-[140%] h-[140%] object-cover mix-blend-screen drop-shadow-[0_0_8px_rgba(255,90,20,0.5)] animate-pulse" 
-        />
-      </div>
+
 
       <div className="max-w-[80%] rounded-2xl px-5 py-3.5 text-[13px] leading-relaxed shadow-sm theme-card theme-heading border border-[#FF5A14]/20 rounded-bl-none relative bg-slate-900/60 backdrop-blur-md">
         <div className="markdown-body inline-block">
