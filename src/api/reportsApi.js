@@ -41,5 +41,9 @@ export const reportsApi = {
   generateReport: async (projectId = 1) => {
     const response = await api.post('/reports/generate', { project_id: projectId });
     return response.data;
+  },
+  deleteReport: async (id) => {
+    const response = await api.delete(`/reports/${id}`);
+    return response.data;
   }
 };
