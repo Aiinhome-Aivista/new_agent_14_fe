@@ -30,6 +30,7 @@ const AppLayout = () => {
   const { activeProject, projects, selectProject } = useProject();
   const navigate = useNavigate();
   const location = useLocation();
+  const isProjectsHub = location.pathname.startsWith('/projects');
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
   const projectDropdownRef = useRef(null);
@@ -80,8 +81,6 @@ const AppLayout = () => {
         return [
           allNavDefinitions.dashboard,
           allNavDefinitions.reports,
-          // allNavDefinitions.knowledge,
-          allNavDefinitions.chat,
         ];
       case 'Program Director':
         return [
@@ -89,7 +88,6 @@ const AppLayout = () => {
           allNavDefinitions.risks,
           allNavDefinitions.reports,
           allNavDefinitions.guardrails,
-          allNavDefinitions.chat,
         ];
       case 'PMO':
         return [
@@ -485,8 +483,8 @@ const AppLayout = () => {
         </main>
       </div>
 
-      {/* Floating Chat Assistant Trigger */}
-      {location.pathname !== '/chat' && (
+      {/* Floating Chat Assistant Trigger - Hidden on Projects Hub for all personas */}
+      {!isProjectsHub && location.pathname !== '/chat' && (
         <button 
           onClick={() => setIsChatOpen(!isChatOpen)}
           className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-[#FF5A14] to-[#E04808] text-white rounded-2xl shadow-[0_0_30px_rgba(255,90,20,0.5)] hover:shadow-[0_0_40px_rgba(255,90,20,0.7)] hover:scale-105 transition-all flex items-center justify-center z-40 group"
@@ -497,7 +495,7 @@ const AppLayout = () => {
       )}
 
       {/* Floating Chat Panel */}
-      {isChatOpen && location.pathname !== '/chat' && (
+      {!isProjectsHub && isChatOpen && location.pathname !== '/chat' && (
         <div className={`fixed bottom-24 right-6 w-[420px] h-[620px] z-50 rounded-2xl overflow-hidden shadow-[0_20px_70px_rgba(0,0,0,0.7)] flex flex-col border backdrop-blur-xl ${
           theme === 'dark' ? 'bg-[#0E1322] border-white/10' : 'bg-white border-slate-300'
         }`}>

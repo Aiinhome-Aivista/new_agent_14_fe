@@ -685,7 +685,7 @@ const PMOLeadDashboard = ({
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? 'rgba(255, 255, 255, 0.07)' : '#E2E8F0'} />
                 <XAxis dataKey="sprint" stroke={isDark ? '#94A3B8' : '#64748B'} fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis stroke={isDark ? '#94A3B8' : '#64748B'} fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}k`} />
+                <YAxis stroke={isDark ? '#94A3B8' : '#64748B'} fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}k`} width={90} />
                 <RechartsTooltip
                   content={({ active, payload, label }) => {
                     if (!active || !payload || !payload.length) return null;

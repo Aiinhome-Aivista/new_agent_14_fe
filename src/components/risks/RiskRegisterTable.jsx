@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Search, ArrowUpDown, ChevronDown, ChevronUp, 
   CheckCircle2, Clock, AlertTriangle, Edit3, Save, UserCheck,
@@ -8,15 +8,6 @@ import {
 } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { risksApi } from '../../api/risksApi';
-
-const OWNER_OPTIONS = [
-  "Unassigned",
-  "Lead Cloud Architect",
-  "Chief InfoSec Officer",
-  "PMO Program Director",
-  "Vendor Delivery Head",
-  "Financial Controller"
-];
 
 const STATUS_OPTIONS = ['Open', 'Mitigated', 'Closed'];
 
@@ -30,7 +21,55 @@ const CATEGORY_OPTIONS = [
   'Delivery & Schedule'
 ];
 
-const RiskRegisterTable = ({ risks, activeProject, onUpdateRisk, onRiskUpdated, initialSearch = '', initialSeverity = 'ALL', isJiraConnected = false, jiraBaseUrl = '' }) => {
+const CustomSelect = ({ value, options, onChange, placeholder = "Select..." }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between px-2.5 py-1 text-xs theme-input rounded-xl cursor-pointer hover:border-[#FF5A14] transition-colors border border-slate-200 dark:border-slate-700/60 w-36 shadow-sm bg-white dark:bg-[#0E1422]"
+      >
+        <span className="truncate flex-1 font-medium text-slate-700 dark:text-slate-300">{value || placeholder}</span>
+        <ChevronDown size={12} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180 text-[#FF5A14]' : ''}`} />
+      </div>
+      
+      {isOpen && (
+        <div className="absolute z-[100] mt-1 w-44 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)] max-h-48 overflow-y-auto no-scrollbar right-0 sm:left-0 py-1.5 animate-in fade-in zoom-in-95 duration-100">
+          {options.map(opt => (
+            <div
+              key={opt}
+              onClick={() => {
+                onChange(opt);
+                setIsOpen(false);
+              }}
+              className={`px-3 py-1.5 text-xs cursor-pointer transition-colors mx-1 rounded-lg ${value === opt ? 'bg-orange-50 dark:bg-[#FF5A14]/15 text-[#FF5A14] font-bold' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5'}`}
+            >
+              {opt}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const RiskRegisterTable = ({ risks, activeProject, onUpdateRisk, onRiskUpdated, initialSearch = '', initialSeverity = 'ALL', isJiraConnected = false, jiraBaseUrl = '', stakeholders = [] }) => {
+  const ownerOptions = React.useMemo(() => {
+    return ["Unassigned", ...stakeholders.map(s => s.name)];
+  }, [stakeholders]);
+
   const [sortField, setSortField] = useState('severity');
   const [sortAsc, setSortAsc] = useState(false);
   const [searchQuery, setSearchQuery] = useState(initialSearch || '');
@@ -329,15 +368,11 @@ const RiskRegisterTable = ({ risks, activeProject, onUpdateRisk, onRiskUpdated, 
           <td className="p-4 whitespace-nowrap">
             <div className="flex items-center gap-1.5">
               <UserCheck size={14} className={risk.owner && risk.owner !== 'Unassigned' ? 'text-emerald-500' : 'text-slate-400'} />
-              <select
+              <CustomSelect 
                 value={risk.owner || 'Unassigned'}
-                onChange={(e) => handleOwnerChange(risk, e.target.value)}
-                className="px-2.5 py-1 text-xs theme-input rounded-xl focus:outline-none focus:border-[#FF5A14] font-medium max-w-[170px] truncate"
-              >
-                {OWNER_OPTIONS.map(opt => (
-                  <option key={opt} value={opt}>{opt}</option>
-                ))}
-              </select>
+                options={ownerOptions}
+                onChange={(newVal) => handleOwnerChange(risk, newVal)}
+              />
             </div>
           </td>
 

@@ -120,7 +120,7 @@ const ResourceDetailPage = () => {
       
       {/* 1. TOP BREADCRUMBS & CONTEXTUAL NAVIGATION */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-white/10">
-        <nav className="flex items-center gap-2 text-xs font-semibold theme-muted overflow-x-auto whitespace-nowrap py-1">
+        <nav className="flex items-center gap-2 text-xs font-semibold theme-muted overflow-x-auto whitespace-nowrap py-1 no-scrollbar">
           <Link 
             to="/dashboard" 
             className="hover:text-[#FF5A14] transition-colors flex items-center gap-1.5"

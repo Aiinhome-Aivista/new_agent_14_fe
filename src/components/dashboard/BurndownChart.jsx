@@ -276,6 +276,7 @@ const BurndownChart = ({ data: initialData, className, minHeight = "min-h-[260px
                 tickLine={false} 
                 axisLine={false}
                 tickFormatter={(value) => fmtCurrency(value)}
+                width={90}
               />
               
               <Tooltip content={<CustomTooltip />} />
