@@ -2331,16 +2331,25 @@ const ProjectDrilldown = () => {
 
           {(() => {
             const tasks = data.tasks || [];
-            const completedTasks = tasks.filter(t => t.status === 'Completed' || t.status === 'Done' || t.status === 'Resolved');
-            const pendingTasks = tasks.filter(t => t.status !== 'Completed' && t.status !== 'Done' && t.status !== 'Resolved');
+            
+            const isCompleted = (s) => ['Completed', 'Done', 'Resolved'].includes(s);
+            const isReviewBlocked = (s) => ['Under Review / QA', 'Under Review', 'QA', 'Blocked / Impeded', 'Blocked'].includes(s);
+            
+            const completedTasks = tasks.filter(t => isCompleted(t.status));
+            const reviewBlockedTasks = tasks.filter(t => isReviewBlocked(t.status));
+            const activeTasks = tasks.filter(t => !isCompleted(t.status) && !isReviewBlocked(t.status));
             
             return (
               <div className="space-y-6">
                 {/* Stats */}
-                <div className="grid grid-cols-2 gap-4 shrink-0">
+                <div className="grid grid-cols-3 gap-4 shrink-0">
                   <div className="p-4 rounded-2xl theme-subtle border theme-border">
-                    <span className="theme-muted text-[10px] uppercase font-bold tracking-wider">Active / Pending Tasks</span>
-                    <div className="text-2xl font-black theme-heading font-mono mt-1">{pendingTasks.length}</div>
+                    <span className="theme-muted text-[10px] uppercase font-bold tracking-wider">Active Tasks</span>
+                    <div className="text-2xl font-black theme-heading font-mono mt-1">{activeTasks.length}</div>
+                  </div>
+                  <div className="p-4 rounded-2xl theme-subtle border theme-border">
+                    <span className="theme-muted text-[10px] uppercase font-bold tracking-wider">Review & Blocked</span>
+                    <div className="text-2xl font-black text-rose-500 font-mono mt-1">{reviewBlockedTasks.length}</div>
                   </div>
                   <div className="p-4 rounded-2xl theme-subtle border theme-border">
                     <span className="theme-muted text-[10px] uppercase font-bold tracking-wider">Completed</span>
@@ -2349,28 +2358,28 @@ const ProjectDrilldown = () => {
                 </div>
 
                 {/* Split View */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Left Column: Pending / Active */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Column 1: Active / Pending */}
                   <div className="space-y-3">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-amber-500 flex items-center gap-2 border-b theme-border pb-2">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-blue-500 flex items-center gap-2 border-b theme-border pb-2">
                       <Clock size={14} />
-                      <span>Active & Pending Work</span>
+                      <span>Active & Pending</span>
                     </h4>
                     <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 no-scrollbar">
-                      {pendingTasks.length === 0 ? (
+                      {activeTasks.length === 0 ? (
                         <div className="p-4 text-center text-xs theme-muted rounded-xl border border-dashed theme-border">
-                          No pending tasks.
+                          No active tasks.
                         </div>
                       ) : (
-                        pendingTasks.map((task, idx) => (
-                          <div key={idx} className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border theme-border flex items-start gap-3 group hover:border-amber-500/30 transition-colors">
-                            <div className="p-1.5 rounded-lg mt-0.5 bg-amber-500/10 text-amber-500 shrink-0">
+                        activeTasks.map((task, idx) => (
+                          <div key={idx} className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border theme-border flex items-start gap-3 group hover:border-blue-500/30 transition-colors">
+                            <div className="p-1.5 rounded-lg mt-0.5 bg-blue-500/10 text-blue-500 shrink-0">
                               <div className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin opacity-50" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-start justify-between gap-2">
-                                <h5 className="text-sm font-bold theme-heading group-hover:text-amber-500 transition-colors truncate" title={task.summary || task.title}>{task.summary || task.title}</h5>
-                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-500 whitespace-nowrap shrink-0 mt-0.5">
+                                <h5 className="text-sm font-bold theme-heading group-hover:text-blue-500 transition-colors truncate" title={task.summary || task.title}>{task.summary || task.title}</h5>
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-500 whitespace-nowrap shrink-0 mt-0.5">
                                   {task.status}
                                 </span>
                               </div>
@@ -2386,7 +2395,43 @@ const ProjectDrilldown = () => {
                     </div>
                   </div>
 
-                  {/* Right Column: Completed */}
+                  {/* Column 2: Review & Blocked */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-rose-500 flex items-center gap-2 border-b theme-border pb-2">
+                      <AlertTriangle size={14} />
+                      <span>Review & Blocked</span>
+                    </h4>
+                    <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 no-scrollbar">
+                      {reviewBlockedTasks.length === 0 ? (
+                        <div className="p-4 text-center text-xs theme-muted rounded-xl border border-dashed theme-border">
+                          No tasks under review or blocked.
+                        </div>
+                      ) : (
+                        reviewBlockedTasks.map((task, idx) => (
+                          <div key={idx} className="p-3 rounded-xl bg-rose-50 dark:bg-rose-500/[0.02] border border-rose-100 dark:border-rose-500/10 flex items-start gap-3 group hover:border-rose-500/30 transition-colors">
+                            <div className="p-1.5 rounded-lg mt-0.5 bg-rose-500/10 text-rose-500 shrink-0">
+                              <AlertTriangle size={14} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2">
+                                <h5 className="text-sm font-bold theme-heading group-hover:text-rose-500 transition-colors truncate" title={task.summary || task.title}>{task.summary || task.title}</h5>
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-rose-500/10 text-rose-500 whitespace-nowrap shrink-0 mt-0.5">
+                                  {task.status}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-3 mt-1.5 text-[10px] theme-muted">
+                                {task.jira_key && <span className="font-mono text-rose-400">{task.jira_key}</span>}
+                                <span className="flex items-center gap-1"><Users size={10} /> {task.assignee || 'Unassigned'}</span>
+                                <span className="flex items-center gap-1"><Tag size={10} /> {task.priority || 'Medium'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Column 3: Completed */}
                   <div className="space-y-3">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-500 flex items-center gap-2 border-b theme-border pb-2">
                       <CheckCircle2 size={14} />

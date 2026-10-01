@@ -479,7 +479,7 @@ const PMOLeadDashboard = ({
         <div 
           onClick={() => {
             const activePid = activeProject?.numeric_id || activeProject?.id || '1';
-            navigate(`/project/${activePid}?tab=schedule`);
+            navigate(`/project/${activePid}?tab=tasks`);
           }}
           className="lg:col-span-4 p-6 rounded-2xl theme-card border border-white/10 flex flex-col justify-between hover:border-[#FF5A14]/60 hover:shadow-[0_0_25px_rgba(255,90,20,0.15)] transition-all cursor-pointer group relative"
           title="Click to open Level 4 Drilldown: Task & Deliverables Schedule"
@@ -514,7 +514,7 @@ const PMOLeadDashboard = ({
               onClick={(e) => { 
                 e.stopPropagation();
                 const activePid = activeProject?.numeric_id || activeProject?.id || '1';
-                navigate(`/project/${activePid}?tab=schedule`);
+                navigate(`/project/${activePid}?tab=tasks`);
               }}
               className="relative h-56 w-full flex flex-col items-center justify-center text-center p-4 cursor-pointer group hover:bg-white/5 rounded-2xl transition-all"
             >
@@ -533,8 +533,8 @@ const PMOLeadDashboard = ({
             <div 
               onClick={(e) => { 
                 e.stopPropagation();
-                setTaskFilter('ALL');
-                setActiveDrilldown('tasks');
+                const activePid = activeProject?.numeric_id || activeProject?.id || '1';
+                navigate(`/project/${activePid}?tab=tasks`);
               }}
               className="relative h-56 w-full flex items-center justify-center cursor-pointer group"
               title="Click to open Level 4 Drilldown: Task & Deliverables Status"
@@ -583,8 +583,8 @@ const PMOLeadDashboard = ({
                 key={idx} 
                 onClick={(e) => {
                   e.stopPropagation();
-                  setTaskFilter(item.name);
-                  setActiveDrilldown('tasks');
+                  const activePid = activeProject?.numeric_id || activeProject?.id || '1';
+                  navigate(`/project/${activePid}?tab=tasks`);
                 }}
                 className="flex items-center justify-between p-2 rounded-xl theme-subtle text-xs hover:border-[#FF5A14]/50 hover:bg-[#FF5A14]/10 transition-all cursor-pointer border border-transparent text-left group"
                 title={`Drill down into ${item.name} deliverables`}
