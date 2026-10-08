@@ -43,7 +43,7 @@ const ProjectsPage = () => {
   const [editForm, setEditForm] = useState({
     name: '',
     status: 'Active',
-    planned_spend: 1000000,
+    planned_spend: 0,
     description: '',
     project_manager_id: ''
   });
@@ -71,7 +71,7 @@ const ProjectsPage = () => {
     name: '',
     jira_key: '',
     description: '',
-    planned_spend: 1500000,
+    planned_spend: 0,
     status: 'Active',
     project_manager_id: ''
   });
@@ -90,7 +90,7 @@ const ProjectsPage = () => {
     setEditForm({
       name: proj.name || '',
       status: proj.status || 'Active',
-      planned_spend: proj.planned_spend || 1000000,
+      planned_spend: proj.planned_spend !== undefined ? proj.planned_spend : 0,
       description: proj.description || '',
       project_manager_id: proj.project_manager_id || ''
     });
@@ -109,7 +109,7 @@ const ProjectsPage = () => {
       await updateProject(editingProject.id, {
         name: editForm.name.trim(),
         status: editForm.status,
-        planned_spend: Number(editForm.planned_spend) || 1000000,
+        planned_spend: Number(editForm.planned_spend) || 0,
         description: editForm.description.trim(),
         project_manager_id: editForm.project_manager_id ? Number(editForm.project_manager_id) : null
       });
@@ -147,7 +147,7 @@ const ProjectsPage = () => {
         jira_key: form.jira_key.trim(),
         description: form.description.trim(),
         status: form.status,
-        planned_spend: Number(form.planned_spend) || 1000000,
+        planned_spend: Number(form.planned_spend) || 0,
         project_manager_id: form.project_manager_id ? Number(form.project_manager_id) : null
       });
       showToast(res.message || `Project ${form.name} created successfully!`, 'success');
@@ -156,7 +156,7 @@ const ProjectsPage = () => {
         name: '',
         jira_key: '',
         description: '',
-        planned_spend: 1500000,
+        planned_spend: 0,
         status: 'Active',
         project_manager_id: ''
       });
@@ -260,10 +260,10 @@ const ProjectsPage = () => {
           <div>
             <span className="text-[11px] theme-muted uppercase font-bold tracking-wider block">Portfolio Allocation</span>
             <div className="text-2xl font-black theme-heading mt-0.5">
-              ${totalAllocation >= 1000000 ? (totalAllocation / 1000000).toFixed(1) + 'M' : (totalAllocation / 1000).toFixed(0) + 'K'}
+              ${totalAllocation >= 1000000 ? (totalAllocation / 1000000).toFixed(1) + 'M' : (totalAllocation === 0 ? '0.0K' : (totalAllocation / 1000).toFixed(0) + 'K')}
             </div>
             <span className="text-[10px] theme-muted font-semibold">
-              Spent: ${totalSpent >= 1000000 ? (totalSpent / 1000000).toFixed(1) + 'M' : (totalSpent / 1000).toFixed(0) + 'K'}
+              Spent: ${totalSpent >= 1000000 ? (totalSpent / 1000000).toFixed(1) + 'M' : (totalSpent === 0 ? '0.0K' : (totalSpent / 1000).toFixed(0) + 'K')}
             </span>
           </div>
         </div>
@@ -414,14 +414,14 @@ const ProjectsPage = () => {
                   <div className="space-y-1.5 mb-4">
                     <div className="flex justify-between items-center text-[11px]">
                       <span className="theme-muted font-medium">Budget Burn</span>
-                      <span className="font-mono font-bold text-slate-800 dark:text-white">{proj.budget_summary || '$0 / $1.0M'}</span>
+                      <span className="font-mono font-bold text-slate-800 dark:text-white">{proj.budget_summary || '$0.0K / $0.0K'}</span>
                     </div>
                     <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-black/40 overflow-hidden border border-slate-200 dark:border-white/5">
                       <div 
                         className={`h-full rounded-full transition-all duration-500 ${
                           burnPct > 90 ? 'bg-red-500' : burnPct > 70 ? 'bg-amber-500' : 'bg-gradient-to-r from-[#FF5A14] to-emerald-400'
                         }`}
-                        style={{ width: `${Math.min(100, Math.max(5, burnPct))}%` }}
+                        style={{ width: `${burnPct > 0 ? Math.min(100, Math.max(5, burnPct)) : 0}%` }}
                       ></div>
                     </div>
                   </div>
