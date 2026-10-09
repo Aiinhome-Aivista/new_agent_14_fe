@@ -181,6 +181,23 @@ const ProjectsPage = () => {
     return matchSearch && matchStatus;
   });
 
+  // Clean enterprise currency formatter ($0, $100K, $280K, $1M, $1.5M)
+  const formatCurrency = (val) => {
+    if (val === undefined || val === null || val === '') return '$0';
+    const num = Number(val) || 0;
+    if (num === 0) return '$0';
+    const abs = Math.abs(num);
+    if (abs >= 1000000) {
+      const m = num / 1000000;
+      return `$${m % 1 === 0 ? m.toFixed(0) : m.toFixed(1)}M`;
+    }
+    if (abs >= 1000) {
+      const k = num / 1000;
+      return `$${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}K`;
+    }
+    return `$${Math.round(num).toLocaleString()}`;
+  };
+
   // Calculate portfolio summaries
   const totalAllocation = projects.reduce((acc, p) => acc + (Number(p.planned_spend) || 0), 0);
   const totalSpent = projects.reduce((acc, p) => acc + (Number(p.actual_spend) || 0), 0);
@@ -260,10 +277,10 @@ const ProjectsPage = () => {
           <div>
             <span className="text-[11px] theme-muted uppercase font-bold tracking-wider block">Portfolio Allocation</span>
             <div className="text-2xl font-black theme-heading mt-0.5">
-              ${totalAllocation >= 1000000 ? (totalAllocation / 1000000).toFixed(1) + 'M' : (totalAllocation === 0 ? '0.0K' : (totalAllocation / 1000).toFixed(0) + 'K')}
+              {formatCurrency(totalAllocation)}
             </div>
             <span className="text-[10px] theme-muted font-semibold">
-              Spent: ${totalSpent >= 1000000 ? (totalSpent / 1000000).toFixed(1) + 'M' : (totalSpent === 0 ? '0.0K' : (totalSpent / 1000).toFixed(0) + 'K')}
+              Spent: {formatCurrency(totalSpent)}
             </span>
           </div>
         </div>
@@ -414,7 +431,7 @@ const ProjectsPage = () => {
                   <div className="space-y-1.5 mb-4">
                     <div className="flex justify-between items-center text-[11px]">
                       <span className="theme-muted font-medium">Budget Burn</span>
-                      <span className="font-mono font-bold text-slate-800 dark:text-white">{proj.budget_summary || '$0.0K / $0.0K'}</span>
+                      <span className="font-mono font-bold text-slate-800 dark:text-white">{proj.budget_summary || '$0 / $0'}</span>
                     </div>
                     <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-black/40 overflow-hidden border border-slate-200 dark:border-white/5">
                       <div 
