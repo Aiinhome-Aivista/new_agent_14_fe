@@ -8,10 +8,12 @@ import KPICard from '../components/dashboard/KPICard';
 import BurndownChart from '../components/dashboard/BurndownChart';
 import RiskHeatmap from '../components/dashboard/RiskHeatmap';
 import ProjectThreatRegister from '../components/dashboard/ProjectThreatRegister';
+import ProjectMitigationPlan from '../components/dashboard/ProjectMitigationPlan';
 import FuturisticLoader from '../components/common/FuturisticLoader';
 import { 
   ArrowLeft, 
   ArrowRight, 
+  ArrowDown, 
   Users, 
   Briefcase, 
   CheckCircle2, 
@@ -55,6 +57,8 @@ const ProjectDrilldown = () => {
 
   const [data, setData] = useState(null);
   const [teamData, setTeamData] = useState(null);
+  const [mitigationPlan, setMitigationPlan] = useState(null);
+  const [isMitigationRefreshing, setIsMitigationRefreshing] = useState(false);
   const [expandedPhase, setExpandedPhase] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -67,12 +71,11 @@ const ProjectDrilldown = () => {
   const [selectedDomainModal, setSelectedDomainModal] = useState(null);
   const [selectedMilestoneModal, setSelectedMilestoneModal] = useState(null);
 
-  // Tab filtering: 'all' | 'team' | 'budget' | 'schedule' | 'governance' | 'threats' | ('completion' for Investor only)
+  // Tab filtering: 'all' | 'team' | 'budget' | 'schedule' | 'tasks' | 'governance' | 'threats' | 'completion'
   const rawTab = searchParams.get('tab') || 'all';
-  const currentTab = (rawTab === 'completion' && user?.role !== 'Investor') ? 'all' : rawTab;
+  const currentTab = (rawTab === 'mitigation' ? 'budget' : rawTab);
 
   const handleTabChange = (tabKey) => {
-    if (tabKey === 'completion' && user?.role !== 'Investor') return;
     setSearchParams(tabKey === 'all' ? {} : { tab: tabKey });
   };
 
@@ -92,6 +95,9 @@ const ProjectDrilldown = () => {
 
         if (isMounted) {
           setData(details);
+          if (details?.mitigation_plan) {
+            setMitigationPlan(details.mitigation_plan);
+          }
           if (team) {
             setTeamData(team);
           } else if (details?.team_summary) {
@@ -131,6 +137,58 @@ const ProjectDrilldown = () => {
       isMounted = false;
     };
   }, [id]);
+
+  const handleRefreshMitigationPlan = async () => {
+    try {
+      setIsMitigationRefreshing(true);
+      if (showToast) showToast('Synthesizing updated Mitigation Plan with LLM...', 'info');
+      const updated = await dashboardApi.getMitigationPlan(id, true);
+      if (updated) {
+        setMitigationPlan(updated);
+        if (showToast) showToast('Mitigation Plan successfully re-calibrated with LLM!', 'success');
+      }
+    } catch (err) {
+      console.error('Failed to re-calibrate mitigation plan:', err);
+      if (showToast) showToast('Could not reach remote LLM; retained current calibrated mitigation plan.', 'warning');
+    } finally {
+      setIsMitigationRefreshing(false);
+    }
+  };
+
+  const handleAdoptStrategy = async (strategy) => {
+    try {
+      const numericPid = data?.numeric_id || id;
+      const res = await dashboardApi.adoptStrategyToBacklog(numericPid, strategy);
+      if (res && res.status === 'success') {
+        if (showToast) showToast(`Strategy [${strategy.id}] adopted into Backlog (${res.task?.jira_key || 'Ticket created'})!`, 'success');
+        setMitigationPlan((prev) => {
+          if (!prev) return prev;
+          const strats = (prev.strategies || []).map((s) => (s.id === strategy.id ? { ...s, status: 'Adopted' } : s));
+          return { ...prev, strategies: strats };
+        });
+      }
+    } catch (err) {
+      console.error('Failed to adopt strategy:', err);
+      if (showToast) showToast('Failed to adopt strategy into backlog.', 'error');
+    }
+  };
+
+  const handleUpdateStrategyStatus = async (strategyId, newStatus) => {
+    try {
+      const numericPid = data?.numeric_id || id;
+      const res = await dashboardApi.updateStrategyStatus(numericPid, strategyId, newStatus);
+      if (res && res.status === 'success') {
+        if (showToast) showToast(`Strategy [${strategyId}] marked as ${newStatus}`, 'success');
+        setMitigationPlan((prev) => {
+          if (!prev) return prev;
+          const strats = (prev.strategies || []).map((s) => (s.id === strategyId ? { ...s, status: newStatus } : s));
+          return { ...prev, strategies: strats };
+        });
+      }
+    } catch (err) {
+      console.error('Failed to update strategy status:', err);
+    }
+  };
 
   // Scroll to hash section if present on initial render
   useEffect(() => {
@@ -1037,18 +1095,18 @@ const ProjectDrilldown = () => {
 
   const getSectionOrder = (sectionId) => {
     if (user?.role === 'Investor') {
-      const investorOrder = { kpi: 1, completion: 2, budget: 3, schedule: 4, governance: 5, charts: 6, team: 7, threats: 8 };
+      const investorOrder = { mitigation: 1, kpi: 2, completion: 3, budget: 4, schedule: 5, governance: 6, charts: 7, team: 8, threats: 9 };
       return investorOrder[sectionId] || 99;
     }
     if (user?.role === 'Project Manager') {
-      const pmOrder = { kpi: 1, team: 2, schedule: 3, threats: 4, charts: 5, budget: 6, governance: 7 };
+      const pmOrder = { mitigation: 1, kpi: 2, completion: 3, team: 4, schedule: 5, threats: 6, charts: 7, budget: 8, governance: 9 };
       return pmOrder[sectionId] || 99;
     }
     if (user?.role === 'PMO' || user?.role === 'Program Director') {
-      const pmoOrder = { kpi: 1, budget: 2, governance: 3, schedule: 4, charts: 5, threats: 6, team: 7 };
+      const pmoOrder = { mitigation: 1, kpi: 2, completion: 3, budget: 4, governance: 5, schedule: 6, charts: 7, threats: 8, team: 9 };
       return pmoOrder[sectionId] || 99;
     }
-    const defaultOrder = { kpi: 1, team: 2, budget: 3, schedule: 4, governance: 5, charts: 6, threats: 7 };
+    const defaultOrder = { mitigation: 1, kpi: 2, completion: 3, team: 4, budget: 5, schedule: 6, governance: 7, charts: 8, threats: 9 };
     return defaultOrder[sectionId] || 99;
   };
 
@@ -1221,21 +1279,19 @@ const ProjectDrilldown = () => {
           <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-black/25 font-mono">L4</span>
         </button>
 
-        {/* Level 4 Drilldown Tab: Project Completion & Delivery Velocity (Investor Persona Exclusive) */}
-        {user?.role === 'Investor' && (
-          <button
-            onClick={() => handleTabChange('completion')}
-            className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
-              currentTab === 'completion'
-                ? 'bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white shadow-md'
-                : 'theme-subtle hover:bg-white/5 theme-muted'
-            }`}
-          >
-            <CheckCircle2 size={13} />
-            <span>Completion & Velocity</span>
-            <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-black/25 font-mono">L4</span>
-          </button>
-        )}
+        {/* Level 4 Drilldown Tab: Project Completion & Delivery Velocity */}
+        <button
+          onClick={() => handleTabChange('completion')}
+          className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+            currentTab === 'completion'
+              ? 'bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] text-white shadow-md'
+              : 'theme-subtle hover:bg-white/5 theme-muted'
+          }`}
+        >
+          <CheckCircle2 size={13} />
+          <span>Completion & Velocity</span>
+          <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-black/25 font-mono">L4</span>
+        </button>
 
         {/* Threat Register Tab - Commented out / Hidden for Investor Persona */}
         {user?.role !== 'Investor' && (
@@ -1253,11 +1309,11 @@ const ProjectDrilldown = () => {
         )}
       </div>
 
-      <div className="flex flex-col space-y-6">
+      <div className="flex flex-col gap-6 sm:gap-8">
 
-      {/* 3. EXECUTIVE KPIS GRID (Visible in All or Overview) */}
-      {(currentTab === 'all' || currentTab === 'budget' || (user?.role === 'Investor' && currentTab === 'completion')) && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-2" style={{ order: getSectionOrder('kpi') }}>
+      {/* 3. EXECUTIVE KPIS GRID (Visible in All, Budget, Mitigation, or Completion) */}
+      {(currentTab === 'all' || currentTab === 'budget' || currentTab === 'mitigation' || currentTab === 'completion') && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" style={{ order: getSectionOrder('kpi') }}>
           {currentTab === 'budget' ? (
             <>
               <KPICard 
@@ -1293,9 +1349,8 @@ const ProjectDrilldown = () => {
             (data.kpis || []).map((kpi, idx) => {
               const titleLower = (kpi.title || '').toLowerCase();
               const isRisk = titleLower.includes('risk') || idx === 2;
-              const isInvestor = user?.role === 'Investor';
 
-              if (isInvestor && isRisk) {
+              if (isRisk) {
                 return (
                   <KPICard 
                     key={idx}
@@ -1304,6 +1359,9 @@ const ProjectDrilldown = () => {
                     trend={completion.percentage > 0 ? "up" : "neutral"}
                     trendLabel={completion.label}
                     icon={<CheckCircle2 size={18} />}
+                    onClick={() => handleTabChange('completion')}
+                    clickable={true}
+                    badge="Level 4 Dynamic"
                   />
                 );
               }
@@ -1443,6 +1501,48 @@ const ProjectDrilldown = () => {
               <ArrowRight size={12} />
             </Link>
           </div>
+
+          {/* Active Capital Deficit Remediation Alert Banner */}
+          {(budget.variance < 0 || budget.burn_pct > 100) && (
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-red-500/15 via-[#FF5A14]/10 to-transparent border border-red-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fadeIn">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle size={20} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-red-400 uppercase tracking-wider font-mono">
+                      Deficit Mitigation Active: -{fmtMoney(Math.abs(budget.variance))} Overrun Detected
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                      {budget.burn_pct || 102}% Burn Rate
+                    </span>
+                  </div>
+                  <p className="text-xs theme-muted mt-0.5">
+                    Autonomous LLM Mitigation Plan (Solution Plan) active with capital ring-fencing, dual-key PMO approvals, and tranche gate freezes.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  const el = document.getElementById('mitigation-plan');
+                  if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    el.classList.add('ring-2', 'ring-[#FF5A14]', 'ring-offset-2', 'ring-offset-black/50');
+                    setTimeout(() => {
+                      el.classList.remove('ring-2', 'ring-[#FF5A14]', 'ring-offset-2', 'ring-offset-black/50');
+                    }, 2200);
+                  }
+                }}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] hover:brightness-110 text-white text-xs font-bold transition-all flex items-center gap-2 flex-shrink-0 cursor-pointer shadow-md"
+              >
+                <Sparkles size={13} />
+                <span>View Solution Plan</span>
+                <ArrowDown size={13} />
+              </button>
+            </div>
+          )}
 
           {/* 4 Financial Stat Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
@@ -1923,8 +2023,9 @@ const ProjectDrilldown = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* 5B. LEVEL 4: PROJECT COMPLETION & DELIVERY VELOCITY (INVESTOR EXCLUSIVE)  */}
-      {user?.role === 'Investor' && (currentTab === 'all' || currentTab === 'completion') && (() => {
+      {/* 5B. LEVEL 4: PROJECT COMPLETION & DELIVERY VELOCITY                       */}
+      {/* ========================================================================= */}
+      {(currentTab === 'all' || currentTab === 'completion') && (() => {
         const calculationBasis = completion.basis || 'Task Backlog';
         const completionPct = completion.percentage || 0;
         const completionSubtitle = completion.label || 'Project Initialization Phase';
@@ -2604,6 +2705,22 @@ const ProjectDrilldown = () => {
         Threat Register commented out for Investor Persona:
         Investors do not have access to risk details.
       */}
+
+      {/* ========================================================================= */}
+      {/* 9.5. LLM MITIGATION PLAN (SOLUTION PLAN) SECTION                         */}
+      {/* ========================================================================= */}
+      {(currentTab === 'all' || currentTab === 'budget' || currentTab === 'mitigation') && (
+        <div id="mitigation-plan" className="mb-2 sm:mb-4" style={{ order: getSectionOrder('mitigation') }}>
+          <ProjectMitigationPlan
+            project={data}
+            mitigationPlan={mitigationPlan || data.mitigation_plan}
+            onRefresh={handleRefreshMitigationPlan}
+            onAdoptStrategy={handleAdoptStrategy}
+            onUpdateStrategyStatus={handleUpdateStrategyStatus}
+            isRefreshing={isMitigationRefreshing}
+          />
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* 10. ITEMIZED EXPENSE DETAIL & AUDIT MODAL                                 */}

@@ -57,5 +57,37 @@ export const dashboardApi = {
     if (refresh) params.refresh = 'true';
     const response = await api.get('/dashboard/forecast', { params });
     return response.data;
+  },
+  getMitigationPlan: async (projectId, refresh = false) => {
+    const params = {};
+    if (refresh) params.refresh = 'true';
+    const response = await api.get(`/dashboard/projects/${projectId}/mitigation-plan`, { params });
+    let payload = response.data?.data || response.data;
+    if (typeof payload === 'string') {
+      try {
+        payload = JSON.parse(payload);
+      } catch (e) {
+        console.error("Failed to parse mitigation plan string", e);
+      }
+    }
+    return payload;
+  },
+  updateStrategyStatus: async (projectId, strategyId, status, progressPct = null) => {
+    const response = await api.post(`/dashboard/projects/${projectId}/mitigation-plan/strategy-status`, {
+      strategy_id: strategyId,
+      status,
+      progress_pct: progressPct
+    });
+    return response.data;
+  },
+  adoptStrategyToBacklog: async (projectId, strategy) => {
+    const response = await api.post(`/dashboard/projects/${projectId}/mitigation-plan/adopt-to-backlog`, {
+      strategy_id: strategy.id,
+      title: strategy.title,
+      owner: strategy.owner,
+      priority: strategy.priority,
+      objective: strategy.objective
+    });
+    return response.data;
   }
 };

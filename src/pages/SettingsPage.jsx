@@ -7,7 +7,8 @@ import {
   Save, Server, GitBranch, Database, FileText, Bell, 
   Sparkles, CheckCircle2, AlertCircle, Loader2, Activity,
   Unplug, Eye, EyeOff, Key, ExternalLink, Copy,
-  FolderKanban, HardDrive, Cloud, Layers, BookmarkCheck
+  FolderKanban, HardDrive, Cloud, Layers, BookmarkCheck,
+  PlugZap, Code, RefreshCw, Send, Shield, Globe, Terminal
 } from 'lucide-react';
 import FuturisticLoader from '../components/common/FuturisticLoader';
 
@@ -67,6 +68,20 @@ const PRIMARY_PROVIDERS = [
     userLabel: 'Account Email / Tenant ID',
     userPlaceholder: 'onedrive.pmo@pwc-enterprise.com',
     tokenLabel: 'Microsoft Graph API Client Secret / PAT'
+  },
+  {
+    id: 'custom_api',
+    name: 'Custom REST API',
+    icon: PlugZap,
+    color: 'text-purple-400',
+    borderActive: 'border-purple-500',
+    bgActive: 'bg-purple-500/10',
+    desc: 'Connect proprietary ERPs, custom project microservices, or external webhooks via REST & Custom Auth',
+    urlLabel: 'Custom API Endpoint URL',
+    urlPlaceholder: 'https://api.enterprise.com/v1/projects/{key}/data',
+    userLabel: 'Authentication Strategy',
+    userPlaceholder: 'Bearer, API-Key, Basic Auth, or Custom Headers',
+    tokenLabel: 'Authentication Secret / Token'
   }
 ];
 
@@ -141,12 +156,16 @@ const SettingsPage = () => {
   const [imgLoadFailed, setImgLoadFailed] = useState(false);
   const [notifiedConnectors, setNotifiedConnectors] = useState({});
 
+  const [retrievingData, setRetrievingData] = useState(false);
+  const [retrievedPayload, setRetrievedPayload] = useState(null);
+
   // Track connected status from database per provider
   const [connectedProviders, setConnectedProviders] = useState({
     jira: false,
     azure_devops: false,
     google_drive: false,
-    onedrive: false
+    onedrive: false,
+    custom_api: false
   });
 
   // Track whether provider has an existing saved token in DB
@@ -154,7 +173,8 @@ const SettingsPage = () => {
     jira: false,
     azure_devops: false,
     google_drive: false,
-    onedrive: false
+    onedrive: false,
+    custom_api: false
   });
 
   // Detailed profile information for connected accounts
@@ -162,7 +182,8 @@ const SettingsPage = () => {
     jira: null,
     azure_devops: null,
     google_drive: null,
-    onedrive: null
+    onedrive: null,
+    custom_api: null
   });
 
   // Settings stored per provider
@@ -170,7 +191,22 @@ const SettingsPage = () => {
     jira: { base_url: '', username_email: '', api_token: '' },
     azure_devops: { base_url: '', username_email: '', api_token: '' },
     google_drive: { base_url: '', username_email: '', api_token: '' },
-    onedrive: { base_url: '', username_email: '', api_token: '' }
+    onedrive: { base_url: '', username_email: '', api_token: '' },
+    custom_api: {
+      base_url: '',
+      username_email: 'bearer',
+      api_token: '',
+      method: 'GET',
+      auth_type: 'bearer',
+      token: '',
+      api_key_name: 'X-API-Key',
+      api_key_value: '',
+      basic_user: '',
+      basic_pass: '',
+      custom_headers: '',
+      body: '',
+      data_category: 'general'
+    }
   });
 
   const canEdit = ['PMO', 'Program Director'].includes(user?.role);
@@ -185,51 +221,103 @@ const SettingsPage = () => {
         jira: { base_url: '', username_email: '', api_token: '' },
         azure_devops: { base_url: '', username_email: '', api_token: '' },
         google_drive: { base_url: '', username_email: '', api_token: '' },
-        onedrive: { base_url: '', username_email: '', api_token: '' }
+        onedrive: { base_url: '', username_email: '', api_token: '' },
+        custom_api: {
+          base_url: '',
+          username_email: 'bearer',
+          api_token: '',
+          method: 'GET',
+          auth_type: 'bearer',
+          token: '',
+          api_key_name: 'X-API-Key',
+          api_key_value: '',
+          basic_user: '',
+          basic_pass: '',
+          custom_headers: '',
+          body: '',
+          data_category: 'general'
+        }
       };
       const updatedConnected = {
         jira: false,
         azure_devops: false,
         google_drive: false,
-        onedrive: false
+        onedrive: false,
+        custom_api: false
       };
       const updatedTokens = {
         jira: false,
         azure_devops: false,
         google_drive: false,
-        onedrive: false
+        onedrive: false,
+        custom_api: false
       };
       const updatedProfiles = {
         jira: null,
         azure_devops: null,
         google_drive: null,
-        onedrive: null
+        onedrive: null,
+        custom_api: null
       };
 
       if (items && items.length > 0) {
         items.forEach(item => {
           if (item && item.provider && updatedSettings[item.provider] !== undefined) {
-            updatedSettings[item.provider] = {
-              base_url: item.base_url || '',
-              username_email: item.username_email || '',
-              api_token: item.api_token || ''
-            };
-            updatedConnected[item.provider] = Boolean(item.is_connected);
-            updatedTokens[item.provider] = Boolean(item.has_token);
-
-            if (item.is_connected && item.username_email) {
-              let accType = 'Enterprise Service Account';
-              if (item.provider === 'jira') accType = 'Atlassian Cloud Identity';
-              else if (item.provider === 'azure_devops') accType = 'Azure DevOps Organization Account';
-              else if (item.provider === 'google_drive') accType = 'Google Workspace Cloud Drive';
-              else if (item.provider === 'onedrive') accType = 'Microsoft 365 Tenant Account';
-
-              updatedProfiles[item.provider] = {
-                user: item.username_email.split('@')[0],
-                email: item.username_email,
-                server: item.base_url,
-                account_type: accType
+            if (item.provider === 'custom_api') {
+              let parsedCfg = {};
+              if (item.api_token && item.api_token.startsWith('{') && item.api_token.endsWith('}')) {
+                try {
+                  parsedCfg = JSON.parse(item.api_token);
+                } catch (e) {}
+              }
+              updatedSettings.custom_api = {
+                base_url: item.base_url || '',
+                username_email: item.username_email || parsedCfg.auth_type || 'bearer',
+                api_token: item.api_token || '',
+                method: parsedCfg.method || 'GET',
+                auth_type: parsedCfg.auth_type || item.username_email || 'bearer',
+                token: parsedCfg.token || (!item.api_token?.startsWith('{') ? item.api_token : ''),
+                api_key_name: parsedCfg.api_key_name || 'X-API-Key',
+                api_key_value: parsedCfg.api_key_value || '',
+                basic_user: parsedCfg.basic_user || '',
+                basic_pass: parsedCfg.basic_pass || '',
+                custom_headers: typeof parsedCfg.custom_headers === 'object' ? JSON.stringify(parsedCfg.custom_headers, null, 2) : (parsedCfg.custom_headers || ''),
+                body: typeof parsedCfg.body === 'object' ? JSON.stringify(parsedCfg.body, null, 2) : (parsedCfg.body || ''),
+                data_category: parsedCfg.data_category || 'general'
               };
+              updatedConnected.custom_api = Boolean(item.is_connected);
+              updatedTokens.custom_api = Boolean(item.has_token);
+              if (item.is_connected) {
+                updatedProfiles.custom_api = {
+                  user: `Custom API (${(parsedCfg.auth_type || item.username_email || 'Bearer').toUpperCase()})`,
+                  email: item.base_url,
+                  server: item.base_url,
+                  account_type: 'Custom REST API Endpoint'
+                };
+              }
+            } else {
+              updatedSettings[item.provider] = {
+                base_url: item.base_url || '',
+                username_email: item.username_email || '',
+                api_token: item.api_token || ''
+              };
+              updatedConnected[item.provider] = Boolean(item.is_connected);
+              updatedTokens[item.provider] = Boolean(item.has_token);
+
+              if (item.is_connected && item.username_email) {
+                let accType = 'Enterprise Service Account';
+                if (item.provider === 'jira') accType = 'Atlassian Cloud Identity';
+                else if (item.provider === 'azure_devops') accType = 'Azure DevOps Organization Account';
+                else if (item.provider === 'google_drive') accType = 'Google Workspace Cloud Drive';
+                else if (item.provider === 'onedrive') accType = 'Microsoft 365 Tenant Account';
+
+                updatedProfiles[item.provider] = {
+                  user: item.username_email.split('@')[0],
+                  email: item.username_email,
+                  server: item.base_url,
+                  account_type: accType
+                };
+              }
             }
           }
         });
@@ -282,6 +370,41 @@ const SettingsPage = () => {
     }));
   };
 
+  const preparePayload = (provider) => {
+    const current = allSettings[provider] || {};
+    let payload = { ...current };
+    if (provider === 'custom_api') {
+      let headersObj = {};
+      if (typeof current.custom_headers === 'string' && current.custom_headers.trim()) {
+        try {
+          headersObj = JSON.parse(current.custom_headers);
+        } catch (e) {
+          console.warn("Invalid JSON in custom_headers", e);
+        }
+      } else if (typeof current.custom_headers === 'object') {
+        headersObj = current.custom_headers || {};
+      }
+
+      const customConfig = {
+        auth_type: current.auth_type || 'bearer',
+        token: current.token || current.api_token || '',
+        api_key_name: current.api_key_name || 'X-API-Key',
+        api_key_value: current.api_key_value || '',
+        basic_user: current.basic_user || '',
+        basic_pass: current.basic_pass || '',
+        method: current.method || 'GET',
+        custom_headers: headersObj,
+        body: current.body || '',
+        data_category: current.data_category || 'general'
+      };
+
+      payload.custom_config = customConfig;
+      payload.username_email = current.auth_type || 'bearer';
+      payload.api_token = JSON.stringify(customConfig);
+    }
+    return payload;
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     if (!canEdit) return;
@@ -289,8 +412,8 @@ const SettingsPage = () => {
     try {
       setSaving(true);
       setTestResult(null);
-      const current = allSettings[activeTab];
-      const res = await settingsApi.saveProviderSettings(activeTab, current, activeProject?.id);
+      const payload = preparePayload(activeTab);
+      const res = await settingsApi.saveProviderSettings(activeTab, payload, activeProject?.id);
       
       const tRes = res.test_result || {};
       setTestResult(tRes);
@@ -301,7 +424,7 @@ const SettingsPage = () => {
       }));
       setTokenStatus(prev => ({
         ...prev,
-        [activeTab]: Boolean(current.api_token || prev[activeTab])
+        [activeTab]: Boolean(payload.api_token || prev[activeTab])
       }));
 
       let accType = 'Enterprise Service Account';
@@ -309,13 +432,14 @@ const SettingsPage = () => {
       else if (activeTab === 'azure_devops') accType = 'Azure DevOps Organization Account';
       else if (activeTab === 'google_drive') accType = 'Google Workspace Cloud Drive';
       else if (activeTab === 'onedrive') accType = 'Microsoft 365 Tenant Account';
+      else if (activeTab === 'custom_api') accType = 'Custom REST API Endpoint';
 
       setConnectedProfiles(prev => ({
         ...prev,
         [activeTab]: {
-          user: tRes.user || current.username_email?.split('@')[0] || 'Enterprise User',
-          email: tRes.email || current.username_email,
-          server: tRes.server || current.base_url,
+          user: tRes.user || payload.username_email?.split('@')[0] || 'Enterprise User',
+          email: tRes.email || payload.username_email,
+          server: tRes.server || payload.base_url,
           avatar_url: tRes.avatar_url || '',
           account_type: tRes.account_type || accType,
           time_zone: tRes.time_zone || ''
@@ -327,7 +451,7 @@ const SettingsPage = () => {
         ...prev,
         [activeTab]: { 
           ...prev[activeTab], 
-          api_token: current.api_token || prev[activeTab].api_token || '' 
+          api_token: payload.api_token || prev[activeTab].api_token || '' 
         }
       }));
     } catch (err) {
@@ -353,8 +477,8 @@ const SettingsPage = () => {
     try {
       setTesting(true);
       setTestResult(null);
-      const current = allSettings[activeTab];
-      const result = await settingsApi.testProviderConnection(activeTab, activeProject?.id, current);
+      const payload = preparePayload(activeTab);
+      const result = await settingsApi.testProviderConnection(activeTab, activeProject?.id, payload);
       setTestResult(result);
       if (result.success) {
         setConnectedProviders(prev => ({
@@ -371,13 +495,14 @@ const SettingsPage = () => {
         else if (activeTab === 'azure_devops') accType = 'Azure DevOps Organization Account';
         else if (activeTab === 'google_drive') accType = 'Google Workspace Cloud Drive';
         else if (activeTab === 'onedrive') accType = 'Microsoft 365 Tenant Account';
+        else if (activeTab === 'custom_api') accType = 'Custom REST API Endpoint';
 
         setConnectedProfiles(prev => ({
           ...prev,
           [activeTab]: {
-            user: result.user || allSettings[activeTab].username_email?.split('@')[0],
-            email: result.email || allSettings[activeTab].username_email,
-            server: result.server || allSettings[activeTab].base_url,
+            user: result.user || payload.username_email?.split('@')[0],
+            email: result.email || payload.username_email,
+            server: result.server || payload.base_url,
             avatar_url: result.avatar_url,
             account_type: result.account_type || accType,
             time_zone: result.time_zone
@@ -410,6 +535,25 @@ const SettingsPage = () => {
       showToast(errMsg, "error");
     } finally {
       setTesting(false);
+    }
+  };
+
+  const handleRetrieveData = async () => {
+    try {
+      setRetrievingData(true);
+      setRetrievedPayload(null);
+      const res = await settingsApi.syncCustomApi(activeProject?.id);
+      if (res && res.success) {
+        setRetrievedPayload(res.payload);
+        showToast(`Retrieved ${res.data_category || 'custom'} data payload (${res.latency_ms}ms, HTTP ${res.status_code})!`, "success");
+      } else {
+        showToast(res.error || "Failed to retrieve custom data.", "error");
+      }
+    } catch (err) {
+      console.error("Failed to retrieve custom data:", err);
+      showToast(err.response?.data?.error || err.message || "Failed to retrieve custom data.", "error");
+    } finally {
+      setRetrievingData(false);
     }
   };
 
@@ -450,11 +594,35 @@ const SettingsPage = () => {
           const next = { ...prev };
           Object.keys(res.data).forEach(p => {
             if (next[p]) {
-              next[p] = {
-                base_url: res.data[p].base_url || '',
-                username_email: res.data[p].username_email || '',
-                api_token: res.data[p].api_token || ''
-              };
+              if (p === 'custom_api') {
+                let parsedCfg = {};
+                if (res.data[p].api_token && res.data[p].api_token.startsWith('{')) {
+                  try {
+                    parsedCfg = JSON.parse(res.data[p].api_token);
+                  } catch (e) {}
+                }
+                next[p] = {
+                  base_url: res.data[p].base_url || '',
+                  username_email: res.data[p].username_email || parsedCfg.auth_type || 'bearer',
+                  api_token: res.data[p].api_token || '',
+                  method: parsedCfg.method || 'GET',
+                  auth_type: parsedCfg.auth_type || res.data[p].username_email || 'bearer',
+                  token: parsedCfg.token || (!res.data[p].api_token?.startsWith('{') ? res.data[p].api_token : ''),
+                  api_key_name: parsedCfg.api_key_name || 'X-API-Key',
+                  api_key_value: parsedCfg.api_key_value || '',
+                  basic_user: parsedCfg.basic_user || '',
+                  basic_pass: parsedCfg.basic_pass || '',
+                  custom_headers: typeof parsedCfg.custom_headers === 'object' ? JSON.stringify(parsedCfg.custom_headers, null, 2) : (parsedCfg.custom_headers || ''),
+                  body: typeof parsedCfg.body === 'object' ? JSON.stringify(parsedCfg.body, null, 2) : (parsedCfg.body || ''),
+                  data_category: parsedCfg.data_category || 'general'
+                };
+              } else {
+                next[p] = {
+                  base_url: res.data[p].base_url || '',
+                  username_email: res.data[p].username_email || '',
+                  api_token: res.data[p].api_token || ''
+                };
+              }
             }
           });
           return next;
@@ -477,12 +645,21 @@ const SettingsPage = () => {
           const next = { ...prev };
           Object.keys(res.data).forEach(p => {
             if (next[p] !== undefined) {
-              next[p] = {
-                user: res.data[p].username_email?.split('@')[0],
-                email: res.data[p].username_email,
-                server: res.data[p].base_url,
-                account_type: p === 'jira' ? 'Atlassian Verified Sandbox' : 'Enterprise Demo Sandbox'
-              };
+              if (p === 'custom_api') {
+                next[p] = {
+                  user: 'Custom API (BEARER)',
+                  email: res.data[p].base_url,
+                  server: res.data[p].base_url,
+                  account_type: 'Custom REST API Endpoint'
+                };
+              } else {
+                next[p] = {
+                  user: res.data[p].username_email?.split('@')[0],
+                  email: res.data[p].username_email,
+                  server: res.data[p].base_url,
+                  account_type: p === 'jira' ? 'Atlassian Verified Sandbox' : 'Enterprise Demo Sandbox'
+                };
+              }
             }
           });
           return next;
@@ -572,8 +749,8 @@ const SettingsPage = () => {
         
         {/* Left Workbench: Jira, Azure DevOps, Google Drive, OneDrive (8 cols) */}
         <div className="lg:col-span-8 space-y-4">
-          {/* Primary Connector Tabs (4 project connectors: Jira, Azure, GDrive, OneDrive) */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pb-2">
+          {/* Primary Connector Tabs (5 project connectors: Jira, Azure, GDrive, OneDrive, Custom API) */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 pb-2">
             {PRIMARY_PROVIDERS.map((prov) => {
               const Icon = prov.icon;
               const isActive = activeTab === prov.id;
@@ -764,132 +941,483 @@ const SettingsPage = () => {
               )}
 
               <form onSubmit={handleSave} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-bold theme-heading">
-                      {currentProviderDef.urlLabel}
-                    </label>
-                    <input
-                      type="text"
-                      value={currentSettings.base_url}
-                      onChange={(e) => handleFieldChange(activeTab, 'base_url', e.target.value)}
-                      placeholder={currentProviderDef.urlPlaceholder}
-                      disabled={!canEdit}
-                      className="w-full px-4 py-2.5 theme-input rounded-xl text-xs focus:outline-none focus:border-[#FF5A14] disabled:opacity-50 transition-colors"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-bold theme-heading">
-                      {currentProviderDef.userLabel}
-                    </label>
-                    <input
-                      type="text"
-                      value={currentSettings.username_email}
-                      onChange={(e) => handleFieldChange(activeTab, 'username_email', e.target.value)}
-                      placeholder={currentProviderDef.userPlaceholder}
-                      disabled={!canEdit}
-                      className="w-full px-4 py-2.5 theme-input rounded-xl text-xs focus:outline-none focus:border-[#FF5A14] disabled:opacity-50 transition-colors"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-1.5 md:col-span-2">
-                    <div className="flex items-center justify-between">
-                      <label className="block text-xs font-bold theme-heading flex items-center gap-1.5">
-                        <Key size={13} className="text-[#FF5A14]" />
-                        <span>{currentProviderDef.tokenLabel}</span>
-                      </label>
-                      
-                      {tokenStatus[activeTab] ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                          <CheckCircle2 size={11} />
-                          Token Saved in DB for Project #{activeProject?.id || 1}
-                        </span>
-                      ) : (
-                        <span className="text-[11px] theme-muted font-normal">
-                          (Enter secret/token to authenticate)
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="relative">
-                      <input
-                        type={showToken ? "text" : "password"}
-                        value={currentSettings.api_token}
-                        onChange={(e) => handleFieldChange(activeTab, 'api_token', e.target.value)}
-                        placeholder={
-                          tokenStatus[activeTab] 
-                            ? "•••••••••••••••••••••••• (Encrypted Secret Configured - Type to change)" 
-                            : "Paste API token / Secret key here"
-                        }
-                        disabled={!canEdit}
-                        className="w-full pl-4 pr-20 py-2.5 theme-input rounded-xl text-xs focus:outline-none focus:border-[#FF5A14] disabled:opacity-50 transition-colors font-mono"
-                      />
-                      <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                        {currentSettings.api_token && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              navigator.clipboard.writeText(currentSettings.api_token);
-                              showToast("Token copied to clipboard!", "success");
-                            }}
-                            className="p-1.5 text-slate-400 hover:text-[#FF5A14] rounded-md transition-colors cursor-pointer"
-                            title="Copy token to clipboard"
-                          >
-                            <Copy size={15} />
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => setShowToken(!showToken)}
-                          className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-md transition-colors cursor-pointer"
-                          title={showToken ? "Hide secret token" : "Show secret token"}
+                {activeTab === 'custom_api' ? (
+                  /* Dedicated Custom REST API Workbench */
+                  <div className="space-y-5">
+                    {/* Top Row: Method, Endpoint URL & Data Category */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                      {/* Method Selector */}
+                      <div className="md:col-span-2 space-y-1.5">
+                        <label className="block text-xs font-bold theme-heading flex items-center gap-1">
+                          <Globe size={13} className="text-purple-400" />
+                          <span>Method</span>
+                        </label>
+                        <select
+                          value={currentSettings.method || 'GET'}
+                          onChange={(e) => handleFieldChange('custom_api', 'method', e.target.value)}
+                          disabled={!canEdit}
+                          className="w-full px-3 py-2.5 theme-input rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-purple-500 cursor-pointer"
                         >
-                          {showToken ? <EyeOff size={15} /> : <Eye size={15} />}
-                        </button>
+                          <option value="GET">GET</option>
+                          <option value="POST">POST</option>
+                          <option value="PUT">PUT</option>
+                          <option value="DELETE">DELETE</option>
+                        </select>
+                      </div>
+
+                      {/* Endpoint URL */}
+                      <div className="md:col-span-6 space-y-1.5">
+                        <label className="block text-xs font-bold theme-heading flex items-center gap-1">
+                          <PlugZap size={13} className="text-purple-400" />
+                          <span>Custom API Endpoint URL</span>
+                        </label>
+                        <input
+                          type="url"
+                          value={currentSettings.base_url}
+                          onChange={(e) => handleFieldChange('custom_api', 'base_url', e.target.value)}
+                          placeholder="https://api.enterprise.com/v1/projects/{key}/data"
+                          disabled={!canEdit}
+                          className="w-full px-4 py-2.5 theme-input rounded-xl text-xs font-mono focus:outline-none focus:border-purple-500 transition-colors"
+                          required
+                        />
+                      </div>
+
+                      {/* Data Category / Scope */}
+                      <div className="md:col-span-4 space-y-1.5">
+                        <label className="block text-xs font-bold theme-heading flex items-center gap-1">
+                          <Layers size={13} className="text-purple-400" />
+                          <span>Data Scope / Domain</span>
+                        </label>
+                        <select
+                          value={currentSettings.data_category || 'general'}
+                          onChange={(e) => handleFieldChange('custom_api', 'data_category', e.target.value)}
+                          disabled={!canEdit}
+                          className="w-full px-3 py-2.5 theme-input rounded-xl text-xs font-semibold focus:outline-none focus:border-purple-500 cursor-pointer"
+                        >
+                          <option value="general">General Metrics & Telemetry</option>
+                          <option value="tasks_and_milestones">Tasks, Sprints & Milestones</option>
+                          <option value="budget_financial">Budget & Financial Ledger</option>
+                          <option value="risks_and_threats">Risk & Vulnerability Feed</option>
+                          <option value="raw_json">Raw JSON Data Lake Stream</option>
+                        </select>
                       </div>
                     </div>
-                    <p className="text-[11px] theme-muted">
-                      {tokenStatus[activeTab] && !currentSettings.api_token
-                        ? `A secure encrypted token is active in DB for Project [${activeProject?.jira_key || ''}]. Leave blank to keep existing token.`
-                        : "Click the eye icon to view or verify the token before saving."}
-                    </p>
-                    {activeTab === 'google_drive' && (
-                      <p className="text-[11px] text-emerald-600 dark:text-emerald-400/90 font-medium bg-emerald-500/10 p-2.5 rounded-lg border border-emerald-500/20">
-                        <strong>Live Connector:</strong> Supports either a <strong>Google Service Account Private Key</strong> (<code className="font-mono bg-emerald-500/20 px-1 py-0.5 rounded">-----BEGIN PRIVATE KEY-----</code>) with its Service Account Email, or an <strong>OAuth 2.0 Bearer Token</strong> (<code className="font-mono bg-emerald-500/20 px-1 py-0.5 rounded">ya29.</code>). Invalid or mismatched keys will be strictly rejected.
-                      </p>
+
+                    {/* Authentication Strategy Selector */}
+                    <div className="space-y-3 p-4 rounded-2xl bg-black/20 border border-white/5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold theme-heading flex items-center gap-1.5">
+                          <Shield size={14} className="text-purple-400" />
+                          <span>Authentication Scheme</span>
+                        </label>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/15 text-purple-300 border border-purple-500/30 font-bold uppercase tracking-wider">
+                          Active: {currentSettings.auth_type || 'bearer'}
+                        </span>
+                      </div>
+
+                      {/* Auth Type Buttons */}
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                        {[
+                          { id: 'bearer', label: 'Bearer Token' },
+                          { id: 'api_key', label: 'API Key Header' },
+                          { id: 'basic', label: 'Basic Auth' },
+                          { id: 'custom_headers', label: 'Custom Headers' },
+                          { id: 'none', label: 'No Auth (Public)' }
+                        ].map((strategy) => {
+                          const isSel = (currentSettings.auth_type || 'bearer') === strategy.id;
+                          return (
+                            <button
+                              key={strategy.id}
+                              type="button"
+                              onClick={() => {
+                                handleFieldChange('custom_api', 'auth_type', strategy.id);
+                                handleFieldChange('custom_api', 'username_email', strategy.id);
+                              }}
+                              className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
+                                isSel
+                                  ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30 font-extrabold'
+                                  : 'theme-subtle hover:theme-subtle-hover theme-muted hover:text-white border theme-border'
+                              }`}
+                            >
+                              {strategy.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Dynamic Auth Input Fields */}
+                      <div className="pt-2">
+                        {/* 1. Bearer Token */}
+                        {(!currentSettings.auth_type || currentSettings.auth_type === 'bearer') && (
+                          <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold theme-heading flex items-center gap-1">
+                              <Key size={12} className="text-[#FF5A14]" />
+                              <span>Bearer Token (sent as <code className="text-purple-400 font-mono">Authorization: Bearer &lt;token&gt;</code>)</span>
+                            </label>
+                            <div className="relative">
+                              <input
+                                type={showToken ? "text" : "password"}
+                                value={currentSettings.token || currentSettings.api_token || ''}
+                                onChange={(e) => {
+                                  handleFieldChange('custom_api', 'token', e.target.value);
+                                  handleFieldChange('custom_api', 'api_token', e.target.value);
+                                }}
+                                placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                                disabled={!canEdit}
+                                className="w-full pl-4 pr-20 py-2.5 theme-input rounded-xl text-xs font-mono focus:outline-none focus:border-purple-500"
+                              />
+                              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                {(currentSettings.token || currentSettings.api_token) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      navigator.clipboard?.writeText(currentSettings.token || currentSettings.api_token);
+                                      showToast("Bearer token copied!", "success");
+                                    }}
+                                    className="p-1.5 text-slate-400 hover:text-purple-400 transition-colors cursor-pointer"
+                                    title="Copy Token"
+                                  >
+                                    <Copy size={14} />
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => setShowToken(!showToken)}
+                                  className="p-1.5 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                                  title={showToken ? "Hide secret" : "Show secret"}
+                                >
+                                  {showToken ? <EyeOff size={14} /> : <Eye size={14} />}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 2. API Key */}
+                        {currentSettings.auth_type === 'api_key' && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <label className="text-[11px] font-bold theme-heading">
+                                Header / Query Key Name
+                              </label>
+                              <input
+                                type="text"
+                                value={currentSettings.api_key_name || 'X-API-Key'}
+                                onChange={(e) => handleFieldChange('custom_api', 'api_key_name', e.target.value)}
+                                placeholder="X-API-Key or api-token"
+                                disabled={!canEdit}
+                                className="w-full px-3.5 py-2.5 theme-input rounded-xl text-xs font-mono focus:outline-none focus:border-purple-500"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[11px] font-bold theme-heading flex items-center gap-1">
+                                <Key size={12} className="text-[#FF5A14]" />
+                                <span>API Key Secret Value</span>
+                              </label>
+                              <div className="relative">
+                                <input
+                                  type={showToken ? "text" : "password"}
+                                  value={currentSettings.api_key_value || ''}
+                                  onChange={(e) => handleFieldChange('custom_api', 'api_key_value', e.target.value)}
+                                  placeholder="secret_key_prod_abc123..."
+                                  disabled={!canEdit}
+                                  className="w-full pl-3.5 pr-10 py-2.5 theme-input rounded-xl text-xs font-mono focus:outline-none focus:border-purple-500"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setShowToken(!showToken)}
+                                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-white cursor-pointer"
+                                >
+                                  {showToken ? <EyeOff size={14} /> : <Eye size={14} />}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 3. Basic Auth */}
+                        {currentSettings.auth_type === 'basic' && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <label className="text-[11px] font-bold theme-heading">
+                                Username / Client ID
+                              </label>
+                              <input
+                                type="text"
+                                value={currentSettings.basic_user || ''}
+                                onChange={(e) => handleFieldChange('custom_api', 'basic_user', e.target.value)}
+                                placeholder="service-principal-id"
+                                disabled={!canEdit}
+                                className="w-full px-3.5 py-2.5 theme-input rounded-xl text-xs font-mono focus:outline-none focus:border-purple-500"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[11px] font-bold theme-heading flex items-center gap-1">
+                                <Key size={12} className="text-[#FF5A14]" />
+                                <span>Password / Client Secret</span>
+                              </label>
+                              <div className="relative">
+                                <input
+                                  type={showToken ? "text" : "password"}
+                                  value={currentSettings.basic_pass || ''}
+                                  onChange={(e) => handleFieldChange('custom_api', 'basic_pass', e.target.value)}
+                                  placeholder="••••••••••••"
+                                  disabled={!canEdit}
+                                  className="w-full pl-3.5 pr-10 py-2.5 theme-input rounded-xl text-xs font-mono focus:outline-none focus:border-purple-500"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setShowToken(!showToken)}
+                                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-white cursor-pointer"
+                                >
+                                  {showToken ? <EyeOff size={14} /> : <Eye size={14} />}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 4. Custom Headers */}
+                        {currentSettings.auth_type === 'custom_headers' && (
+                          <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold theme-heading flex items-center gap-1">
+                              <Code size={12} className="text-purple-400" />
+                              <span>Custom JSON Request Headers</span>
+                            </label>
+                            <textarea
+                              rows={3}
+                              value={currentSettings.custom_headers || ''}
+                              onChange={(e) => handleFieldChange('custom_api', 'custom_headers', e.target.value)}
+                              placeholder={`{\n  "X-Tenant-ID": "enterprise-alpha",\n  "X-Custom-Auth": "secret-token-key"\n}`}
+                              disabled={!canEdit}
+                              className="w-full p-3 theme-input rounded-xl text-xs font-mono focus:outline-none focus:border-purple-500"
+                            />
+                          </div>
+                        )}
+
+                        {/* 5. None */}
+                        {currentSettings.auth_type === 'none' && (
+                          <p className="text-xs text-slate-400 p-2.5 rounded-xl bg-white/5 border border-white/5">
+                            Public API endpoint — requests will be made without authentication headers.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Request Body (For POST/PUT) */}
+                    {(currentSettings.method === 'POST' || currentSettings.method === 'PUT') && (
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold theme-heading flex items-center gap-1">
+                          <Terminal size={13} className="text-purple-400" />
+                          <span>Request JSON Body Payload (Optional)</span>
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={currentSettings.body || ''}
+                          onChange={(e) => handleFieldChange('custom_api', 'body', e.target.value)}
+                          placeholder={`{\n  "projectId": "${activeProject?.jira_key || 'PRJ'}",\n  "includeSubtasks": true\n}`}
+                          disabled={!canEdit}
+                          className="w-full p-3 theme-input rounded-xl text-xs font-mono focus:outline-none focus:border-purple-500"
+                        />
+                      </div>
                     )}
                   </div>
-                </div>
+                ) : (
+                  /* Standard SaaS Connector Form (Jira, Azure, GDrive, OneDrive) */
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold theme-heading">
+                        {currentProviderDef.urlLabel}
+                      </label>
+                      <input
+                        type="text"
+                        value={currentSettings.base_url}
+                        onChange={(e) => handleFieldChange(activeTab, 'base_url', e.target.value)}
+                        placeholder={currentProviderDef.urlPlaceholder}
+                        disabled={!canEdit}
+                        className="w-full px-4 py-2.5 theme-input rounded-xl text-xs focus:outline-none focus:border-[#FF5A14] disabled:opacity-50 transition-colors"
+                        required
+                      />
+                    </div>
 
-                {/* Test Result Callout */}
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold theme-heading">
+                        {currentProviderDef.userLabel}
+                      </label>
+                      <input
+                        type="text"
+                        value={currentSettings.username_email}
+                        onChange={(e) => handleFieldChange(activeTab, 'username_email', e.target.value)}
+                        placeholder={currentProviderDef.userPlaceholder}
+                        disabled={!canEdit}
+                        className="w-full px-4 py-2.5 theme-input rounded-xl text-xs focus:outline-none focus:border-[#FF5A14] disabled:opacity-50 transition-colors"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 md:col-span-2">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-bold theme-heading flex items-center gap-1.5">
+                          <Key size={13} className="text-[#FF5A14]" />
+                          <span>{currentProviderDef.tokenLabel}</span>
+                        </label>
+                        
+                        {tokenStatus[activeTab] ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                            <CheckCircle2 size={11} />
+                            Token Saved in DB for Project #{activeProject?.id || 1}
+                          </span>
+                        ) : (
+                          <span className="text-[11px] theme-muted font-normal">
+                            (Enter secret/token to authenticate)
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="relative">
+                        <input
+                          type={showToken ? "text" : "password"}
+                          value={currentSettings.api_token}
+                          onChange={(e) => handleFieldChange(activeTab, 'api_token', e.target.value)}
+                          placeholder={
+                            tokenStatus[activeTab] 
+                              ? "•••••••••••••••••••••••• (Encrypted Secret Configured - Type to change)" 
+                              : "Paste API token / Secret key here"
+                          }
+                          disabled={!canEdit}
+                          className="w-full pl-4 pr-20 py-2.5 theme-input rounded-xl text-xs focus:outline-none focus:border-[#FF5A14] disabled:opacity-50 transition-colors font-mono"
+                        />
+                        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                          {currentSettings.api_token && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(currentSettings.api_token);
+                                showToast("Token copied to clipboard!", "success");
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-[#FF5A14] rounded-md transition-colors cursor-pointer"
+                              title="Copy token to clipboard"
+                            >
+                              <Copy size={15} />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setShowToken(!showToken)}
+                            className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-md transition-colors cursor-pointer"
+                            title={showToken ? "Hide secret token" : "Show secret token"}
+                          >
+                            {showToken ? <EyeOff size={15} /> : <Eye size={15} />}
+                          </button>
+                        </div>
+                      </div>
+                      <p className="text-[11px] theme-muted">
+                        {tokenStatus[activeTab] && !currentSettings.api_token
+                          ? `A secure encrypted token is active in DB for Project [${activeProject?.jira_key || ''}]. Leave blank to keep existing token.`
+                          : "Click the eye icon to view or verify the token before saving."}
+                      </p>
+                      {activeTab === 'google_drive' && (
+                        <p className="text-[11px] text-emerald-600 dark:text-emerald-400/90 font-medium bg-emerald-500/10 p-2.5 rounded-lg border border-emerald-500/20">
+                          <strong>Live Connector:</strong> Supports either a <strong>Google Service Account Private Key</strong> (<code className="font-mono bg-emerald-500/20 px-1 py-0.5 rounded">-----BEGIN PRIVATE KEY-----</code>) with its Service Account Email, or an <strong>OAuth 2.0 Bearer Token</strong> (<code className="font-mono bg-emerald-500/20 px-1 py-0.5 rounded">ya29.</code>). Invalid or mismatched keys will be strictly rejected.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Test Result Callout & Live Sample Data Inspector */}
                 {testResult && (
-                  <div className={`p-4 rounded-xl border flex items-start gap-3 text-xs ${
+                  <div className={`p-4 rounded-2xl border space-y-3 text-xs ${
                     testResult.success 
                       ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400' 
                       : 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400'
                   }`}>
-                    {testResult.success ? <CheckCircle2 size={18} className="shrink-0 mt-0.5" /> : <AlertCircle size={18} className="shrink-0 mt-0.5" />}
-                    <div>
-                      <span className="font-bold">
-                        {testResult.success ? 'Handshake Successful' : 'Connection Failed'}:
-                      </span>{' '}
-                      {testResult.success ? (
-                        <span>
-                          Verified endpoint at <span className="font-mono">{testResult.server}</span> for user{' '}
-                          <span className="font-semibold">{testResult.user}</span>
-                          {testResult.is_sandbox && (
-                            <span className="ml-2 px-2 py-0.5 bg-purple-500/20 text-purple-700 dark:text-purple-300 font-bold rounded-full text-[10px]">
-                              Sandbox Mode
-                            </span>
-                          )}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-2.5">
+                        {testResult.success ? <CheckCircle2 size={18} className="shrink-0 mt-0.5 text-emerald-500" /> : <AlertCircle size={18} className="shrink-0 mt-0.5 text-rose-500" />}
+                        <div>
+                          <div className="font-bold flex items-center gap-2">
+                            <span>{testResult.success ? 'Handshake Successful' : 'Connection Failed'}</span>
+                            {testResult.status_code && (
+                              <span className="px-2 py-0.5 rounded-md font-mono text-[10px] font-bold bg-black/30 border border-white/10">
+                                HTTP {testResult.status_code}
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-0.5 text-[11px] opacity-90">
+                            {testResult.success ? (
+                              <span>
+                                Verified endpoint at <span className="font-mono font-bold">{testResult.server}</span> ({testResult.user})
+                              </span>
+                            ) : (
+                              <span>{testResult.error}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {testResult.latency_ms !== undefined && (
+                        <span className="font-mono text-[10px] px-2.5 py-1 rounded-lg bg-black/40 border border-white/10 text-emerald-300 font-bold shrink-0 flex items-center gap-1">
+                          <Activity size={11} className="text-emerald-400" />
+                          <span>{testResult.latency_ms} ms</span>
                         </span>
-                      ) : (
-                        <span>{testResult.error}</span>
                       )}
                     </div>
+
+                    {/* Live JSON Payload Inspector */}
+                    {testResult.sample_data && (
+                      <div className="pt-2 border-t border-emerald-500/20 space-y-1.5">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-bold uppercase tracking-wider flex items-center gap-1.5 text-emerald-400 font-mono text-[10px]">
+                            <Code size={12} />
+                            <span>Retrieved Data Payload Preview:</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const str = typeof testResult.sample_data === 'object' ? JSON.stringify(testResult.sample_data, null, 2) : String(testResult.sample_data);
+                              navigator.clipboard?.writeText(str);
+                              showToast('JSON payload copied to clipboard!', 'success');
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-black/40 hover:bg-black/60 text-[10px] font-mono font-bold flex items-center gap-1 transition-colors cursor-pointer border border-white/5"
+                          >
+                            <Copy size={11} />
+                            <span>Copy JSON</span>
+                          </button>
+                        </div>
+                        <pre className="p-3.5 rounded-xl bg-black/60 border border-white/10 text-[11px] font-mono text-emerald-300 max-h-56 overflow-auto leading-relaxed shadow-inner">
+                          {typeof testResult.sample_data === 'object' 
+                            ? JSON.stringify(testResult.sample_data, null, 2)
+                            : String(testResult.sample_data)}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Live Retrieved Data Payload HUD (When Sync Triggered) */}
+                {retrievedPayload && (
+                  <div className="p-4 rounded-2xl bg-purple-500/10 border border-purple-500/30 space-y-2 text-xs animate-fadeIn">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-purple-400 flex items-center gap-1.5">
+                        <CheckCircle2 size={14} className="text-purple-400" />
+                        <span>Live Custom Data Retrieved & Ingested for Project</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard?.writeText(JSON.stringify(retrievedPayload, null, 2));
+                          showToast('Retrieved payload copied!', 'success');
+                        }}
+                        className="px-2 py-0.5 rounded bg-black/40 text-[10px] font-mono text-purple-300 flex items-center gap-1 cursor-pointer"
+                      >
+                        <Copy size={10} />
+                        <span>Copy</span>
+                      </button>
+                    </div>
+                    <pre className="p-3 rounded-xl bg-black/60 border border-white/10 text-[11px] font-mono text-purple-200 max-h-48 overflow-auto">
+                      {JSON.stringify(retrievedPayload, null, 2)}
+                    </pre>
                   </div>
                 )}
 
@@ -909,7 +1437,7 @@ const SettingsPage = () => {
                     </div>
                   )}
                   
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-wrap">
                     {canEdit && connectedProviders[activeTab] && (
                       <button
                         type="button"
@@ -921,6 +1449,20 @@ const SettingsPage = () => {
                         <span>Disconnect</span>
                       </button>
                     )}
+
+                    {activeTab === 'custom_api' && connectedProviders.custom_api && (
+                      <button
+                        type="button"
+                        onClick={handleRetrieveData}
+                        disabled={retrievingData}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:brightness-110 text-white rounded-xl text-xs font-bold shadow-md shadow-purple-600/25 transition-all cursor-pointer disabled:opacity-50"
+                        title="Retrieve live data payload from this endpoint now"
+                      >
+                        {retrievingData ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                        <span>{retrievingData ? 'Retrieving Data...' : 'Retrieve Live Data'}</span>
+                      </button>
+                    )}
+
                     <button
                       type="button"
                       onClick={handleTestConnection}

@@ -53,6 +53,10 @@ export const settingsApi = {
     const response = await api.post(`/settings/sync-onedrive/${projectId}`);
     return response.data;
   },
+  syncCustomApi: async (projectId) => {
+    const response = await api.post(`/settings/sync-custom-api/${projectId}`);
+    return response.data;
+  },
 
   // Backward-compatible Jira aliases
   getJiraSettings: async (projectId = null) => {

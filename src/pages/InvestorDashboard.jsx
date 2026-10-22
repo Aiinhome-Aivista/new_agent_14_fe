@@ -861,10 +861,17 @@ const InvestorDashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x theme-border p-2 sm:p-4">
             
             {/* 1. Timeline Duration Progress */}
-            <div className="p-4 space-y-3">
+            <div 
+              onClick={() => {
+                const activePid = activeProject?.numeric_id || activeProject?.id || '1';
+                navigate(`/project/${activePid}?tab=schedule`);
+              }}
+              className="p-4 space-y-3 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-white/[0.03] transition-colors group"
+              title="Click to drill down into Schedule details"
+            >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold theme-heading">
-                  <span className="p-1.5 bg-blue-500/10 text-blue-400 rounded-lg">
+                <div className="flex items-center gap-2 text-xs font-bold theme-heading group-hover:text-blue-500 transition-colors">
+                  <span className="p-1.5 bg-blue-500/10 text-blue-400 rounded-lg group-hover:bg-blue-500 group-hover:text-white transition-colors">
                     <Clock size={15} />
                   </span>
                   <span>1. Timeline Horizon</span>
@@ -893,10 +900,17 @@ const InvestorDashboard = () => {
             </div>
 
             {/* 2. Task Backlog Execution */}
-            <div className="p-4 space-y-3">
+            <div 
+              onClick={() => {
+                const activePid = activeProject?.numeric_id || activeProject?.id || '1';
+                navigate(`/project/${activePid}?tab=tasks`);
+              }}
+              className="p-4 space-y-3 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-white/[0.03] transition-colors group"
+              title="Click to drill down into Task Backlog"
+            >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold theme-heading">
-                  <span className="p-1.5 bg-[#FF5A14]/10 text-[#FF5A14] rounded-lg">
+                <div className="flex items-center gap-2 text-xs font-bold theme-heading group-hover:text-[#FF5A14] transition-colors">
+                  <span className="p-1.5 bg-[#FF5A14]/10 text-[#FF5A14] rounded-lg group-hover:bg-[#FF5A14] group-hover:text-white transition-colors">
                     <CheckCircle2 size={15} />
                   </span>
                   <span>2. Task Execution</span>
@@ -925,10 +939,17 @@ const InvestorDashboard = () => {
             </div>
 
             {/* 3. Contractual Milestones */}
-            <div className="p-4 space-y-3">
+            <div 
+              onClick={() => {
+                const activePid = activeProject?.numeric_id || activeProject?.id || '1';
+                navigate(`/project/${activePid}?tab=schedule`);
+              }}
+              className="p-4 space-y-3 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-white/[0.03] transition-colors group"
+              title="Click to drill down into Milestone Schedule"
+            >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold theme-heading">
-                  <span className="p-1.5 bg-emerald-500/10 text-emerald-500 rounded-lg">
+                <div className="flex items-center gap-2 text-xs font-bold theme-heading group-hover:text-emerald-500 transition-colors">
+                  <span className="p-1.5 bg-emerald-500/10 text-emerald-500 rounded-lg group-hover:bg-emerald-500 group-hover:text-white transition-colors">
                     <Layers size={15} />
                   </span>
                   <span>3. SOW Milestones</span>
