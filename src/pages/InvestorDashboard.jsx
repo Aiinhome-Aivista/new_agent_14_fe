@@ -366,9 +366,14 @@ const InvestorDashboard = () => {
 
     const fmtMoney = (val) => {
       if (val === undefined || val === null) return '$0';
-      const num = Math.abs(Number(val));
+      let num = Math.abs(Number(val));
+      if (isNaN(num)) return '$0';
+      if (num > 0 && num < 2000) num = num * 1000;
       if (num >= 1000000) return `$${(num / 1000000).toFixed(2).replace(/\.00$/, '')}M`;
-      if (num >= 1000) return `$${Math.round(num / 1000)}K`;
+      if (num >= 1000) {
+        const k = num / 1000;
+        return k % 1 === 0 ? `$${k.toFixed(0)}K` : `$${k.toFixed(1)}K`;
+      }
       return `$${Number(num).toLocaleString()}`;
     };
 
@@ -378,21 +383,29 @@ const InvestorDashboard = () => {
       
       // Override Budget metrics to display in Dollars for Investor persona
       if (titleLower.includes('budget') && !titleLower.includes('variance')) {
-        const spent = data?.financials?.spent || 0;
-        const total = data?.financials?.totalBudget || 0;
-        return {
-          ...kpi,
-          value: `${fmtMoney(spent)} / ${fmtMoney(total)}`
-        };
+        const spent = data?.financials?.spent || data?.budget_summary?.actual || 0;
+        const total = data?.financials?.totalBudget || data?.budget_summary?.planned || 0;
+        if (spent > 0 || total > 0) {
+          return {
+            ...kpi,
+            value: `${fmtMoney(spent)} / ${fmtMoney(total)}`
+          };
+        }
+        return kpi;
       }
       
       if (titleLower.includes('variance')) {
-        const variance = data?.financials?.projectedVariance || 0;
-        const isSurplus = variance >= 0;
-        return {
-          ...kpi,
-          value: `${isSurplus ? '+' : '-'}${fmtMoney(Math.abs(variance))} ${isSurplus ? 'Surplus' : 'Deficit'}`
-        };
+        const variance = data?.financials?.projectedVariance !== undefined 
+          ? data?.financials?.projectedVariance 
+          : (data?.budget_summary?.variance !== undefined ? data?.budget_summary?.variance : 0);
+        if (variance !== 0 || data?.financials || data?.budget_summary) {
+          const isSurplus = variance >= 0;
+          return {
+            ...kpi,
+            value: `${isSurplus ? '+' : '-'}${fmtMoney(Math.abs(variance))} ${isSurplus ? 'Surplus' : 'Deficit'}`
+          };
+        }
+        return kpi;
       }
 
       if (titleLower.includes('risk') || idx === 2) {

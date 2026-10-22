@@ -86,11 +86,16 @@ const ForecastDrilldownPage = () => {
 
   const fmtMoney = (val) => {
     if (val === undefined || val === null) return '$0';
-    const num = Number(val);
+    let num = Number(val);
+    if (isNaN(num)) return '$0';
+    if (Math.abs(num) > 0 && Math.abs(num) < 2000) num = num * 1000;
     const abs = Math.abs(num);
     const sign = num < 0 ? '-' : '';
     if (abs >= 1000000) return `${sign}$${(abs / 1000000).toFixed(1)}M`;
-    if (abs >= 1000) return `${sign}$${Math.round(abs / 1000)}K`;
+    if (abs >= 1000) {
+      const k = abs / 1000;
+      return `${sign}$${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}K`;
+    }
     return `${sign}$${Math.round(abs).toLocaleString()}`;
   };
 
@@ -98,11 +103,16 @@ const ForecastDrilldownPage = () => {
 
   const fmtVariance = (val) => {
     if (val === undefined || val === null) return '$0';
-    const num = Number(val);
+    let num = Number(val);
+    if (isNaN(num)) return '$0';
+    if (Math.abs(num) > 0 && Math.abs(num) < 2000) num = num * 1000;
     const abs = Math.abs(num);
     const sign = num < 0 ? '-' : num > 0 ? '+' : '';
     if (abs >= 1000000) return `${sign}$${(abs / 1000000).toFixed(1)}M`;
-    if (abs >= 1000) return `${sign}$${Math.round(abs / 1000)}K`;
+    if (abs >= 1000) {
+      const k = abs / 1000;
+      return `${sign}$${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}K`;
+    }
     return `${sign}$${Math.round(abs).toLocaleString()}`;
   };
 

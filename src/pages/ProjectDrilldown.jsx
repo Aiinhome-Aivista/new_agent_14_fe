@@ -283,9 +283,21 @@ const ProjectDrilldown = () => {
 
   const fmtMoney = (val) => {
     if (val === undefined || val === null) return '$0';
-    if (Math.abs(val) >= 1000000) return `$${(val / 1000000).toFixed(2)}M`;
-    if (Math.abs(val) >= 1000) return `$${(val / 1000).toFixed(0)}k`;
-    return `$${val.toLocaleString()}`;
+    let num = Number(val);
+    if (isNaN(num)) return '$0';
+    if (Math.abs(num) > 0 && Math.abs(num) < 2000) {
+      num = num * 1000;
+    }
+    const abs = Math.abs(num);
+    if (abs >= 1000000) {
+      const m = num / 1000000;
+      return `$${m.toFixed(2)}M`;
+    }
+    if (abs >= 1000) {
+      const k = num / 1000;
+      return k % 1 === 0 ? `$${k.toFixed(0)}k` : `$${k.toFixed(1)}k`;
+    }
+    return `$${Math.round(num).toLocaleString()}`;
   };
 
   // =========================================================================
@@ -1348,7 +1360,53 @@ const ProjectDrilldown = () => {
           ) : (
             (data.kpis || []).map((kpi, idx) => {
               const titleLower = (kpi.title || '').toLowerCase();
+              const isBudget = titleLower.includes('budget') && !titleLower.includes('variance');
+              const isVariance = titleLower.includes('variance');
               const isRisk = titleLower.includes('risk') || idx === 2;
+
+              if (isBudget) {
+                const actualStr = budget.actual > 0 ? fmtMoney(budget.actual) : (kpi.value?.split('/')[0]?.trim() || '$0');
+                const plannedStr = budget.planned > 0 ? fmtMoney(budget.planned) : (kpi.value?.split('/')[1]?.trim() || '$0');
+                const burnStr = budget.burn_pct ? `${budget.burn_pct}% Burned` : kpi.trendLabel;
+                const isUnder = (budget.actual || 0) <= (budget.planned || 0);
+
+                return (
+                  <KPICard 
+                    key={idx}
+                    title="PROJECT BUDGET"
+                    value={`${actualStr} / ${plannedStr}`}
+                    trend={isUnder ? "up" : "down"}
+                    trendLabel={burnStr}
+                    icon={<DollarSign size={18} />}
+                    onClick={() => handleTabChange('budget')}
+                    clickable={true}
+                    badge="Level 4 Dynamic"
+                  />
+                );
+              }
+
+              if (isVariance) {
+                const varAmt = budget.variance !== undefined ? budget.variance : 0;
+                const isSurplus = varAmt >= 0;
+                const varStr = (budget.planned > 0 || budget.actual > 0) 
+                  ? `${fmtMoney(Math.abs(varAmt))} ${isSurplus ? 'Surplus' : 'Deficit'}` 
+                  : kpi.value;
+                const varLabel = isSurplus ? 'Within Allocation' : 'Over Allocation';
+
+                return (
+                  <KPICard 
+                    key={idx}
+                    title="BUDGET VARIANCE (COST-DERIVED)"
+                    value={varStr}
+                    trend={isSurplus ? "up" : "down"}
+                    trendLabel={(budget.planned > 0 || budget.actual > 0) ? varLabel : kpi.trendLabel}
+                    icon={<TrendingUp size={18} />}
+                    onClick={() => handleTabChange('budget')}
+                    clickable={true}
+                    badge="Level 4 Dynamic"
+                  />
+                );
+              }
 
               if (isRisk) {
                 return (
