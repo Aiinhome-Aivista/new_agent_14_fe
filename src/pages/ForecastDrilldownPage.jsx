@@ -88,10 +88,13 @@ const ForecastDrilldownPage = () => {
     if (val === undefined || val === null) return '$0';
     let num = Number(val);
     if (isNaN(num)) return '$0';
-    if (Math.abs(num) > 0 && Math.abs(num) < 2000) num = num * 1000;
     const abs = Math.abs(num);
     const sign = num < 0 ? '-' : '';
-    if (abs >= 1000000) return `${sign}$${(abs / 1000000).toFixed(1)}M`;
+    if (abs >= 1000000) {
+      const m = abs / 1000000;
+      const formatted = m % 1 === 0 ? m.toFixed(0) : (m % 0.1 === 0 ? m.toFixed(1) : m.toFixed(2));
+      return `${sign}$${formatted}M`;
+    }
     if (abs >= 1000) {
       const k = abs / 1000;
       return `${sign}$${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}K`;
@@ -105,16 +108,20 @@ const ForecastDrilldownPage = () => {
     if (val === undefined || val === null) return '$0';
     let num = Number(val);
     if (isNaN(num)) return '$0';
-    if (Math.abs(num) > 0 && Math.abs(num) < 2000) num = num * 1000;
     const abs = Math.abs(num);
     const sign = num < 0 ? '-' : num > 0 ? '+' : '';
-    if (abs >= 1000000) return `${sign}$${(abs / 1000000).toFixed(1)}M`;
+    if (abs >= 1000000) {
+      const m = abs / 1000000;
+      const formatted = m % 1 === 0 ? m.toFixed(0) : (m % 0.1 === 0 ? m.toFixed(1) : m.toFixed(2));
+      return `${sign}$${formatted}M`;
+    }
     if (abs >= 1000) {
       const k = abs / 1000;
       return `${sign}$${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}K`;
     }
     return `${sign}$${Math.round(abs).toLocaleString()}`;
   };
+
 
   const forecastedVariance = forecastData?.forecasted_variance ?? 0;
   const confidenceScore = forecastData?.confidence_score ?? 85;
@@ -653,7 +660,7 @@ const ForecastDrilldownPage = () => {
                           </span>
                         </td>
                         <td className="py-3 px-3 text-right font-mono text-theme-muted">
-                          {risk.financial_impact ? fmtCurrency(risk.financial_impact) : 'Calculated by Agent'}
+                          {(risk.financial_impact || risk.financial_exposure) ? fmtCurrency(risk.financial_impact || risk.financial_exposure) : 'Calculated by Agent'}
                         </td>
                       </tr>
                     ))}

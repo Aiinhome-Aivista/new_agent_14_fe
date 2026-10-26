@@ -1804,7 +1804,7 @@ const ProjectDrilldown = () => {
                   ? budget.milestone_breakdown
                   : (timeline.phases || [])
                 ).map((mb, mIdx) => {
-                  const mPlanned = mb.planned_tranche || mb.amount || (mb.tranche_amount ? (budget.planned * (mb.tranche_amount / 100)) : 0);
+                  const mPlanned = mb.planned_tranche || mb.amount || (mb.tranche_amount > 100 ? mb.tranche_amount : (mb.tranche_amount ? (budget.planned * (mb.tranche_amount / 100)) : 0));
                   const mActual = mb.actual_spent !== undefined ? mb.actual_spent : (mb.completion_pct ? (mPlanned * (mb.completion_pct / 100)) : 0);
                   const mVar = mPlanned - mActual;
                   const isCleared = mb.completion_pct === 100 || (mb.payment_status && mb.payment_status.toLowerCase().includes('cleared'));
@@ -3133,7 +3133,7 @@ const ProjectDrilldown = () => {
       {/* 12. CONTRACTUAL MILESTONE CAPITAL TRANCHE DRILLDOWN MODAL */}
       {selectedMilestoneModal && (() => {
         const mb = selectedMilestoneModal;
-        const mPlanned = mb.planned_tranche || mb.amount || (mb.tranche_amount ? (budget.planned * (mb.tranche_amount / 100)) : 0);
+        const mPlanned = mb.planned_tranche || mb.amount || (mb.tranche_amount > 100 ? mb.tranche_amount : (mb.tranche_amount ? (budget.planned * (mb.tranche_amount / 100)) : 0));
         const mActual = mb.actual_spent !== undefined ? mb.actual_spent : (mb.completion_pct ? (mPlanned * (mb.completion_pct / 100)) : 0);
         const mVar = mPlanned - mActual;
         const isCleared = mb.completion_pct === 100 || (mb.payment_status && mb.payment_status.toLowerCase().includes('cleared'));
