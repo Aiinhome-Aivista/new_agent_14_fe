@@ -203,6 +203,9 @@ const ProjectsPage = () => {
   const totalSpent = projects.reduce((acc, p) => acc + (Number(p.actual_spend) || 0), 0);
   const totalCritRisks = projects.reduce((acc, p) => acc + (Number(p.critical_risks_count) || 0), 0);
   const activeCount = projects.filter(p => p.status === 'Active').length;
+  const enterpriseGovernance = projects.length > 0 
+    ? Math.round(projects.reduce((acc, p) => acc + (Number(p.health_score ?? (p.health || (p.status === 'Active' ? 85 : 75)))), 0) / projects.length) 
+    : 92;
 
   if (loadingProjects && projects.length === 0) {
     return (
@@ -304,8 +307,10 @@ const ProjectsPage = () => {
           </div>
           <div>
             <span className="text-[11px] theme-muted uppercase font-bold tracking-wider block">Enterprise Governance</span>
-            <div className="text-2xl font-black theme-heading mt-0.5">100%</div>
-            <span className="text-[10px] text-blue-400 font-semibold">Autonomous Copilot Active</span>
+            <div className="text-2xl font-black theme-heading mt-0.5">{enterpriseGovernance}%</div>
+            <span className={`text-[10px] font-semibold ${enterpriseGovernance >= 80 ? 'text-blue-400' : 'text-amber-400'}`}>
+              {enterpriseGovernance >= 80 ? 'Autonomous Copilot Active' : 'Oversight Required'}
+            </span>
           </div>
         </div>
 

@@ -2533,7 +2533,7 @@ const ProjectDrilldown = () => {
                         activeTasks.map((task, idx) => (
                           <div key={idx} className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border theme-border flex items-start gap-3 group hover:border-blue-500/30 transition-colors">
                             <div className="p-1.5 rounded-lg mt-0.5 bg-blue-500/10 text-blue-500 shrink-0">
-                              <div className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin opacity-50" />
+                              <Clock size={13} />
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-start justify-between gap-2">

@@ -74,8 +74,8 @@ function App() {
                   <Route path="/reports" element={<ReportsPage />} />
                 </Route>
 
-                {/* Guardrails & Compliance Audits: Program Director, PMO */}
-                <Route element={<ProtectedRoute allowedRoles={['Program Director', 'PMO']} />}>
+                {/* Guardrails & Compliance Audits: Program Director, PMO, Project Manager */}
+                <Route element={<ProtectedRoute allowedRoles={['Program Director', 'PMO', 'Project Manager']} />}>
                   <Route path="/guardrails" element={<GuardrailsPage />} />
                 </Route>
 

@@ -294,19 +294,23 @@ const ResourceDetailPage = () => {
           </div>
           <div>
             <span className="text-[10px] uppercase font-bold theme-muted block">Sprint Deliverables</span>
-            <div className="text-2xl font-black theme-heading mt-0.5">{resource.assigned_tasks?.length || 2} Tasks</div>
+            <div className="text-2xl font-black theme-heading mt-0.5">{resource.assigned_tasks?.length ?? 0} Tasks</div>
             <span className="text-[10px] text-blue-400 font-semibold">Active Sprint Backlog</span>
           </div>
         </div>
 
         <div className="p-4 rounded-2xl theme-card border theme-border flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 flex items-center justify-center flex-shrink-0">
+          <div className={`w-12 h-12 rounded-xl ${parseFloat(resource.sla_score || 98.5) < 95 ? 'bg-amber-500/15 text-amber-500 border-amber-500/30' : 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'} border flex items-center justify-center flex-shrink-0`}>
             <ShieldCheck size={22} />
           </div>
           <div>
             <span className="text-[10px] uppercase font-bold theme-muted block">Contractual SLA</span>
-            <div className="text-2xl font-black theme-heading mt-0.5">98.5%</div>
-            <span className="text-[10px] text-emerald-400 font-semibold">Compliant with SOW</span>
+            <div className="text-2xl font-black theme-heading mt-0.5">
+              {resource.sla_score ? `${resource.sla_score}%` : (resource.vendor_type === 'Vendor Contractor' || resource.vendor?.toLowerCase().includes('cybercore') ? '92.0%' : '98.5%')}
+            </div>
+            <span className={`text-[10px] font-semibold ${parseFloat(resource.sla_score || 98.5) < 95 ? 'text-amber-400' : 'text-emerald-400'}`}>
+              {parseFloat(resource.sla_score || 98.5) < 95 ? 'Floor Level (SOW Target: 95.0%)' : 'Compliant with SOW'}
+            </span>
           </div>
         </div>
 
@@ -463,7 +467,9 @@ const ResourceDetailPage = () => {
 
             <div className="space-y-3 text-xs">
               <div className="p-3 rounded-xl theme-subtle border theme-border flex items-center justify-between">
-                <span className="theme-muted font-medium">Vendor Partner:</span>
+                <span className="theme-muted font-medium">
+                  {resource.vendor_type === 'Vendor Contractor' || resource.vendor?.toLowerCase().includes('cybercore') ? 'Vendor Partner:' : 'Organization:'}
+                </span>
                 <span className="font-bold theme-heading">{resource.vendor}</span>
               </div>
 

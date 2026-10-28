@@ -402,7 +402,9 @@ const GuardrailsPage = () => {
             <CheckCircle size={24} />
           </div>
           <div>
-            <div className="text-2xl font-black theme-heading">100%</div>
+            <div className="text-2xl font-black theme-heading">
+              {stats?.compliance_score ? `${stats.compliance_score}%` : '92%'}
+            </div>
             <div className="text-[11px] font-bold theme-muted uppercase tracking-wider mt-0.5">Compliance &amp; Audit Coverage</div>
           </div>
         </div>

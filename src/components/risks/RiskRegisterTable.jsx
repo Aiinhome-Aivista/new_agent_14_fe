@@ -304,7 +304,11 @@ const RiskRegisterTable = ({ risks, activeProject, onUpdateRisk, onRiskUpdated, 
             >
               {risk.title}
             </div>
-            <div className="text-[11px] theme-muted line-clamp-1 mt-0.5 leading-relaxed">
+            <div 
+              className={`text-[11px] theme-muted mt-0.5 leading-relaxed cursor-pointer ${isExpanded ? '' : 'line-clamp-2'}`}
+              onClick={() => setExpandedRiskId(isExpanded ? null : risk.id)}
+              title="Click to view full risk intelligence dossier"
+            >
               {risk.description || 'No description provided'}
             </div>
             <div className="mt-1 flex items-center gap-2 text-[10px] font-medium">
@@ -313,7 +317,7 @@ const RiskRegisterTable = ({ risks, activeProject, onUpdateRisk, onRiskUpdated, 
                 {impactLabel}
               </span>
               <span className="text-slate-400">•</span>
-              <span className="theme-muted font-mono">Exposure: {exposure}</span>
+              <span className="theme-muted font-mono">Exposure: <strong className="text-slate-800 dark:text-slate-200 font-mono font-bold">{exposure}</strong></span>
             </div>
           </td>
 
