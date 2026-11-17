@@ -282,7 +282,7 @@ const ProjectsPage = () => {
             <div className="text-2xl font-black theme-heading mt-0.5">
               {formatCurrency(totalAllocation)}
             </div>
-            <span className="text-[10px] theme-muted font-semibold">
+            <span className="text-[16px] theme-muted font-semibold">
               Spent: {formatCurrency(totalSpent)}
             </span>
           </div>
