@@ -16,7 +16,32 @@ import { BarChart3, TrendingUp, TrendingDown, Layers, ArrowDownRight, Compass } 
 const BurndownChart = ({ data: initialData, className, minHeight = "min-h-[260px]" }) => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-  const chartData = Array.isArray(initialData) && initialData.length > 0 ? initialData : [];
+  const rawData = Array.isArray(initialData) && initialData.length > 0 ? initialData : [];
+  const chartData = rawData.map(d => {
+    const comp = Number(d.completion_pct) || 0;
+    const planned = Number(d.planned) || 0;
+    const tranche_planned = Number(d.tranche_planned) || 0;
+    const earned = d.earned !== undefined && d.earned !== null ? Number(d.earned) : Math.round(planned * (comp / 100));
+    const tranche_earned = d.tranche_earned !== undefined && d.tranche_earned !== null 
+      ? Number(d.tranche_earned) 
+      : Math.round(tranche_planned * (comp / 100));
+    const remaining_earned = d.remaining_earned !== undefined && d.remaining_earned !== null 
+      ? Number(d.remaining_earned) 
+      : Math.max(0, Math.round(planned - earned));
+    return {
+      ...d,
+      completion_pct: comp,
+      planned,
+      actual: Number(d.actual) || 0,
+      tranche_planned,
+      tranche_actual: Number(d.tranche_actual) || 0,
+      remaining_planned: Number(d.remaining_planned) || 0,
+      remaining_actual: Number(d.remaining_actual) || 0,
+      earned,
+      tranche_earned,
+      remaining_earned
+    };
+  });
   
   // Interactive view modes: 'cumulative' | 'tranches' | 'runway'
   const [viewMode, setViewMode] = useState('cumulative');
@@ -69,7 +94,7 @@ const BurndownChart = ({ data: initialData, className, minHeight = "min-h-[260px
     return `$${Math.round(val).toLocaleString()}`;
   };
 
-  // Custom EVM Tooltip
+  // Custom EVM Tooltip with Work Completion & Spend Efficiency
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload || !payload.length) return null;
     const currentItem = chartData.find(d => d.sprint === label) || payload[0]?.payload;
@@ -83,39 +108,75 @@ const BurndownChart = ({ data: initialData, className, minHeight = "min-h-[260px
       ? currentItem.actual 
       : (viewMode === 'tranches' ? currentItem.tranche_actual : currentItem.remaining_actual);
 
-    const varVal = currentItem.variance ?? ((plannedVal ?? 0) - (actualVal ?? 0));
-    const isItemOverrun = varVal < 0;
+    const completionPct = currentItem.completion_pct ?? 0;
+
+    // Value of work completed (Earned Value):
+    // Directly clarifies: "In the money spent, how much allocated work is actually completed?"
+    const earnedVal = viewMode === 'cumulative'
+      ? (currentItem.earned ?? Math.round((plannedVal || 0) * (completionPct / 100)))
+      : (viewMode === 'tranches'
+          ? (currentItem.tranche_earned ?? Math.round((currentItem.tranche_planned || 0) * (completionPct / 100)))
+          : Math.round((plannedVal || 0) * (completionPct / 100)));
+
+    // Cash Variance (Planned SOW Baseline vs Actual Spend)
+    const cashVariance = (plannedVal ?? 0) - (actualVal ?? 0);
+    const isCashOverrun = cashVariance < 0;
+
+    // True Cost Variance for Work Done (Earned Value - Actual Spend)
+    // If Earned >= Actual: delivered more work value than spent (efficient)
+    // If Earned < Actual: overspent for the amount of work completed (cost deficit)
+    const workCostVariance = (earnedVal ?? 0) - (actualVal ?? 0);
+    const isWorkDeficit = workCostVariance < 0;
+
+    // Cost Performance Index (CPI)
+    const cpi = (actualVal && actualVal > 0) ? (earnedVal / actualVal) : (completionPct > 0 ? 1.0 : 0);
 
     return (
       <div 
         className="p-3.5 rounded-xl text-xs font-sans shadow-2xl border backdrop-blur-md transition-all animate-fadeIn"
         style={{
-          backgroundColor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.97)',
+          backgroundColor: isDark ? 'rgba(15, 23, 42, 0.96)' : 'rgba(255, 255, 255, 0.98)',
           borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(203, 213, 225, 0.9)',
           color: isDark ? '#F8FAFC' : '#0F172A',
-          minWidth: '220px'
+          minWidth: '260px'
         }}
       >
-        <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200 dark:border-white/10">
+        {/* Header with Milestone Code, Name and Work Completion % */}
+        <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-200 dark:border-white/10">
           <div className="flex items-center gap-1.5 font-bold">
             <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-[#FF5A14]/15 text-[#FF5A14]">
               {currentItem.sprint}
             </span>
-            <span className="truncate max-w-[170px]" title={currentItem.name}>
+            <span className="truncate max-w-[140px]" title={currentItem.name}>
               {currentItem.name || `Milestone ${currentItem.sprint}`}
             </span>
           </div>
-          {currentItem.completion_pct !== undefined && (
-            <span className="text-[10px] font-mono opacity-70">
-              {currentItem.completion_pct}%
-            </span>
-          )}
+          <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
+            completionPct === 100 
+              ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30' 
+              : completionPct > 0 
+                ? 'bg-amber-500/15 text-amber-500 border border-amber-500/30' 
+                : 'bg-slate-500/15 text-slate-400 border border-slate-500/30'
+          }`}>
+            {completionPct}% Work Done
+          </span>
         </div>
 
+        {/* Deliverable Progress Mini Bar */}
+        <div className="w-full bg-slate-200/70 dark:bg-white/10 h-1.5 rounded-full overflow-hidden mb-2.5">
+          <div 
+            className={`h-full transition-all duration-300 ${
+              completionPct === 100 ? 'bg-emerald-500' : completionPct > 0 ? 'bg-[#FF5A14]' : 'bg-slate-400/40'
+            }`}
+            style={{ width: `${Math.min(100, Math.max(0, completionPct))}%` }}
+          />
+        </div>
+
+        {/* Breakdown: Planned vs Completed Work vs Incurred Spend */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <span className="text-slate-500 dark:text-slate-400">
-              {viewMode === 'cumulative' ? 'Cumulative Planned' : (viewMode === 'tranches' ? 'Tranche SOW Cap' : 'Planned Runway')}:
+              {viewMode === 'cumulative' ? 'Cumulative Planned (PV):' : (viewMode === 'tranches' ? 'Tranche SOW Cap (PV):' : 'Planned Runway:')}
             </span>
             <span className="font-mono font-semibold">
               {fmtFullDollar(plannedVal)}
@@ -124,19 +185,50 @@ const BurndownChart = ({ data: initialData, className, minHeight = "min-h-[260px
 
           <div className="flex items-center justify-between">
             <span className="text-slate-500 dark:text-slate-400">
-              {viewMode === 'cumulative' ? 'Cumulative Actual' : (viewMode === 'tranches' ? 'Incurred Spend' : 'Actual Runway')}:
+              Earned Work Value (EV):
+            </span>
+            <span className="font-mono font-bold text-emerald-500">
+              {fmtFullDollar(earnedVal)}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-slate-500 dark:text-slate-400">
+              {viewMode === 'cumulative' ? 'Cumulative Actual (AC):' : (viewMode === 'tranches' ? 'Incurred Spend (AC):' : 'Actual Runway:')}
             </span>
             <span className="font-mono font-bold text-[#FF5A14]">
               {fmtFullDollar(actualVal)}
             </span>
           </div>
 
-          <div className="flex items-center justify-between pt-1 border-t border-slate-200/70 dark:border-white/10">
-            <span className="text-slate-500 dark:text-slate-400">Variance:</span>
-            <span className={`font-mono font-bold flex items-center gap-1 ${isItemOverrun ? 'text-rose-500' : 'text-emerald-500'}`}>
-              {isItemOverrun ? <TrendingDown size={12} /> : <TrendingUp size={12} />}
-              {varVal > 0 ? `+${fmtFullDollar(varVal)}` : fmtFullDollar(varVal)}
-            </span>
+          {/* Work Completion Efficiency & Variance Section */}
+          <div className="pt-2 mt-2 border-t border-slate-200/70 dark:border-white/10 space-y-1.5">
+            {actualVal > 0 && (
+              <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-white/[0.04] border border-slate-200/60 dark:border-white/5 space-y-1">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-slate-500 dark:text-slate-400">Work vs Spend Efficiency:</span>
+                  <span className={`font-mono font-bold ${isWorkDeficit ? 'text-rose-500' : 'text-emerald-500'}`}>
+                    {cpi.toFixed(2)}x CPI
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="text-slate-400 dark:text-slate-500">
+                    {isWorkDeficit ? 'Cost Deficit for Work Done:' : 'Value Exceeds Spend:'}
+                  </span>
+                  <span className={`font-mono font-semibold ${isWorkDeficit ? 'text-rose-500' : 'text-emerald-500'}`}>
+                    {workCostVariance >= 0 ? `+${fmtFullDollar(workCostVariance)}` : fmtFullDollar(workCostVariance)}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between pt-0.5">
+              <span className="text-slate-500 dark:text-slate-400">Cash Variance (PV - AC):</span>
+              <span className={`font-mono font-bold flex items-center gap-1 ${isCashOverrun ? 'text-rose-500' : 'text-emerald-500'}`}>
+                {isCashOverrun ? <TrendingDown size={12} /> : <TrendingUp size={12} />}
+                {cashVariance > 0 ? `+${fmtFullDollar(cashVariance)}` : fmtFullDollar(cashVariance)}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -253,6 +345,10 @@ const BurndownChart = ({ data: initialData, className, minHeight = "min-h-[260px
                   <stop offset="5%" stopColor={isDark ? '#94A3B8' : '#64748B'} stopOpacity={0.25} />
                   <stop offset="95%" stopColor={isDark ? '#64748B' : '#94A3B8'} stopOpacity={0.0} />
                 </linearGradient>
+                <linearGradient id="gradientEarned" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10B981" stopOpacity={0.25} />
+                  <stop offset="95%" stopColor="#10B981" stopOpacity={0.0} />
+                </linearGradient>
               </defs>
 
               <CartesianGrid 
@@ -295,6 +391,16 @@ const BurndownChart = ({ data: initialData, className, minHeight = "min-h-[260px
                 strokeDasharray="4 4" 
                 fill="url(#gradientPlanned)"
                 dot={{ r: 4, fill: isDark ? '#94A3B8' : '#64748B' }} 
+              />
+              <Area 
+                type="monotone" 
+                dataKey={viewMode === 'cumulative' ? 'earned' : (viewMode === 'tranches' ? 'tranche_earned' : 'remaining_earned')} 
+                name={viewMode === 'cumulative' ? 'Work Delivered (EV)' : (viewMode === 'tranches' ? 'Tranche Work Delivered (EV)' : 'Work Runway Remaining (EV)')} 
+                stroke="#10B981" 
+                strokeWidth={3} 
+                fill="url(#gradientEarned)"
+                dot={{ r: 4.5, fill: '#10B981' }} 
+                activeDot={{ r: 7.5, fill: '#34D399', stroke: '#FFFFFF', strokeWidth: 2 }} 
               />
               <Area 
                 type="monotone" 

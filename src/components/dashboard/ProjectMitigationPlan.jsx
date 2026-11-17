@@ -33,8 +33,90 @@ import {
   Lock,
   Briefcase,
   HelpCircle,
-  Copy
+  Copy,
+  GitMerge,
+  Workflow,
+  Link2
 } from 'lucide-react';
+
+/**
+ * Dynamically computes root-cause dependencies and correlation points between
+ * diagnostic deficits (from Project Deficit Root-Cause Diagnostic) for a given strategy.
+ * Only returns hasCorrelations: true for the applicable strategy that genuinely bridges
+ * its primary domain deficit with a foreign deficit from another diagnostic vector.
+ */
+export const getStrategyRootCauseCorrelations = (strat, allDeficits = []) => {
+  if (!strat || !allDeficits || allDeficits.length === 0) {
+    return { linkedDeficits: [], narrative: '', hasCorrelations: false };
+  }
+
+  // 1. If backend explicitly populated it and marked it as an applicable strategy
+  if (strat.has_root_cause_interdependency && Array.isArray(strat.correlated_deficits) && strat.correlated_deficits.length >= 2) {
+    return {
+      linkedDeficits: strat.correlated_deficits,
+      narrative: strat.correlation_narrative || '',
+      hasCorrelations: true
+    };
+  }
+
+  // If backend explicitly marked it as false, do not show
+  if (strat.has_root_cause_interdependency === false) {
+    return { linkedDeficits: [], narrative: '', hasCorrelations: false };
+  }
+
+  // 2. Dynamic evaluation: A strategy is applicable IF it bridges its primary domain deficit
+  // with a foreign diagnostic deficit that it explicitly targets
+  const stratDomain = (strat.domain || '').toLowerCase().trim();
+  const stratTarget = (strat.target_deficit || '').toLowerCase().trim();
+
+  // Find primary domain deficit matching the strategy's domain
+  const primaryDef = allDeficits.find((d) => {
+    const dDom = (d.domain || '').toLowerCase();
+    const cleanStrat = stratDomain.split('&')[0].replace(/[^a-z]/g, '');
+    const cleanDef = dDom.split('&')[0].replace(/[^a-z]/g, '');
+    return cleanStrat && cleanDef && (cleanStrat.includes(cleanDef) || cleanDef.includes(cleanStrat));
+  });
+
+  // Find foreign domain deficits targeted by this strategy
+  const foreignDefs = allDeficits.filter((d) => {
+    if (primaryDef && d.domain === primaryDef.domain) return false;
+    const dMetric = (d.metric || '').toLowerCase();
+    if (stratTarget && dMetric.length > 4) {
+      const idMatch = dMetric.match(/[a-z]{2,5}-\d{2,4}/i);
+      if (idMatch && stratTarget.includes(idMatch[0].toLowerCase())) {
+        return true;
+      }
+      if (stratTarget.includes(dMetric.substring(0, 25)) || dMetric.includes(stratTarget.substring(0, 25))) {
+        return true;
+      }
+    }
+    return false;
+  });
+
+  // Only applicable if the strategy bridges its primary domain with a foreign targeted deficit
+  if (primaryDef && foreignDefs.length > 0) {
+    const linked = [primaryDef, ...foreignDefs];
+    const threatDef = linked.find((d) => d.domain.toLowerCase().includes('threat') || d.domain.toLowerCase().includes('security')) || linked[1];
+    const schedDef = linked.find((d) => d.domain.toLowerCase().includes('schedule') || d.domain.toLowerCase().includes('delivery')) || linked[0];
+
+    let narrative = strat.correlation_narrative || '';
+    if (!narrative) {
+      if (threatDef && schedDef && threatDef !== schedDef) {
+        narrative = `Technical bottlenecks in [${threatDef.domain}] (${threatDef.metric}) directly impede execution and stage-gate clearance for [${schedDef.domain}] (${schedDef.metric}). This single playbook simultaneously resolves the root cause to recover critical milestone delivery.`;
+      } else {
+        narrative = `This strategy bridges dependent root causes across ${linked.map((d) => `[${d.domain}]`).join(' and ')} under a single remediation playbook.`;
+      }
+    }
+
+    return {
+      linkedDeficits: linked,
+      narrative,
+      hasCorrelations: true
+    };
+  }
+
+  return { linkedDeficits: [], narrative: '', hasCorrelations: false };
+};
 
 const ProjectMitigationPlan = ({
   project,
@@ -184,15 +266,21 @@ STRATEGIC MITIGATION MATRIX:
 ------------------------------------------------------------------------
 ${strategies
   .map(
-    (s, i) => `STRATEGY ${i + 1}: [${s.id}] ${s.title}
+    (s, i) => {
+      const cData = getStrategyRootCauseCorrelations(s, deficits);
+      const corrLines = cData.hasCorrelations
+        ? `\n- Interdependent Diagnostic Root Causes: ${cData.linkedDeficits.map(ld => `[${ld.domain}] ${ld.metric}: ${ld.root_cause}`).join(' ↔ ')}\n- Dependency & Correlation Point: ${cData.narrative}`
+        : '';
+      return `STRATEGY ${i + 1}: [${s.id}] ${s.title}
 - Domain: ${s.domain} | Priority: ${s.priority} | Status: ${s.status || 'Recommended'}
-- Target Deficit: ${s.target_deficit}
+- Target Deficit: ${s.target_deficit}${corrLines}
 - Owner: ${s.owner} | Timeframe: ${s.timeframe}
 - Objective: ${s.objective}
 - Action Steps:
 ${(s.action_steps || []).map((step, idx) => `  ${idx + 1}. ${step}`).join('\n')}
 - Expected Outcome: ${s.expected_outcome}
-`
+`;
+    }
   )
   .join('\n------------------------------------------------------------------------\n')}
 
@@ -277,11 +365,6 @@ ${(r.milestones || []).map((m) => `  * ${m}`).join('\n')}`
                 Level 4 Strategic Remediation
               </span>
             </h2>
-            <p className="text-xs sm:text-sm theme-muted mt-1 leading-relaxed">
-              Specific, tailored strategic playbooks synthesized by LLM to directly remediate active project deficits,
-              cost variance overruns, milestone delivery lag, and critical threat exposure for{' '}
-              <strong className="theme-heading font-semibold">{project?.name || 'VPM Platform'}</strong>.
-            </p>
           </div>
         </div>
 
@@ -543,6 +626,7 @@ ${(r.milestones || []).map((m) => `  * ${m}`).join('\n')}`
             const domainColors = getDomainColor(strat.domain);
             const isExpanded = expandedStrategyId === strat.id || (!expandedStrategyId && idx === 0);
             const isAdopted = strat.status?.toLowerCase() === 'adopted';
+            const correlationData = getStrategyRootCauseCorrelations(strat, deficits);
 
             return (
               <div
@@ -631,6 +715,32 @@ ${(r.milestones || []).map((m) => `  * ${m}`).join('\n')}`
                 <p className="text-xs sm:text-sm theme-muted leading-relaxed">
                   {strat.objective}
                 </p>
+
+                {/* Diagnostic Root-Cause Interdependencies & Correlation: (Simple & Clean) */}
+                {correlationData.hasCorrelations && (
+                  <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs space-y-1.5">
+                    <div className="flex items-center gap-1.5 font-bold text-amber-400">
+                      <GitMerge size={14} className="text-amber-400 flex-shrink-0" />
+                      <span>Diagnostic Root-Cause Interdependencies & Correlation:</span>
+                    </div>
+
+                    <div className="text-[11px] theme-muted leading-relaxed flex flex-wrap items-center gap-1.5">
+                      <span className="font-semibold text-slate-300">Linked Root Causes:</span>
+                      {correlationData.linkedDeficits.map((d, i) => (
+                        <span key={i} className="inline-flex items-center gap-1 font-mono text-slate-200">
+                          {i > 0 && <span className="text-amber-400 font-bold mx-1">↔</span>}
+                          <strong className="text-[#FF7A45]">[{d.domain}]</strong>
+                          <span>{d.metric}</span>
+                        </span>
+                      ))}
+                    </div>
+
+                    <p className="text-[11px] theme-muted leading-relaxed">
+                      <strong className="text-amber-400 font-semibold">Correlation: </strong>
+                      {correlationData.narrative}
+                    </p>
+                  </div>
+                )}
 
                 {/* Collapsible Action Steps Playbook */}
                 {isExpanded && (
