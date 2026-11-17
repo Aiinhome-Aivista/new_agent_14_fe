@@ -161,7 +161,7 @@ const PMOLeadDashboard = ({
         <p className="text-sm theme-muted max-w-md mx-auto mb-6">
           The dashboard requires project data to display insights. Please import a Statement of Work (SOW) or Project Charter document to dynamically generate the dashboard metrics.
         </p>
-        <button 
+        <button
           onClick={() => {
             if (fileInputRef && fileInputRef.current) {
               fileInputRef.current.click();
@@ -261,9 +261,9 @@ const PMOLeadDashboard = ({
 
       {/* CORE PMO EXECUTIVE PILLARS */}
       <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${user?.role === 'Project Manager' ? 'xl:grid-cols-5' : 'xl:grid-cols-6'} gap-4 sm:gap-5`}>
-        
+
         {/* PILLAR 1: TEAM & CONTRIBUTORS ("koto jon kaj korche") */}
-        <div 
+        <div
           onClick={() => {
             const activePid = activeProject?.numeric_id || activeProject?.id || '1';
             navigate(`/project/${activePid}?tab=team`);
@@ -306,7 +306,7 @@ const PMOLeadDashboard = ({
               <span className="font-mono font-bold text-blue-400">{headcount.utilization_rate}%</span>
             </div>
             <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-              <div 
+              <div
                 className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-500"
                 style={{ width: `${Math.min(100, headcount.utilization_rate)}%` }}
               ></div>
@@ -316,62 +316,62 @@ const PMOLeadDashboard = ({
 
         {/* PILLAR 2: TOTAL BUDGET & BURN ("total budget") */}
         {user?.role !== 'Project Manager' && (
-        <div 
-          onClick={() => {
-            const activePid = activeProject?.numeric_id || activeProject?.id || '1';
-            navigate(`/project/${activePid}?tab=budget`);
-          }}
-          className="p-5 rounded-2xl theme-card border border-white/10 hover:border-[#FF5A14]/60 hover:shadow-[0_0_25px_rgba(255,90,20,0.15)] transition-all group relative overflow-hidden cursor-pointer"
-          title="Click to open Level 4 Drilldown: Capital burn, expenditure trajectory & financial breakdown"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] font-bold theme-muted uppercase tracking-wider">
-              Total Budget & Capital
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono text-[#FF5A14] font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
-                Level 4 Drilldown <ArrowUpRight size={12} />
+          <div
+            onClick={() => {
+              const activePid = activeProject?.numeric_id || activeProject?.id || '1';
+              navigate(`/project/${activePid}?tab=budget`);
+            }}
+            className="p-5 rounded-2xl theme-card border border-white/10 hover:border-[#FF5A14]/60 hover:shadow-[0_0_25px_rgba(255,90,20,0.15)] transition-all group relative overflow-hidden cursor-pointer"
+            title="Click to open Level 4 Drilldown: Capital burn, expenditure trajectory & financial breakdown"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-bold theme-muted uppercase tracking-wider">
+                Total Budget & Capital
               </span>
-              <div className="p-2 rounded-xl bg-[#FF5A14]/10 text-[#FF5A14] border border-[#FF5A14]/20 group-hover:scale-110 transition-transform">
-                <DollarSign size={18} />
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono text-[#FF5A14] font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                  Level 4 Drilldown <ArrowUpRight size={12} />
+                </span>
+                <div className="p-2 rounded-xl bg-[#FF5A14]/10 text-[#FF5A14] border border-[#FF5A14]/20 group-hover:scale-110 transition-transform">
+                  <DollarSign size={18} />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-baseline gap-2 mb-1">
+              <span className="text-2xl sm:text-3xl font-black text-[#FF5A14]">
+                {fmtMoney(budget.total_actual)}
+              </span>
+              <span className="text-xs font-mono font-semibold theme-muted">
+                / {fmtMoney(budget.total_planned)}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between text-xs theme-muted font-medium mb-3">
+              <span>Rem: <strong className="theme-heading">{fmtMoney(budget.remaining)}</strong></span>
+              <span className={`font-bold ${budget.variance >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                {budget.variance >= 0 ? `+${fmtMoney(budget.variance)} Surplus` : `-${fmtMoney(Math.abs(budget.variance))} Deficit`}
+              </span>
+            </div>
+
+            {/* Budget burn progress bar */}
+            <div className="pt-2 border-t theme-border">
+              <div className="flex justify-between items-center text-[11px] mb-1">
+                <span className="theme-muted font-medium">Burn Velocity</span>
+                <span className="font-mono font-bold text-[#FF7A45]">{budget.burn_percentage}% Burned</span>
+              </div>
+              <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] transition-all duration-500"
+                  style={{ width: `${Math.min(100, budget.burn_percentage)}%` }}
+                ></div>
               </div>
             </div>
           </div>
-
-          <div className="flex items-baseline gap-2 mb-1">
-            <span className="text-2xl sm:text-3xl font-black text-[#FF5A14]">
-              {fmtMoney(budget.total_actual)}
-            </span>
-            <span className="text-xs font-mono font-semibold theme-muted">
-              / {fmtMoney(budget.total_planned)}
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between text-xs theme-muted font-medium mb-3">
-            <span>Rem: <strong className="theme-heading">{fmtMoney(budget.remaining)}</strong></span>
-            <span className={`font-bold ${budget.variance >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-              {budget.variance >= 0 ? `+${fmtMoney(budget.variance)} Surplus` : `-${fmtMoney(Math.abs(budget.variance))} Deficit`}
-            </span>
-          </div>
-
-          {/* Budget burn progress bar */}
-          <div className="pt-2 border-t theme-border">
-            <div className="flex justify-between items-center text-[11px] mb-1">
-              <span className="theme-muted font-medium">Burn Velocity</span>
-              <span className="font-mono font-bold text-[#FF7A45]">{budget.burn_percentage}% Burned</span>
-            </div>
-            <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-              <div 
-                className="h-full rounded-full bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] transition-all duration-500"
-                style={{ width: `${Math.min(100, budget.burn_percentage)}%` }}
-              ></div>
-            </div>
-          </div>
-        </div>
         )}
 
         {/* PILLAR 3: PROJECT COMPLETION & DELIVERY VELOCITY */}
-        <div 
+        <div
           onClick={() => {
             const activePid = activeProject?.numeric_id || activeProject?.id || '1';
             navigate(`/project/${activePid}?tab=completion`);
@@ -415,7 +415,7 @@ const PMOLeadDashboard = ({
               </span>
             </div>
             <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-              <div 
+              <div
                 className="h-full rounded-full bg-gradient-to-r from-[#FF5A14] to-emerald-400 transition-all duration-500"
                 style={{ width: `${Math.max(4, Math.min(100, completionPct))}%` }}
               ></div>
@@ -424,7 +424,7 @@ const PMOLeadDashboard = ({
         </div>
 
         {/* PILLAR 4: ESTIMATE DEADLINE & SCHEDULE ("estimate dateline") */}
-        <div 
+        <div
           onClick={() => {
             const activePid = activeProject?.numeric_id || activeProject?.id || '1';
             navigate(`/project/${activePid}?tab=schedule`);
@@ -472,7 +472,7 @@ const PMOLeadDashboard = ({
         </div>
 
         {/* PILLAR 4: VENDOR SLA & COMPLIANCE */}
-        <div 
+        <div
           onClick={() => {
             const activePid = activeProject?.numeric_id || activeProject?.id || '1';
             navigate(`/project/${activePid}?tab=governance`);
@@ -517,7 +517,7 @@ const PMOLeadDashboard = ({
         </div>
 
         {/* PILLAR 5: PROGRAM RISKS & THREATS */}
-        <div 
+        <div
           onClick={() => {
             const activePid = activeProject?.numeric_id || activeProject?.id || '1';
             navigate(`/project/${activePid}?tab=threats`);
@@ -566,7 +566,7 @@ const PMOLeadDashboard = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
         {/* CHART 1: TASK & DELIVERABLES STATUS BREAKDOWN (DONUT PIE CHART) */}
-        <div 
+        <div
           onClick={() => {
             const activePid = activeProject?.numeric_id || activeProject?.id || '1';
             navigate(`/project/${activePid}?tab=tasks`);
@@ -600,8 +600,8 @@ const PMOLeadDashboard = ({
 
           {/* Donut Chart Container */}
           {tasks.total === 0 ? (
-            <div 
-              onClick={(e) => { 
+            <div
+              onClick={(e) => {
                 e.stopPropagation();
                 const activePid = activeProject?.numeric_id || activeProject?.id || '1';
                 navigate(`/project/${activePid}?tab=tasks`);
@@ -620,8 +620,8 @@ const PMOLeadDashboard = ({
               </span>
             </div>
           ) : (
-            <div 
-              onClick={(e) => { 
+            <div
+              onClick={(e) => {
                 e.stopPropagation();
                 const activePid = activeProject?.numeric_id || activeProject?.id || '1';
                 navigate(`/project/${activePid}?tab=tasks`);
@@ -644,7 +644,7 @@ const PMOLeadDashboard = ({
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <RechartsTooltip 
+                  <RechartsTooltip
                     contentStyle={{
                       borderRadius: '12px',
                       backgroundColor: isDark ? '#141A28' : '#FFFFFF',
@@ -669,8 +669,8 @@ const PMOLeadDashboard = ({
           {/* Interactive Legend Breakdown */}
           <div className="grid grid-cols-2 gap-2 pt-4 border-t theme-border">
             {tasks.breakdown.map((item, idx) => (
-              <button 
-                key={idx} 
+              <button
+                key={idx}
                 onClick={(e) => {
                   e.stopPropagation();
                   const activePid = activeProject?.numeric_id || activeProject?.id || '1';
@@ -701,7 +701,7 @@ const PMOLeadDashboard = ({
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h4 
+                  <h4
                     onClick={() => {
                       const activePid = activeProject?.numeric_id || activeProject?.id || '1';
                       navigate(`/project/${activePid}?tab=budget`);
@@ -713,21 +713,18 @@ const PMOLeadDashboard = ({
                     <ArrowUpRight size={13} className="text-[#FF5A14]" />
                   </h4>
                   <div className="flex items-center gap-1.5">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold flex items-center gap-1 border ${
-                      Number(budget.cpi) >= 1.0 
-                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' 
-                        : (Number(budget.cpi) === 0 ? 'bg-slate-500/15 text-slate-400 border-slate-500/30' : 'bg-rose-500/15 text-rose-400 border-rose-500/30')
-                    }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${
-                        Number(budget.cpi) >= 1.0 ? 'bg-emerald-400 animate-pulse' : (Number(budget.cpi) === 0 ? 'bg-slate-400' : 'bg-rose-400 animate-pulse')
-                      }`}></span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold flex items-center gap-1 border ${Number(budget.cpi) >= 1.0
+                      ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                      : (Number(budget.cpi) === 0 ? 'bg-slate-500/15 text-slate-400 border-slate-500/30' : 'bg-rose-500/15 text-rose-400 border-rose-500/30')
+                      }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${Number(budget.cpi) >= 1.0 ? 'bg-emerald-400 animate-pulse' : (Number(budget.cpi) === 0 ? 'bg-slate-400' : 'bg-rose-400 animate-pulse')
+                        }`}></span>
                       CPI {budget.cpi !== undefined ? Number(budget.cpi).toFixed(2) : '0.00'} {Number(budget.cpi) >= 1.0 ? 'Favorable' : (Number(budget.cpi) === 0 ? 'No Data (0%)' : 'Deficit')}
                     </span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold flex items-center gap-1 border ${
-                      Number(budget.spi ?? timeline?.spi ?? 0) >= 1.0 
-                        ? 'bg-sky-500/15 text-sky-400 border-sky-500/30' 
-                        : (Number(budget.spi ?? timeline?.spi ?? 0) === 0 ? 'bg-slate-500/15 text-slate-400 border-slate-500/30' : 'bg-amber-500/15 text-amber-400 border-amber-500/30')
-                    }`}>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold flex items-center gap-1 border ${Number(budget.spi ?? timeline?.spi ?? 0) >= 1.0
+                      ? 'bg-sky-500/15 text-sky-400 border-sky-500/30'
+                      : (Number(budget.spi ?? timeline?.spi ?? 0) === 0 ? 'bg-slate-500/15 text-slate-400 border-slate-500/30' : 'bg-amber-500/15 text-amber-400 border-amber-500/30')
+                      }`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${Number(budget.spi ?? timeline?.spi ?? 0) >= 1.0 ? 'bg-sky-400' : (Number(budget.spi ?? timeline?.spi ?? 0) === 0 ? 'bg-slate-400' : 'bg-amber-400')}`}></span>
                       SPI {(budget.spi !== undefined ? Number(budget.spi).toFixed(2) : (timeline?.spi !== undefined ? Number(timeline.spi).toFixed(2) : '0.00'))} {Number(budget.spi ?? timeline?.spi ?? 0) >= 1.0 ? 'On Track' : (Number(budget.spi ?? timeline?.spi ?? 0) === 0 ? 'No Data (0%)' : 'Impeded')}
                     </span>
@@ -750,7 +747,7 @@ const PMOLeadDashboard = ({
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#10B981]"></span>
-                <span className="text-emerald-400 font-bold text-[11px]">Work Completed</span>
+                <span className="text-emerald-400 font-bold text-[11px]">Month Wise Work Completion Ratio </span>
               </div>
             </div>
           </div>
@@ -788,11 +785,10 @@ const PMOLeadDashboard = ({
                         <div className="font-bold border-b border-white/10 pb-1 flex items-center justify-between gap-4">
                           <span>{label}</span>
                           {ac !== null && ac !== undefined ? (
-                            <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-bold ${
-                              ac === 0 && ev === 0
-                                ? 'bg-slate-500/20 text-slate-300'
-                                : (diff >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400')
-                            }`}>
+                            <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-bold ${ac === 0 && ev === 0
+                              ? 'bg-slate-500/20 text-slate-300'
+                              : (diff >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400')
+                              }`}>
                               {ac === 0 && ev === 0
                                 ? 'Kickoff Baseline'
                                 : (diff >= 0 ? `+$${diff}k Value Surplus (Ahead)` : `-$${Math.abs(diff)}k Deficit (Behind)`)}
@@ -815,7 +811,7 @@ const PMOLeadDashboard = ({
                         </div>
                         <div className="flex items-center justify-between gap-4">
                           <span className="flex items-center gap-1.5 text-emerald-400 text-[11px]">
-                            <span className="w-2 h-2 rounded-full bg-[#10B981]"></span> Work Completed:
+                            <span className="w-2 h-2 rounded-full bg-[#10B981]"></span> Month Wise Work Completion Ratio:
                           </span>
                           <span className="font-mono font-bold text-emerald-400">{ev !== null && ev !== undefined ? `$${ev}k` : 'Not Reached'}</span>
                         </div>
@@ -826,9 +822,9 @@ const PMOLeadDashboard = ({
                 {/* Vertical "Today / Current Sprint" Marker */}
                 <ReferenceLine
                   x={
-                    chartData.find(c => c.is_current)?.sprint 
-                    || data?.active_sprint 
-                    || budget?.active_sprint 
+                    chartData.find(c => c.is_current)?.sprint
+                    || data?.active_sprint
+                    || budget?.active_sprint
                     || (Number(budget.total_actual) > 0 ? 'Sprint 3' : 'Sprint 1')
                   }
                   stroke="#FF5A14"
@@ -845,7 +841,7 @@ const PMOLeadDashboard = ({
                 />
                 <Area type="monotone" dataKey="planned" name="Planned Target" stroke={isDark ? '#94A3B8' : '#64748B'} strokeWidth={2} strokeDasharray="4 4" fillOpacity={1} fill="url(#pmoPlannedGradient)" />
                 <Area type="monotone" dataKey="actual" name="Actual Spend" stroke="#FF5A14" strokeWidth={3} fillOpacity={1} fill="url(#pmoActualGradient)" />
-                <Area type="monotone" dataKey="earned" name="Work Completed" stroke="#10B981" strokeWidth={3} fillOpacity={1} fill="url(#pmoEarnedGradient)" />
+                <Area type="monotone" dataKey="earned" name="Month wise work completion ratio" stroke="#10B981" strokeWidth={3} fillOpacity={1} fill="url(#pmoEarnedGradient)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -876,7 +872,7 @@ const PMOLeadDashboard = ({
 
       </div>
       {/* ACTIVE GOVERNANCE ESCALATIONS STREAM */}
-      {user?.role !== 'Project Manager' && (
+      {/* {user?.role !== 'Project Manager' && (
       <div className="p-6 rounded-2xl theme-card border border-white/10 flex flex-col justify-between">
         <div>
           <div className="flex justify-between items-center mb-3">
@@ -961,7 +957,7 @@ const PMOLeadDashboard = ({
           </Link>
         </div>
       </div>
-      )}
+      )} */}
 
       {/* ========================================================================= */}
       {/* PROJECT COMPLETION & DELIVERY PROGRESS TRACKER                            */}
@@ -1011,10 +1007,10 @@ const PMOLeadDashboard = ({
             </div>
             <span className="text-xs font-mono font-bold text-[#FF7A45]">{completionSubtitle}</span>
           </div>
-          
+
           {/* Animated Gradient Bar */}
           <div className="w-full h-3.5 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden p-0.5 border border-slate-300 dark:border-white/5">
-            <div 
+            <div
               className="h-full rounded-full bg-gradient-to-r from-[#FF5A14] via-[#FF7A45] to-emerald-400 transition-all duration-1000 shadow-[0_0_12px_rgba(255,90,20,0.5)]"
               style={{ width: `${Math.max(4, completionPct)}%` }}
             ></div>
@@ -1023,9 +1019,9 @@ const PMOLeadDashboard = ({
 
         {/* 3 Breakdown Cards: Timeline, Tasks, Milestones */}
         <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x theme-border p-2 sm:p-4">
-          
+
           {/* 1. Timeline Duration Progress */}
-          <div 
+          <div
             onClick={() => {
               const activePid = activeProject?.numeric_id || activeProject?.id || '1';
               navigate(`/project/${activePid}?tab=schedule`);
@@ -1044,9 +1040,9 @@ const PMOLeadDashboard = ({
                 {totalMonths > 0 ? `${timelinePct}%` : 'Pending SOW'}
               </span>
             </div>
-            
+
             <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden">
-              <div 
+              <div
                 className="h-full rounded-full bg-blue-500 transition-all duration-500"
                 style={{ width: `${timelinePct > 0 ? Math.max(3, timelinePct) : 0}%` }}
               ></div>
@@ -1064,7 +1060,7 @@ const PMOLeadDashboard = ({
           </div>
 
           {/* 2. Task Backlog Execution */}
-          <div 
+          <div
             onClick={() => {
               const activePid = activeProject?.numeric_id || activeProject?.id || '1';
               navigate(`/project/${activePid}?tab=tasks`);
@@ -1083,9 +1079,9 @@ const PMOLeadDashboard = ({
                 {tasksTotal > 0 ? `${tasksPct}%` : (tasks.completion_rate > 0 ? `${tasks.completion_rate}%` : '0% (Pending)')}
               </span>
             </div>
-            
+
             <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden">
-              <div 
+              <div
                 className="h-full rounded-full bg-gradient-to-r from-[#FF5A14] to-[#FF7A45] transition-all duration-500"
                 style={{ width: `${Math.max(3, tasksPct || tasks.completion_rate || 0)}%` }}
               ></div>
@@ -1103,7 +1099,7 @@ const PMOLeadDashboard = ({
           </div>
 
           {/* 3. Contractual Milestones */}
-          <div 
+          <div
             onClick={() => {
               const activePid = activeProject?.numeric_id || activeProject?.id || '1';
               navigate(`/project/${activePid}?tab=schedule`);
@@ -1122,9 +1118,9 @@ const PMOLeadDashboard = ({
                 {msTotal > 0 ? `${msAvgPct}%` : 'TBD'}
               </span>
             </div>
-            
+
             <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden">
-              <div 
+              <div
                 className="h-full rounded-full bg-emerald-500 transition-all duration-500"
                 style={{ width: `${msTotal > 0 ? Math.max(3, msAvgPct) : 0}%` }}
               ></div>
@@ -1158,11 +1154,11 @@ const PMOLeadDashboard = ({
       {/* INTERACTIVE EXECUTIVE DRILLDOWN MODALS */}
       {/* ========================================================================= */}
       {activeDrilldown && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
           onClick={() => setActiveDrilldown(null)}
         >
-          <div 
+          <div
             className="theme-card border border-white/10 rounded-2xl max-w-4xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
@@ -1411,7 +1407,7 @@ const PMOLeadDashboard = ({
                   </h4>
                   <div className="space-y-2">
                     {timeline.phases.map((ph, idx) => (
-                      <div 
+                      <div
                         key={idx}
                         onClick={() => {
                           setSelectedPhase(ph);
@@ -1430,10 +1426,9 @@ const PMOLeadDashboard = ({
                         </div>
                         <div className="text-right flex items-center gap-3">
                           <span className="font-mono font-bold text-xs">{ph.completion_pct}%</span>
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                            ph.status === 'Completed' ? 'bg-emerald-500/15 text-emerald-500' :
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${ph.status === 'Completed' ? 'bg-emerald-500/15 text-emerald-500' :
                             ph.status === 'In Progress' ? 'bg-blue-500/15 text-blue-400' : 'bg-slate-500/15 text-slate-400'
-                          }`}>
+                            }`}>
                             {ph.status}
                           </span>
                         </div>
@@ -1528,11 +1523,10 @@ const PMOLeadDashboard = ({
                 <div className="flex flex-wrap gap-1.5 pb-2 border-b theme-border">
                   <button
                     onClick={() => setTaskFilter('ALL')}
-                    className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
-                      taskFilter === 'ALL'
-                        ? 'bg-[#FF5A14] text-white shadow-sm'
-                        : 'theme-subtle text-slate-400 hover:text-white border theme-border'
-                    }`}
+                    className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${taskFilter === 'ALL'
+                      ? 'bg-[#FF5A14] text-white shadow-sm'
+                      : 'theme-subtle text-slate-400 hover:text-white border theme-border'
+                      }`}
                   >
                     All Deliverables ({tasks.total})
                   </button>
@@ -1540,11 +1534,10 @@ const PMOLeadDashboard = ({
                     <button
                       key={idx}
                       onClick={() => setTaskFilter(b.name)}
-                      className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                        taskFilter === b.name
-                          ? 'bg-[#FF5A14] text-white shadow-sm'
-                          : 'theme-subtle text-slate-400 hover:text-white border theme-border'
-                      }`}
+                      className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1.5 ${taskFilter === b.name
+                        ? 'bg-[#FF5A14] text-white shadow-sm'
+                        : 'theme-subtle text-slate-400 hover:text-white border theme-border'
+                        }`}
                     >
                       <span className="w-2 h-2 rounded-full" style={{ backgroundColor: b.color }}></span>
                       <span>{b.name} ({b.count})</span>
@@ -1580,13 +1573,12 @@ const PMOLeadDashboard = ({
                       .map((t, idx) => {
                         const isBlocked = t.status.includes('Blocked');
                         return (
-                          <div 
+                          <div
                             key={idx}
-                            className={`p-3.5 rounded-xl border transition-all ${
-                              isBlocked 
-                                ? 'bg-red-500/5 border-red-500/30' 
-                                : 'theme-subtle border theme-border'
-                            }`}
+                            className={`p-3.5 rounded-xl border transition-all ${isBlocked
+                              ? 'bg-red-500/5 border-red-500/30'
+                              : 'theme-subtle border theme-border'
+                              }`}
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div>
@@ -1603,12 +1595,11 @@ const PMOLeadDashboard = ({
                                 </div>
                               </div>
 
-                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase flex-shrink-0 ${
-                                t.status === 'Completed' ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30' :
+                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase flex-shrink-0 ${t.status === 'Completed' ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30' :
                                 t.status === 'In Progress' ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30' :
-                                t.status.includes('Review') ? 'bg-amber-500/15 text-amber-500 border border-amber-500/30' :
-                                'bg-red-500/15 text-red-500 border border-red-500/30 animate-pulse'
-                              }`}>
+                                  t.status.includes('Review') ? 'bg-amber-500/15 text-amber-500 border border-amber-500/30' :
+                                    'bg-red-500/15 text-red-500 border border-red-500/30 animate-pulse'
+                                }`}>
                                 {t.status}
                               </span>
                             </div>
@@ -1688,12 +1679,11 @@ const PMOLeadDashboard = ({
                           <div className="font-bold theme-heading text-xs">{del.name}</div>
                           <span className="text-[11px] theme-muted">Assigned: {del.owner}</span>
                         </div>
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                          del.status === 'Verified' ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30' :
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${del.status === 'Verified' ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30' :
                           del.status === 'In Progress' ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30' :
-                          del.status === 'Blocked' ? 'bg-red-500/15 text-red-500 border border-red-500/30' :
-                          'bg-slate-500/15 text-slate-400 border border-slate-500/30'
-                        }`}>
+                            del.status === 'Blocked' ? 'bg-red-500/15 text-red-500 border border-red-500/30' :
+                              'bg-slate-500/15 text-slate-400 border border-slate-500/30'
+                          }`}>
                           {del.status}
                         </span>
                       </div>
